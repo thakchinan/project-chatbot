@@ -1,0 +1,21 @@
+{
+  "classes": [
+    "Angry/Fear",
+    "Happy",
+    "Relaxed",
+    "Sad"
+  ],
+  "index_to_label": {
+    "0": "Angry/Fear",
+    "1": "Happy",
+    "2": "Relaxed",
+    "3": "Sad"
+  },
+  "label_to_index": {
+    "Angry/Fear": 0,
+    "Happy": 1,
+    "Relaxed": 2,
+    "Sad": 3
+  },
+  "type": "LabelEncoder"
+}

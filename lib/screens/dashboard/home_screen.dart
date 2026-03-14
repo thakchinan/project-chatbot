@@ -5,6 +5,7 @@ import '../../models/user.dart';
 import '../../services/muse_service.dart';
 import '../../services/api_service.dart';
 import '../../services/supabase_service.dart';
+import '../../emotion_detection/emotion_detection.dart';
 import 'history_screen.dart';
 import 'test_screen.dart';
 import 'settings_screen.dart';
@@ -20,6 +21,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final MuseService _museService = MuseService();
+  final EmotionDetectionService _emotionService = EmotionDetectionService();
+  EmotionResult? _currentEmotion;
+  bool _isDetectingEmotion = false;
+  Timer? _emotionDetectionTimer;
   bool _isLoading = false;
 
   // ข้อมูลสุขภาพจริงจาก Supabase (Realtime)
@@ -36,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _museService.addListener(_onMuseDataUpdate);
     _subscribeRealtime();
+    _initEmotionDetection();
   }
 
   /// ✅ Supabase Realtime — stream ข้อมูลแบบ real-time
@@ -144,8 +150,60 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _initEmotionDetection() async {
+    await _emotionService.loadModel();
+    // Auto-detect emotion every 5 seconds when brainwave data is available
+    _emotionDetectionTimer = Timer.periodic(
+      const Duration(seconds: EmotionConstants.detectionIntervalSeconds),
+      (_) => _autoDetectEmotion(),
+    );
+  }
+
+  Future<void> _autoDetectEmotion() async {
+    if (!_museService.isConnected || _museService.latestData == null) return;
+    if (_isDetectingEmotion) return;
+
+    _isDetectingEmotion = true;
+    try {
+      final data = _museService.latestData!;
+      final eegData = {
+        'alpha': data.alpha,
+        'beta': data.beta,
+        'theta': data.theta,
+        'delta': data.delta,
+        'gamma': data.gamma,
+        'attention': data.attention,
+        'meditation': data.meditation,
+      };
+
+      final result = await _emotionService.detectFromEEG(eegData);
+
+      if (mounted) {
+        setState(() {
+          _currentEmotion = result;
+        });
+
+        // Save emotion log to Supabase
+        if (result.confidence >= EmotionConstants.confidenceThreshold) {
+          ApiService.saveEmotionLog(
+            userId: widget.user.id,
+            emotionType: result.emotionType,
+            triggerEvent: 'eeg_brainwave',
+            intensity: (result.confidence * 10).round(),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Emotion detection error: $e');
+    } finally {
+      _isDetectingEmotion = false;
+    }
+  }
+
   @override
   void dispose() {
+    _emotionDetectionTimer?.cancel();
+    _emotionService.dispose();
     // ยกเลิก Realtime subscriptions
     _testResultSub?.cancel();
     _brainwaveSub?.cancel();
@@ -621,6 +679,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
               ],
 
+              // Emotion Detection Card
+              if (_museService.isConnected) ...[
+                _buildEmotionDetectionCard(),
+                const SizedBox(height: 16),
+              ],
+
               // Brain Health Summary (ดึงข้อมูลจริงจาก Supabase)
               _buildHealthSummaryCard(),
 
@@ -815,6 +879,201 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  // ==================== EMOTION DETECTION CARD ====================
+
+  Widget _buildEmotionDetectionCard() {
+    final emotion = _currentEmotion;
+    final emotionType = emotion != null ? EmotionType.fromString(emotion.emotionType) : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF667eea).withOpacity(0.08),
+            const Color(0xFF764ba2).withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF667eea).withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.emoji_emotions, color: Color(0xFF667eea), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'การตรวจจับอารมณ์ (AI)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF667eea)),
+              ),
+              const Spacer(),
+              if (_isDetectingEmotion)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF667eea)),
+                )
+              else
+                GestureDetector(
+                  onTap: _autoDetectEmotion,
+                  child: const Icon(Icons.refresh, color: Color(0xFF667eea), size: 20),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          if (emotion != null && emotionType != null) ...[
+            // Main emotion display
+            Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667eea).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(emotionType.emoji, style: const TextStyle(fontSize: 32)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        emotionType.label,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: emotion.confidence.clamp(0.0, 1.0),
+                                minHeight: 8,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  emotion.confidence >= 0.7
+                                      ? Colors.green
+                                      : emotion.confidence >= 0.4
+                                          ? Colors.orange
+                                          : Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${(emotion.confidence * 100).toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: emotion.confidence >= 0.7
+                                  ? Colors.green
+                                  : emotion.confidence >= 0.4
+                                      ? Colors.orange
+                                      : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // All emotion scores
+            if (emotion.allScores.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              ..._buildEmotionScoreBars(emotion.allScores),
+            ],
+          ] else ...[
+            // No emotion data yet
+            Row(
+              children: [
+                const Text('🔍', style: TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('กำลังวิเคราะห์อารมณ์...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    Text(
+                      'เชื่อมต่อ Muse S แล้ว — รอข้อมูล EEG',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildEmotionScoreBars(Map<String, double> scores) {
+    final sorted = scores.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    // Show top 5 emotions
+    final top = sorted.take(5).toList();
+
+    return top.map((entry) {
+      final etype = EmotionType.fromString(entry.key);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Text(etype.emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 65,
+              child: Text(etype.label, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: entry.value.clamp(0.0, 1.0),
+                  minHeight: 6,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _getEmotionBarColor(entry.value),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 35,
+              child: Text(
+                '${(entry.value * 100).toStringAsFixed(0)}%',
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  Color _getEmotionBarColor(double value) {
+    if (value >= 0.7) return const Color(0xFF667eea);
+    if (value >= 0.4) return const Color(0xFFa8b4f0);
+    return Colors.blueGrey[300]!;
   }
 
   String _formatDate(String? dateStr) {

@@ -59,7 +59,7 @@ class WelcomeScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Image.asset(
-                  'assets/images/welcome_illustration.png',
+                  'assets/images/app_icon.png',
                   fit: BoxFit.contain,
                 ),
               ),
