@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _buildLabel('ชื่อผู้ใช้งาน'),
             _buildTextField(
               controller: _usernameController,
-              hintText: 'example@example.com',
+              hintText: 'ระบุชื่อผู้ใช้งาน',
             ),
 
             const SizedBox(height: 20),

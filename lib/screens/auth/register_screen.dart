@@ -145,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildLabel('ชื่อผู้ใช้งาน'),
             _buildTextField(
               controller: _usernameController,
-              hintText: 'username',
+              hintText: 'ระบุชื่อผู้ใช้งาน',
             ),
 
             const SizedBox(height: 16),
@@ -153,7 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildLabel('อีเมล'),
             _buildTextField(
               controller: _emailController,
-              hintText: 'example@email.com',
+              hintText: 'ระบุอีเมลของคุณ',
               keyboardType: TextInputType.emailAddress,
             ),
 
@@ -180,7 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildLabel('ชื่อ-นามสกุล'),
             _buildTextField(
               controller: _fullNameController,
-              hintText: 'example@example.com',
+              hintText: 'ระบุชื่อและนามสกุล',
             ),
 
             const SizedBox(height: 16),
@@ -188,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildLabel('เบอร์โทรศัพท์'),
             _buildTextField(
               controller: _phoneController,
-              hintText: '0xxxxxxxxx',
+              hintText: 'ระบุเบอร์โทรศัพท์ 10 หลัก',
               keyboardType: TextInputType.phone,
               maxLength: 10,
             ),
@@ -201,7 +201,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: AbsorbPointer(
                 child: _buildTextField(
                   controller: _birthDateController,
-                  hintText: 'DD / MM / YYY',
+                  hintText: 'เลือกวัน/เดือน/ปีเกิด',
                 ),
               ),
             ),
