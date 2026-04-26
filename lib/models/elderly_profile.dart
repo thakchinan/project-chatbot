@@ -1,5 +1,4 @@
-/// ElderlyProfile Model - ตาม Class Diagram (ElderProfile)
-/// ข้อมูลเพิ่มเติมสำหรับผู้สูงอายุ
+
 class ElderlyProfile {
   final int? profileId;
   final int userId;
@@ -122,7 +121,6 @@ class ElderlyProfile {
     };
   }
 
-  /// setAge(type): int - ตาม Class Diagram
   int setAge(DateTime dateOfBirth) {
     final now = DateTime.now();
     int calculatedAge = now.year - dateOfBirth.year;
@@ -133,7 +131,6 @@ class ElderlyProfile {
     return calculatedAge;
   }
 
-  /// getFullName(): String - ตาม Class Diagram
   String getFullName() {
     return '${firstName ?? ''} ${lastName ?? ''}'.trim();
   }

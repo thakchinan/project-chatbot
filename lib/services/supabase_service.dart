@@ -4,14 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
   static SupabaseClient? _client;
-  
-  // ==================== CONFIGURATION ====================
-  // thakchinan's Project
+
   static const String supabaseUrl = 'https://ifsvthnxydchqnigvmuw.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlmc3Z0aG54eWRjaHFuaWd2bXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNjQ2NDIsImV4cCI6MjA4NDY0MDY0Mn0.HWVTbQ7SwY93EZqdKCljnPCT8rCliJAMMxI1QC5JsR0';
-  
-  // ==================== INITIALIZATION ====================
-  
+
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: supabaseUrl,
@@ -19,48 +15,43 @@ class SupabaseService {
     );
     _client = Supabase.instance.client;
   }
-  
+
   static SupabaseClient get client {
     if (_client == null) {
       throw Exception('Supabase client not initialized. Call SupabaseService.initialize() first.');
     }
     return _client!;
   }
-  
+
   static bool get isInitialized => _client != null;
-  
-  // ==================== AUTH ====================
-  
-  // Login with username/password
+
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      // ตรวจสอบ username และ password จากตาราง users
+
       final response = await client
           .from('users')
           .select()
           .eq('username', username)
           .maybeSingle();
-      
+
       if (response == null) {
         return {'success': false, 'message': 'ไม่พบชื่อผู้ใช้'};
       }
-      
-      // ตรวจสอบรหัสผ่าน (ในโปรเจคจริงควรใช้ hash)
+
       if (response['password'] != password) {
         return {'success': false, 'message': 'รหัสผ่านไม่ถูกต้อง'};
       }
-      
+
       return {
         'success': true,
         'message': 'เข้าสู่ระบบสำเร็จ',
-        'user': response, // ส่ง response ทั้งหมดเลย ให้ User.fromJson parse
+        'user': response,
       };
     } catch (e) {
       return {'success': false, 'message': 'เกิดข้อผิดพลาด: $e'};
     }
   }
-  
-  // Register new user
+
   static Future<Map<String, dynamic>> register({
     required String username,
     required String password,
@@ -70,18 +61,17 @@ class SupabaseService {
     String? birthDate,
   }) async {
     try {
-      // ตรวจสอบว่า username ซ้ำหรือไม่
+
       final existing = await client
           .from('users')
           .select('id')
           .eq('username', username)
           .maybeSingle();
-      
+
       if (existing != null) {
         return {'success': false, 'message': 'ชื่อผู้ใช้นี้ถูกใช้แล้ว'};
       }
-      
-      // สร้างผู้ใช้ใหม่
+
       final response = await client
           .from('users')
           .insert({
@@ -94,26 +84,23 @@ class SupabaseService {
           })
           .select()
           .single();
-      
-      // สร้าง default settings สำหรับผู้ใช้
+
       await client
           .from('user_settings')
           .insert({
             'user_id': response['id'],
           });
-      
+
       return {
         'success': true,
         'message': 'สมัครสมาชิกสำเร็จ',
-        'user': response, // ส่ง response ทั้งหมด
+        'user': response,
       };
     } catch (e) {
       return {'success': false, 'message': 'เกิดข้อผิดพลาด: $e'};
     }
   }
-  
-  // ==================== PROFILE ====================
-  
+
   static Future<Map<String, dynamic>> getProfile(int userId) async {
     try {
       final response = await client
@@ -121,7 +108,7 @@ class SupabaseService {
           .select()
           .eq('id', userId)
           .single();
-      
+
       return {
         'success': true,
         'profile': response,
@@ -130,7 +117,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดโปรไฟล์ได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> updateProfile({
     required int userId,
     String? fullName,
@@ -152,32 +139,28 @@ class SupabaseService {
       if (birthDate != null) updateData['birth_date'] = birthDate;
       if (avatarUrl != null) updateData['avatar_url'] = avatarUrl;
       if (role != null) updateData['role'] = role;
-      
+
       await client
           .from('users')
           .update(updateData)
           .eq('id', userId);
-      
+
       return {'success': true, 'message': 'อัปเดตโปรไฟล์สำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถอัปเดตโปรไฟล์ได้'};
     }
   }
-  
-  // ==================== AVATAR UPLOAD ====================
-  
-  /// อัปโหลดรูปโปรไฟล์ไปยัง Supabase Storage
+
   static Future<Map<String, dynamic>> uploadAvatar({
     required int userId,
     required File imageFile,
   }) async {
     try {
-      // สร้างชื่อไฟล์ที่ไม่ซ้ำ
+
       final fileExt = imageFile.path.split('.').last.toLowerCase();
       final fileName = 'user_${userId}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
       final filePath = 'profiles/$fileName';
-      
-      // แมป MIME type ให้ถูกต้อง (jpg → jpeg)
+
       const mimeTypes = {
         'jpg': 'image/jpeg',
         'jpeg': 'image/jpeg',
@@ -186,11 +169,9 @@ class SupabaseService {
         'webp': 'image/webp',
       };
       final contentType = mimeTypes[fileExt] ?? 'image/jpeg';
-      
-      // อ่านไฟล์เป็น bytes
+
       final fileBytes = await imageFile.readAsBytes();
-      
-      // อัปโหลดไปยัง Supabase Storage bucket 'avatars'
+
       await client.storage.from('avatars').uploadBinary(
         filePath,
         fileBytes,
@@ -199,18 +180,16 @@ class SupabaseService {
           upsert: true,
         ),
       );
-      
-      // สร้าง public URL
+
       final publicUrl = client.storage.from('avatars').getPublicUrl(filePath);
-      
-      // อัปเดต avatar_url ในตาราง users
+
       await client
           .from('users')
           .update({'avatar_url': publicUrl})
           .eq('id', userId);
-      
+
       debugPrint('Avatar uploaded successfully: $publicUrl');
-      
+
       return {
         'success': true,
         'message': 'อัปโหลดรูปโปรไฟล์สำเร็จ',
@@ -221,15 +200,14 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถอัปโหลดรูปได้: $e'};
     }
   }
-  
-  /// ลบรูปโปรไฟล์เก่าออกจาก Storage
+
   static Future<void> deleteOldAvatar(String? oldAvatarUrl) async {
     if (oldAvatarUrl == null || oldAvatarUrl.isEmpty) return;
     try {
-      // ดึง path จาก URL
+
       final uri = Uri.parse(oldAvatarUrl);
       final pathSegments = uri.pathSegments;
-      // path จะเป็น: storage/v1/object/public/avatars/profiles/filename
+
       final avatarIdx = pathSegments.indexOf('avatars');
       if (avatarIdx >= 0 && avatarIdx < pathSegments.length - 1) {
         final storagePath = pathSegments.sublist(avatarIdx + 1).join('/');
@@ -240,39 +218,37 @@ class SupabaseService {
       debugPrint('Delete old avatar error: $e');
     }
   }
-  
+
   static Future<Map<String, dynamic>> changePassword({
     required int userId,
     String? currentPassword,
     required String newPassword,
   }) async {
     try {
-      // ตรวจสอบรหัสผ่านปัจจุบัน (ถ้ามี)
+
       if (currentPassword != null) {
         final user = await client
             .from('users')
             .select('password')
             .eq('id', userId)
             .single();
-        
+
         if (user['password'] != currentPassword) {
           return {'success': false, 'message': 'รหัสผ่านปัจจุบันไม่ถูกต้อง'};
         }
       }
-      
+
       await client
           .from('users')
           .update({'password': newPassword})
           .eq('id', userId);
-      
+
       return {'success': true, 'message': 'เปลี่ยนรหัสผ่านสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถเปลี่ยนรหัสผ่านได้'};
     }
   }
-  
-  // ==================== TEST RESULTS ====================
-  
+
   static Future<Map<String, dynamic>> saveTestResult({
     required int userId,
     required int stressScore,
@@ -290,7 +266,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'message': 'บันทึกผลทดสอบสำเร็จ',
@@ -300,7 +276,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถบันทึกผลทดสอบได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> getTestResults(int userId) async {
     try {
       final response = await client
@@ -308,7 +284,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('test_date', ascending: false);
-      
+
       return {
         'success': true,
         'results': response,
@@ -317,9 +293,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดผลทดสอบได้'};
     }
   }
-  
-  // ==================== BRAINWAVE DATA ====================
-  
+
   static Future<Map<String, dynamic>> saveBrainwaveData({
     required int userId,
     required double alphaWave,
@@ -347,7 +321,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'message': 'บันทึกข้อมูลคลื่นสมองสำเร็จ',
@@ -357,7 +331,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถบันทึกข้อมูลคลื่นสมองได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> getBrainwaveData(int userId) async {
     try {
       final response = await client
@@ -365,7 +339,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('recorded_at', ascending: false);
-      
+
       return {
         'success': true,
         'data': response,
@@ -374,9 +348,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดข้อมูลคลื่นสมองได้'};
     }
   }
-  
-  // ==================== ACTIVITIES ====================
-  
+
   static Future<Map<String, dynamic>> saveActivity({
     required int userId,
     required String activityType,
@@ -396,7 +368,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'message': 'บันทึกกิจกรรมสำเร็จ',
@@ -406,7 +378,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถบันทึกกิจกรรมได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> getActivities(int userId) async {
     try {
       final response = await client
@@ -414,7 +386,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('completed_at', ascending: false);
-      
+
       return {
         'success': true,
         'activities': response,
@@ -423,9 +395,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดกิจกรรมได้'};
     }
   }
-  
-  // ==================== SCHEDULES ====================
-  
+
   static Future<Map<String, dynamic>> getSchedules(int userId) async {
     try {
       final response = await client
@@ -433,7 +403,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('time', ascending: true);
-      
+
       return {
         'success': true,
         'schedules': response,
@@ -442,7 +412,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดตารางเวลาได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> addSchedule({
     required int userId,
     required String title,
@@ -464,7 +434,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'message': 'เพิ่มตารางเวลาสำเร็จ',
@@ -474,7 +444,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถเพิ่มตารางเวลาได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> updateScheduleCompletion({
     required int scheduleId,
     required bool isCompleted,
@@ -484,13 +454,13 @@ class SupabaseService {
           .from('schedules')
           .update({'is_completed': isCompleted})
           .eq('id', scheduleId);
-      
+
       return {'success': true, 'message': 'อัปเดตสถานะสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถอัปเดตสถานะได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> deleteSchedule({
     required int scheduleId,
     required int userId,
@@ -501,15 +471,13 @@ class SupabaseService {
           .delete()
           .eq('id', scheduleId)
           .eq('user_id', userId);
-      
+
       return {'success': true, 'message': 'ลบตารางเวลาสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถลบตารางเวลาได้'};
     }
   }
-  
-  // ==================== CHAT MESSAGES ====================
-  
+
   static Future<Map<String, dynamic>> sendChatMessage({
     required int userId,
     required String message,
@@ -525,7 +493,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'message_id': response['id'],
@@ -534,7 +502,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถส่งข้อความได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> getChatHistory(int userId) async {
     try {
       final response = await client
@@ -542,7 +510,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('sent_at', ascending: true);
-      
+
       return {
         'success': true,
         'messages': response,
@@ -551,9 +519,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดประวัติแชทได้'};
     }
   }
-  
-  // ==================== SETTINGS ====================
-  
+
   static Future<Map<String, dynamic>> getSettings(int userId) async {
     try {
       final response = await client
@@ -561,24 +527,24 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .maybeSingle();
-      
+
       if (response == null) {
-        // สร้าง default settings ถ้ายังไม่มี
+
         final newSettings = await client
             .from('user_settings')
             .insert({'user_id': userId})
             .select()
             .single();
-        
+
         return {'success': true, 'settings': newSettings};
       }
-      
+
       return {'success': true, 'settings': response};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถโหลดการตั้งค่าได้'};
     }
   }
-  
+
   static Future<Map<String, dynamic>> updateSettings({
     required int userId,
     bool? dailyReminder,
@@ -608,21 +574,18 @@ class SupabaseService {
       if (criticalFFT != null) updateData['critical_fft'] = criticalFFT;
       if (brainMode != null) updateData['brain_mode'] = brainMode;
       if (fontSize != null) updateData['font_size'] = fontSize;
-      
+
       await client
           .from('user_settings')
           .update(updateData)
           .eq('user_id', userId);
-      
+
       return {'success': true, 'message': 'อัปเดตการตั้งค่าสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถอัปเดตการตั้งค่าได้'};
     }
   }
-  
-  // ==================== EMERGENCY CONTACTS ====================
-  
-  // Get all emergency contacts for a user
+
   static Future<Map<String, dynamic>> getEmergencyContacts(int userId) async {
     try {
       final response = await client
@@ -630,7 +593,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('is_primary', ascending: false);
-      
+
       return {
         'success': true,
         'contacts': response,
@@ -639,8 +602,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดผู้ติดต่อฉุกเฉินได้'};
     }
   }
-  
-  // Add emergency contact
+
   static Future<Map<String, dynamic>> addEmergencyContact({
     required int userId,
     required String contactName,
@@ -653,14 +615,14 @@ class SupabaseService {
     String? notes,
   }) async {
     try {
-      // If setting as primary, unset other primaries first
+
       if (isPrimary) {
         await client
             .from('emergency_contacts')
             .update({'is_primary': false})
             .eq('user_id', userId);
       }
-      
+
       final response = await client
           .from('emergency_contacts')
           .insert({
@@ -676,7 +638,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'message': 'เพิ่มผู้ติดต่อฉุกเฉินสำเร็จ',
@@ -686,8 +648,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถเพิ่มผู้ติดต่อฉุกเฉินได้: $e'};
     }
   }
-  
-  // Update emergency contact
+
   static Future<Map<String, dynamic>> updateEmergencyContact({
     required int contactId,
     String? contactName,
@@ -709,35 +670,31 @@ class SupabaseService {
       if (notifyOnEmergency != null) updateData['notify_on_emergency'] = notifyOnEmergency;
       if (notifyOnHighStress != null) updateData['notify_on_high_stress'] = notifyOnHighStress;
       if (notes != null) updateData['notes'] = notes;
-      
+
       await client
           .from('emergency_contacts')
           .update(updateData)
           .eq('contact_id', contactId);
-      
+
       return {'success': true, 'message': 'อัปเดตผู้ติดต่อฉุกเฉินสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถอัปเดตผู้ติดต่อฉุกเฉินได้'};
     }
   }
-  
-  // Delete emergency contact
+
   static Future<Map<String, dynamic>> deleteEmergencyContact(int contactId) async {
     try {
       await client
           .from('emergency_contacts')
           .delete()
           .eq('contact_id', contactId);
-      
+
       return {'success': true, 'message': 'ลบผู้ติดต่อฉุกเฉินสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถลบผู้ติดต่อฉุกเฉินได้'};
     }
   }
-  
-  // ==================== ELDERLY PROFILE ====================
-  
-  // Get elderly profile
+
   static Future<Map<String, dynamic>> getElderlyProfile(int userId) async {
     try {
       final response = await client
@@ -745,7 +702,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .maybeSingle();
-      
+
       return {
         'success': true,
         'profile': response,
@@ -754,8 +711,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดข้อมูลสุขภาพได้'};
     }
   }
-  
-  // Save or update elderly profile
+
   static Future<Map<String, dynamic>> saveElderlyProfile({
     required int userId,
     String? firstName,
@@ -780,7 +736,7 @@ class SupabaseService {
       final data = <String, dynamic>{
         'user_id': userId,
       };
-      
+
       if (firstName != null) data['first_name'] = firstName;
       if (lastName != null) data['last_name'] = lastName;
       if (dateOfBirth != null) data['date_of_birth'] = dateOfBirth;
@@ -798,21 +754,17 @@ class SupabaseService {
       if (hospitalName != null) data['hospital_name'] = hospitalName;
       if (insuranceInfo != null) data['insurance_info'] = insuranceInfo;
       if (specialNeeds != null) data['special_needs'] = specialNeeds;
-      
-      // Upsert - insert or update
+
       await client
           .from('elderly_profiles')
           .upsert(data, onConflict: 'user_id');
-      
+
       return {'success': true, 'message': 'บันทึกข้อมูลสุขภาพสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถบันทึกข้อมูลสุขภาพได้: $e'};
     }
   }
-  
-  // ==================== VOICE METADATA ====================
-  
-  // Save voice metadata
+
   static Future<Map<String, dynamic>> saveVoiceMetadata({
     int? messageId,
     String? detectedLanguage,
@@ -844,7 +796,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'voice_id': response['voice_id'],
@@ -853,8 +805,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถบันทึกข้อมูลเสียงได้: $e'};
     }
   }
-  
-  // Get voice metadata for a message
+
   static Future<Map<String, dynamic>> getVoiceMetadata(int messageId) async {
     try {
       final response = await client
@@ -862,7 +813,7 @@ class SupabaseService {
           .select()
           .eq('message_id', messageId)
           .maybeSingle();
-      
+
       return {
         'success': true,
         'metadata': response,
@@ -871,10 +822,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดข้อมูลเสียงได้'};
     }
   }
-  
-  // ==================== EEG DEVICES ====================
-  
-  // Register EEG device
+
   static Future<Map<String, dynamic>> registerEEGDevice({
     required int userId,
     required String deviceName,
@@ -897,7 +845,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'device_id': response['device_id'],
@@ -907,8 +855,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถลงทะเบียนอุปกรณ์ได้: $e'};
     }
   }
-  
-  // Get user's EEG devices
+
   static Future<Map<String, dynamic>> getEEGDevices(int userId) async {
     try {
       final response = await client
@@ -916,7 +863,7 @@ class SupabaseService {
           .select()
           .eq('user_id', userId)
           .order('last_connected_at', ascending: false);
-      
+
       return {
         'success': true,
         'devices': response,
@@ -925,8 +872,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดรายการอุปกรณ์ได้'};
     }
   }
-  
-  // Update device status
+
   static Future<Map<String, dynamic>> updateDeviceStatus({
     required int deviceId,
     String? status,
@@ -938,21 +884,18 @@ class SupabaseService {
       if (status != null) updateData['status'] = status;
       if (batteryLevel != null) updateData['battery_level'] = batteryLevel;
       if (updateLastConnected) updateData['last_connected_at'] = DateTime.now().toIso8601String();
-      
+
       await client
           .from('eeg_devices')
           .update(updateData)
           .eq('device_id', deviceId);
-      
+
       return {'success': true, 'message': 'อัปเดตสถานะอุปกรณ์สำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถอัปเดตสถานะอุปกรณ์ได้'};
     }
   }
-  
-  // ==================== EEG SESSIONS ====================
-  
-  // Start new EEG session
+
   static Future<Map<String, dynamic>> startEEGSession({
     required int userId,
     int? deviceId,
@@ -970,7 +913,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'session_id': response['session_id'],
@@ -979,8 +922,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถเริ่ม session ได้: $e'};
     }
   }
-  
-  // End EEG session
+
   static Future<Map<String, dynamic>> endEEGSession({
     required int sessionId,
     double? avgAttentionScore,
@@ -994,11 +936,11 @@ class SupabaseService {
           .select('started_at')
           .eq('session_id', sessionId)
           .single();
-      
+
       final startedAt = DateTime.parse(startedSession['started_at']);
       final endedAt = DateTime.now();
       final durationSeconds = endedAt.difference(startedAt).inSeconds;
-      
+
       await client
           .from('eeg_sessions')
           .update({
@@ -1010,7 +952,7 @@ class SupabaseService {
             'data_quality_grade': dataQualityGrade,
           })
           .eq('session_id', sessionId);
-      
+
       return {
         'success': true,
         'duration_seconds': durationSeconds,
@@ -1020,8 +962,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถจบ session ได้: $e'};
     }
   }
-  
-  // Get EEG sessions
+
   static Future<Map<String, dynamic>> getEEGSessions(int userId, {int limit = 20}) async {
     try {
       final response = await client
@@ -1030,7 +971,7 @@ class SupabaseService {
           .eq('user_id', userId)
           .order('started_at', ascending: false)
           .limit(limit);
-      
+
       return {
         'success': true,
         'sessions': response,
@@ -1039,10 +980,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลด sessions ได้'};
     }
   }
-  
-  // ==================== CONVERSATIONS ====================
-  
-  // Start new conversation
+
   static Future<Map<String, dynamic>> startConversation(int userId) async {
     try {
       final response = await client
@@ -1053,7 +991,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'conversation_id': response['conversation_id'],
@@ -1062,8 +1000,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถเริ่มการสนทนาได้: $e'};
     }
   }
-  
-  // End conversation
+
   static Future<Map<String, dynamic>> endConversation({
     required int conversationId,
     String? topicSummary,
@@ -1079,14 +1016,13 @@ class SupabaseService {
             'sentiment_avg': sentimentAvg,
           })
           .eq('conversation_id', conversationId);
-      
+
       return {'success': true, 'message': 'จบการสนทนาสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถจบการสนทนาได้'};
     }
   }
-  
-  // Get active conversation
+
   static Future<Map<String, dynamic>> getActiveConversation(int userId) async {
     try {
       final response = await client
@@ -1097,7 +1033,7 @@ class SupabaseService {
           .order('started_at', ascending: false)
           .limit(1)
           .maybeSingle();
-      
+
       return {
         'success': true,
         'conversation': response,
@@ -1106,10 +1042,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดการสนทนาได้'};
     }
   }
-  
-  // ==================== EMOTION LOGS ====================
-  
-  /// บันทึกอารมณ์ - ตาม Class Diagram EmotionLog
+
   static Future<Map<String, dynamic>> saveEmotionLog({
     required int userId,
     required String emotionType,
@@ -1127,7 +1060,7 @@ class SupabaseService {
           })
           .select()
           .single();
-      
+
       return {
         'success': true,
         'log_id': response['log_id'],
@@ -1137,8 +1070,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถบันทึกอารมณ์ได้: $e'};
     }
   }
-  
-  /// ดึงบันทึกอารมณ์ทั้งหมดของผู้ใช้
+
   static Future<Map<String, dynamic>> getEmotionLogs(int userId, {int limit = 50}) async {
     try {
       final response = await client
@@ -1147,7 +1079,7 @@ class SupabaseService {
           .eq('user_id', userId)
           .order('created_at', ascending: false)
           .limit(limit);
-      
+
       return {
         'success': true,
         'emotion_logs': response,
@@ -1156,8 +1088,7 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดบันทึกอารมณ์ได้'};
     }
   }
-  
-  /// ดึงบันทึกอารมณ์ตามประเภท
+
   static Future<Map<String, dynamic>> getEmotionLogsByType(int userId, String emotionType) async {
     try {
       final response = await client
@@ -1166,7 +1097,7 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('emotion_type', emotionType)
           .order('created_at', ascending: false);
-      
+
       return {
         'success': true,
         'emotion_logs': response,
@@ -1175,43 +1106,40 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถโหลดบันทึกอารมณ์ได้'};
     }
   }
-  
-  /// ลบบันทึกอารมณ์
+
   static Future<Map<String, dynamic>> deleteEmotionLog(int logId) async {
     try {
       await client
           .from('emotion_logs')
           .delete()
           .eq('log_id', logId);
-      
+
       return {'success': true, 'message': 'ลบบันทึกอารมณ์สำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถลบบันทึกอารมณ์ได้'};
     }
   }
-  
-  /// สรุปอารมณ์ของผู้ใช้ (7 วันล่าสุด)
+
   static Future<Map<String, dynamic>> getEmotionSummary(int userId) async {
     try {
       final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
-      
+
       final response = await client
           .from('emotion_logs')
           .select()
           .eq('user_id', userId)
           .gte('created_at', sevenDaysAgo)
           .order('created_at', ascending: false);
-      
-      // Count emotions by type
+
       final Map<String, int> emotionCounts = {};
       double totalIntensity = 0;
-      
+
       for (final log in response) {
         final type = log['emotion_type'] as String;
         emotionCounts[type] = (emotionCounts[type] ?? 0) + 1;
         totalIntensity += (log['intensity'] ?? 5);
       }
-      
+
       return {
         'success': true,
         'total_logs': response.length,
@@ -1224,26 +1152,17 @@ class SupabaseService {
     }
   }
 
-  // ==================== DELETE ACCOUNT ====================
-  
   static Future<Map<String, dynamic>> deleteAccount(int userId) async {
     try {
-      // ลบข้อมูลที่เกี่ยวข้องทั้งหมดก่อนลบ user
-      // ลำดับสำคัญ: ลบตาราง child ก่อน parent
-      
-      // 1. ลบ user_settings
+
       await client.from('user_settings').delete().eq('user_id', userId);
-      
-      // 2. ลบ emergency_contacts
+
       await client.from('emergency_contacts').delete().eq('user_id', userId);
-      
-      // 3. ลบ activities
+
       await client.from('activities').delete().eq('user_id', userId);
-      
-      // 4. ลบ schedules
+
       await client.from('schedules').delete().eq('user_id', userId);
-      
-      // 5. ลบ voice_metadata ที่เกี่ยวข้องกับ chat_messages ของ user
+
       final chatMessages = await client
           .from('chat_messages')
           .select('id')
@@ -1251,44 +1170,35 @@ class SupabaseService {
       for (final msg in chatMessages) {
         await client.from('voice_metadata').delete().eq('message_id', msg['id']);
       }
-      
-      // 6. ลบ chat_messages
+
       await client.from('chat_messages').delete().eq('user_id', userId);
-      
-      // 7. ลบ brainwave_data
+
       await client.from('brainwave_data').delete().eq('user_id', userId);
-      
-      // 8. ลบ test_results
+
       await client.from('test_results').delete().eq('user_id', userId);
-      
-      // 9. ลบ eeg_sessions
+
       try {
         await client.from('eeg_sessions').delete().eq('user_id', userId);
       } catch (_) {}
-      
-      // 10. ลบ eeg_devices
+
       try {
         await client.from('eeg_devices').delete().eq('user_id', userId);
       } catch (_) {}
-      
-      // 11. ลบ emotion_logs
+
       try {
         await client.from('emotion_logs').delete().eq('user_id', userId);
       } catch (_) {}
-      
-      // 12. ลบ conversations
+
       try {
         await client.from('conversations').delete().eq('user_id', userId);
       } catch (_) {}
-      
-      // 13. ลบ elderly_profiles
+
       try {
         await client.from('elderly_profiles').delete().eq('user_id', userId);
       } catch (_) {}
-      
-      // 14. สุดท้าย ลบ user
+
       await client.from('users').delete().eq('id', userId);
-      
+
       return {'success': true, 'message': 'ลบบัญชีสำเร็จ'};
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถลบบัญชีได้: $e'};

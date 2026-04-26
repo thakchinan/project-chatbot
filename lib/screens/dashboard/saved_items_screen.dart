@@ -29,7 +29,7 @@ class SavedItemsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -68,7 +68,6 @@ class SavedItemsScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // บทความสุขภาพจิต
             Text(
               'บทความสุขภาพจิต',
               style: TextStyle(
@@ -96,7 +95,6 @@ class SavedItemsScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // อาหารบำรุงสมอง
             Text(
               'อาหารบำรุงสมอง',
               style: TextStyle(
@@ -117,7 +115,6 @@ class SavedItemsScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // เทคนิค
             Text(
               'เทคนิคการดูแลสมอง',
               style: TextStyle(

@@ -38,7 +38,6 @@ class BrainProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Helper method to get stress level from score
   static StressLevel getLevel(int score, int maxScore) {
     final percent = (score / maxScore) * 100;
     if (percent <= 25) return StressLevel.normal;
@@ -47,7 +46,6 @@ class BrainProvider extends ChangeNotifier {
     return StressLevel.high;
   }
 
-  // Get level info for display
   static Map<String, dynamic> getLevelInfo(StressLevel level) {
     switch (level) {
       case StressLevel.normal:

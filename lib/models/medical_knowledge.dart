@@ -1,5 +1,4 @@
-/// MedicalKnowledge Model - ตาม Class Diagram
-/// ฐานความรู้ทางการแพทย์/สุขภาพจิต
+
 class MedicalKnowledge {
   final int? knowledgeId;
   final String sourceTitle;
@@ -53,11 +52,9 @@ class MedicalKnowledge {
     };
   }
 
-  /// searchQuery(): List - ตาม Class Diagram
-  /// Returns search-optimized keywords from the content
   List<String> searchQuery() {
     final words = contentText.split(RegExp(r'\s+'));
-    // Return unique keywords longer than 2 characters
+
     return words
         .where((w) => w.length > 2)
         .toSet()

@@ -47,7 +47,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  /// เลือกรูปจากแกลเลอรี่หรือกล้อง
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
@@ -75,7 +74,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  /// แสดง BottomSheet เลือก Gallery/Camera
   void _showImagePickerOptions() {
     showModalBottomSheet(
       context: context,
@@ -88,7 +86,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
+
               Text(
                 'เลือกรูปโปรไฟล์',
                 style: TextStyle(
@@ -99,7 +97,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Gallery
               ListTile(
                 leading: Container(
                   width: 48,
@@ -124,7 +121,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
               const Divider(height: 8),
 
-              // Camera
               ListTile(
                 leading: Container(
                   width: 48,
@@ -146,7 +142,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 },
               ),
 
-              // ลบรูป (ถ้ามีรูปอยู่)
               if (_currentAvatarUrl != null ||
                   _selectedImage != null) ...[
                 const Divider(height: 8),
@@ -182,7 +177,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  /// อัปโหลดรูปภาพไปยัง Supabase
   Future<String?> _uploadImage() async {
     if (_selectedImage == null) return _currentAvatarUrl;
 
@@ -238,13 +232,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _isLoading = true);
 
-    // อัปโหลดรูปก่อน (ถ้ามีรูปใหม่)
     String? avatarUrl = _currentAvatarUrl;
     if (_selectedImage != null) {
       avatarUrl = await _uploadImage();
     }
 
-    // อัปเดตข้อมูลโปรไฟล์
     final result = await ApiService.updateProfile(
       userId: widget.user.id,
       fullName: _fullNameController.text,
@@ -253,7 +245,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       birthDate: _birthDateController.text,
     );
 
-    // ถ้ามีการลบรูป (avatarUrl เป็น null แต่เดิมมีรูป)
     if (_currentAvatarUrl == null && widget.user.avatarUrl != null) {
       await ApiService.updateProfile(
         userId: widget.user.id,
@@ -317,13 +308,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===== Profile Avatar (กดเพื่อเปลี่ยนรูป) =====
+
             Center(
               child: GestureDetector(
                 onTap: _showImagePickerOptions,
                 child: Stack(
                   children: [
-                    // Avatar Circle
+
                     Container(
                       width: 100,
                       height: 100,
@@ -341,7 +332,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: _getAvatarChild(),
                     ),
 
-                    // Camera icon overlay
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -361,7 +351,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
 
-                    // Upload progress
                     if (_isUploadingImage)
                       Positioned.fill(
                         child: Container(
@@ -386,7 +375,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
 
-            // ===== แก้ไขรูปภาพ label =====
             const SizedBox(height: 8),
             Center(
               child: TextButton(
@@ -403,7 +391,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             const SizedBox(height: 16),
 
-            // Form Fields
             _buildLabel('ชื่อจริง-นามสกุล'),
             _buildTextField(
               controller: _fullNameController,
@@ -439,7 +426,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
             const SizedBox(height: 30),
 
-            // Update Button
             Center(
               child: SizedBox(
                 width: double.infinity,
@@ -479,7 +465,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  /// สร้าง DecorationImage สำหรับ Avatar
   DecorationImage? _getAvatarDecoration() {
     if (_selectedImage != null) {
       return DecorationImage(
@@ -496,10 +481,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return null;
   }
 
-  /// สร้าง child Widget สำหรับ Avatar (แสดง icon ถ้าไม่มีรูป)
   Widget? _getAvatarChild() {
     if (_selectedImage != null || (_currentAvatarUrl != null && _currentAvatarUrl!.isNotEmpty)) {
-      return null; // DecorationImage handles display
+      return null;
     }
     return Icon(
       Icons.person,

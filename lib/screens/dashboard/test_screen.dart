@@ -6,7 +6,7 @@ import 'settings_screen.dart';
 
 class TestScreen extends StatefulWidget {
   final User? user;
-  
+
   const TestScreen({super.key, this.user});
 
   @override
@@ -21,19 +21,14 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
-  // ==================== PHQ-9 QUESTIONS ====================
-  // Patient Health Questionnaire-9
-  // แบบสอบถามสุขภาพผู้ป่วย ฉบับ 9 คำถาม (มาตรฐานสากล)
-  // ที่มา: Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke
-  
-  static const String _phq9Instruction = 
+  static const String _phq9Instruction =
     'ในช่วง 2 สัปดาห์ที่ผ่านมา คุณได้รับความเดือดร้อนจากปัญหาต่อไปนี้ มากน้อยเพียงใด';
 
   static const List<String> _answerOptions = [
-    'ไม่เลย',           // 0 คะแนน
-    'หลายวัน',          // 1 คะแนน
-    'มากกว่าครึ่งหนึ่งของวัน', // 2 คะแนน
-    'เกือบทุกวัน',       // 3 คะแนน
+    'ไม่เลย',
+    'หลายวัน',
+    'มากกว่าครึ่งหนึ่งของวัน',
+    'เกือบทุกวัน',
   ];
 
   static const List<Map<String, String>> _phq9Questions = [
@@ -108,7 +103,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
       _selectedAnswer = score;
     });
 
-    // หน่วงเล็กน้อยเพื่อ animation
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       setState(() {
@@ -128,12 +122,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
     });
   }
 
-  /// PHQ-9 Score Interpretation (มาตรฐานสากล)
-  /// 0-4:   Minimal depression (ไม่มีหรือน้อยมาก)
-  /// 5-9:   Mild depression (ซึมเศร้าระดับเล็กน้อย)
-  /// 10-14: Moderate depression (ซึมเศร้าระดับปานกลาง)
-  /// 15-19: Moderately severe depression (ซึมเศร้าระดับค่อนข้างรุนแรง)
-  /// 20-27: Severe depression (ซึมเศร้าระดับรุนแรง)
   Map<String, dynamic> _interpretScore(int totalScore) {
     if (totalScore <= 4) {
       return {
@@ -190,15 +178,14 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
   Future<void> _showResults() async {
     final totalScore = _answers.reduce((a, b) => a + b);
-    final maxScore = _phq9Questions.length * 3; // 27 คะแนน
+    final maxScore = _phq9Questions.length * 3;
     final interpretation = _interpretScore(totalScore);
 
-    // บันทึกผลลง Supabase
     if (widget.user != null) {
       final saveResult = await ApiService.saveTestResult(
         userId: widget.user!.id,
         stressScore: totalScore,
-        depressionScore: totalScore, // PHQ-9 วัดภาวะซึมเศร้าโดยตรง
+        depressionScore: totalScore,
         stressLevel: interpretation['stressLevel'],
       );
       print('💾 [TestScreen] saveTestResult: $saveResult');
@@ -258,7 +245,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
     return SingleChildScrollView(
       child: Column(
         children: [
-          // ===== PHQ-9 Header Card =====
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -324,10 +311,9 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               ],
             ),
           ),
-          
+
           const SizedBox(height: 20),
-          
-          // ===== Info Card =====
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -373,7 +359,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
           const SizedBox(height: 20),
 
-          // ===== Score Guide =====
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -401,10 +386,9 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
-          // ===== Start Button =====
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -499,7 +483,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===== Progress Bar =====
+
             Row(
               children: [
                 Text(
@@ -538,7 +522,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
             const SizedBox(height: 24),
 
-            // ===== Instruction =====
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -565,7 +548,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
             const SizedBox(height: 20),
 
-            // ===== Question Card =====
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -601,10 +583,9 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
-            // ===== Answer Options =====
+
             ...List.generate(_answerOptions.length, (index) {
               final isSelected = _selectedAnswer == index;
               return AnimatedContainer(
@@ -612,7 +593,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Material(
-                  color: isSelected 
+                  color: isSelected
                     ? AppColors.primaryBlue.withOpacity(0.1)
                     : Colors.white,
                   borderRadius: BorderRadius.circular(14),
@@ -624,7 +605,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isSelected 
+                          color: isSelected
                             ? AppColors.primaryBlue
                             : Colors.grey.shade300,
                           width: isSelected ? 2 : 1,
@@ -673,7 +654,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               );
             }),
 
-            // ===== Safety Note for Q9 =====
             if (_currentQuestion == 8)
               Container(
                 margin: const EdgeInsets.only(top: 8),
@@ -721,7 +701,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ===== Handle Bar =====
+
             Container(
               width: 40,
               height: 4,
@@ -732,7 +712,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 20),
 
-            // ===== Result Icon =====
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -743,7 +722,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 16),
 
-            // ===== PHQ-9 Badge =====
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
@@ -757,7 +735,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 12),
 
-            // ===== Score =====
             Text(
               interpretation['level'],
               style: TextStyle(
@@ -773,7 +750,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 16),
 
-            // ===== Score Gauge =====
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -817,7 +793,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 16),
 
-            // ===== Recommendation =====
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -872,7 +847,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               ),
             ),
 
-            // ===== Saved Confirmation =====
             if (widget.user != null) ...[
               const SizedBox(height: 12),
               Row(
@@ -888,7 +862,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               ),
             ],
 
-            // ===== Emergency Hotline =====
             if (totalScore >= 15) ...[
               const SizedBox(height: 16),
               Container(
@@ -931,7 +904,6 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
 
             const SizedBox(height: 20),
 
-            // ===== Action Buttons =====
             Row(
               children: [
                 Expanded(

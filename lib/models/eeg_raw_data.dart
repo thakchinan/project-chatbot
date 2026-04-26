@@ -1,5 +1,4 @@
-/// EEGRawData Model - ตาม Class Diagram
-/// ข้อมูลดิบจากอุปกรณ์ EEG (brainwave_data)
+
 class EEGRawData {
   final int? id;
   final int userId;
@@ -71,7 +70,6 @@ class EEGRawData {
     };
   }
 
-  /// isValid(): Null - ตาม Class Diagram
   bool isValid() {
     return alphaWave >= 0 &&
         betaWave >= 0 &&

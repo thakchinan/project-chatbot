@@ -7,7 +7,7 @@ import 'settings_screen.dart';
 
 class ChartScreen extends StatefulWidget {
   final User? user;
-  
+
   const ChartScreen({super.key, this.user});
 
   @override
@@ -31,14 +31,14 @@ class _ChartScreenState extends State<ChartScreen> {
     }
 
     final result = await ApiService.getTestResults(widget.user!.id);
-    
+
     if (result['success'] == true && result['results'] != null) {
       final results = result['results'] as List;
       if (results.isNotEmpty) {
         final data = results.take(4).map((r) {
           return (r['stress_score'] as num?)?.toDouble() ?? 0;
         }).toList();
-        
+
         setState(() {
           _weeklyData = data.map((s) => (s / 12 * 100).clamp(0.0, 100.0).toDouble()).toList();
           while (_weeklyData.length < 4) {
@@ -94,7 +94,7 @@ class _ChartScreenState extends State<ChartScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Chart Container
+
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -161,9 +161,9 @@ class _ChartScreenState extends State<ChartScreen> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   Wrap(
                     spacing: 16,
                     runSpacing: 8,
@@ -174,9 +174,9 @@ class _ChartScreenState extends State<ChartScreen> {
                       _buildLegend('Delta', Colors.orange),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   Text(
                     'สรุปผลรายสัปดาห์',
                     style: TextStyle(

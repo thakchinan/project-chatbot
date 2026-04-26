@@ -107,7 +107,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Description
+
             Text(
               'รหัสผ่านของคุณควรมีความยาวอย่างน้อย 6 ตัวอักษร โดยใช้ตัวเลขและตัวอักษรผสมกัน',
               style: TextStyle(
@@ -116,10 +116,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 height: 1.5,
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // Current Password
+
             _buildLabel('รหัสผ่าน'),
             _buildPasswordField(
               controller: _currentPasswordController,
@@ -127,7 +126,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               obscure: _obscureCurrent,
               onToggle: () => setState(() => _obscureCurrent = !_obscureCurrent),
             ),
-            
+
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -140,10 +139,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 8),
-            
-            // New Password
+
             _buildLabel('รหัสผ่านใหม่'),
             _buildPasswordField(
               controller: _newPasswordController,
@@ -151,10 +149,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               obscure: _obscureNew,
               onToggle: () => setState(() => _obscureNew = !_obscureNew),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Confirm Password
+
             _buildLabel('ยืนยันรหัสผ่าน'),
             _buildPasswordField(
               controller: _confirmPasswordController,
@@ -162,10 +159,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               obscure: _obscureConfirm,
               onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
             ),
-            
+
             const SizedBox(height: 30),
-            
-            // Change Password Button
+
             Center(
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _changePassword,

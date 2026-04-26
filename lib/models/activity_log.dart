@@ -1,5 +1,4 @@
-/// ActivityLog Model - ตาม Class Diagram
-/// บันทึกกิจกรรมต่างๆ ของผู้ใช้
+
 class ActivityLog {
   final int? id;
   final int userId;
@@ -54,7 +53,6 @@ class ActivityLog {
     };
   }
 
-  /// toActivityObj(): Void - ตาม Class Diagram
   Map<String, dynamic> toActivityObj() {
     return {
       'type': activityType,
@@ -66,8 +64,6 @@ class ActivityLog {
     };
   }
 
-  /// exportData(int format): int - ตาม Class Diagram
-  /// format: 0 = JSON, 1 = CSV
   String exportData(int format) {
     if (format == 1) {
       return '$activityType,$activityData,$score,$durationMinutes,${timestamp.toIso8601String()}';

@@ -1,5 +1,3 @@
-// SmartBrain Care - All Models Export
-// ไฟล์รวม export ทุก model ตาม Class Diagram
 
 export 'user.dart';
 export 'elderly_profile.dart';
@@ -16,4 +14,4 @@ export 'voice_metadata.dart';
 export 'emotion_log.dart';
 export 'retrieval_log.dart';
 export 'medical_knowledge.dart';
-export 'brain_data.dart'; // Legacy models (BrainwaveData, TestResult, Activity, etc.)
+export 'brain_data.dart';

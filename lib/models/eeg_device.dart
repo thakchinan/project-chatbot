@@ -1,5 +1,4 @@
-/// EEGDevice Model - ตาม Class Diagram
-/// อุปกรณ์ EEG ที่ลงทะเบียน
+
 class EEGDevice {
   final int? deviceId;
   final int? userId;
@@ -63,12 +62,10 @@ class EEGDevice {
     };
   }
 
-  /// isConnected(): boolean - ตาม Class Diagram
   bool checkConnected() {
     return isConnected && status == 'active';
   }
 
-  /// disconnect(): Null - ตาม Class Diagram
   EEGDevice disconnect() {
     return EEGDevice(
       deviceId: deviceId,
@@ -86,9 +83,8 @@ class EEGDevice {
     );
   }
 
-  /// updateFirmware(): int - ตาม Class Diagram
   int updateFirmware(String newVersion) {
-    // Return version number parsed from string
+
     final parts = newVersion.split('.');
     if (parts.isNotEmpty) {
       return int.tryParse(parts.first) ?? 0;

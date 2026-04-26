@@ -1,5 +1,4 @@
-/// Conversation Model - ตาม Class Diagram
-/// Session การสนทนากับ AI
+
 class Conversation {
   final int? conversationId;
   final int userId;
@@ -60,7 +59,6 @@ class Conversation {
     };
   }
 
-  /// enableAI(): Bool - ตาม Class Diagram
   Conversation toggleAI() {
     return Conversation(
       conversationId: conversationId,
@@ -77,7 +75,6 @@ class Conversation {
     );
   }
 
-  /// endConversation(): String - ตาม Class Diagram
   String endConversation() {
     return summary ?? 'การสนทนาจบลงเรียบร้อย';
   }

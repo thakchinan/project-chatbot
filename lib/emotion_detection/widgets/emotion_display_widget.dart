@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/emotion_result.dart';
 import '../models/emotion_type.dart';
 
-/// Widget แสดงผลอารมณ์ปัจจุบัน
 class EmotionDisplayWidget extends StatelessWidget {
   final EmotionResult? emotionResult;
 

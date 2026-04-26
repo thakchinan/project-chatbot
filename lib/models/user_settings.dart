@@ -1,5 +1,4 @@
-/// UserSettings Model - ตาม Class Diagram
-/// การตั้งค่าของผู้ใช้
+
 class UserSettings {
   final int? id;
   final int userId;
@@ -75,7 +74,6 @@ class UserSettings {
     };
   }
 
-  /// toggleDarkMode(): Void - ตาม Class Diagram
   UserSettings toggleDarkMode() {
     return UserSettings(
       id: id,
@@ -96,7 +94,6 @@ class UserSettings {
     );
   }
 
-  /// updateNotificationConfig(): Void - ตาม Class Diagram
   UserSettings updateNotificationConfig({
     bool? dailyReminder,
     bool? weeklyReport,

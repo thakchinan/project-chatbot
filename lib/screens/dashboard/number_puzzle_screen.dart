@@ -6,7 +6,7 @@ import '../../services/api_service.dart';
 
 class NumberPuzzleScreen extends StatefulWidget {
   final User? user;
-  
+
   const NumberPuzzleScreen({super.key, this.user});
 
   @override
@@ -63,7 +63,7 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
 
   void _onTileTap(int tappedIndex) {
     if (_hasWon) return;
-    
+
     final emptyIndex = tiles.indexOf(0);
     final validMoves = _getValidMoves(emptyIndex);
 
@@ -142,7 +142,7 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final puzzleSize = screenHeight < 700 ? 200.0 : 280.0;
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -163,7 +163,7 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Moves counter
+
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
@@ -179,10 +179,9 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
-              // Puzzle Grid
+
               SizedBox(
                 width: puzzleSize,
                 height: puzzleSize,
@@ -202,7 +201,7 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
                     itemCount: 9,
                     itemBuilder: (context, index) {
                       final tile = tiles[index];
-                      
+
                       if (tile == 0) {
                         return Container(
                           decoration: BoxDecoration(
@@ -211,7 +210,7 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
                           ),
                         );
                       }
-                      
+
                       return GestureDetector(
                         onTap: () => _onTileTap(index),
                         child: Container(
@@ -235,10 +234,9 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
-              // Target preview with label
+
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -281,10 +279,9 @@ class _NumberPuzzleScreenState extends State<NumberPuzzleScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
-              // Restart button
+
               ElevatedButton.icon(
                 onPressed: () => setState(() => _initGame()),
                 icon: const Icon(Icons.refresh, color: Colors.white, size: 20),

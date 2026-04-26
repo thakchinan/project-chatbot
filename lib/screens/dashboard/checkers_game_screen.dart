@@ -5,7 +5,7 @@ import '../../services/api_service.dart';
 
 class CheckersGameScreen extends StatefulWidget {
   final User? user;
-  
+
   const CheckersGameScreen({super.key, this.user});
 
   @override
@@ -13,7 +13,7 @@ class CheckersGameScreen extends StatefulWidget {
 }
 
 class _CheckersGameScreenState extends State<CheckersGameScreen> {
-  // 8x8 board: 0 = empty, 1 = black piece, 2 = white piece
+
   List<List<int>> board = [];
   int? selectedRow;
   int? selectedCol;
@@ -32,10 +32,10 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
     board = List.generate(8, (row) {
       return List.generate(8, (col) {
         if ((row + col) % 2 == 1) {
-          if (row < 3) return 2; // White pieces
-          if (row > 4) return 1; // Black pieces
+          if (row < 3) return 2;
+          if (row > 4) return 1;
         }
-        return 0; // Empty
+        return 0;
       });
     });
     selectedRow = null;
@@ -46,12 +46,11 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
   }
 
   void _onCellTap(int row, int col) {
-    // Only playable on dark squares
+
     if ((row + col) % 2 == 0) return;
 
     final piece = board[row][col];
 
-    // Select a piece
     if (piece != 0) {
       if ((isBlackTurn && piece == 1) || (!isBlackTurn && piece == 2)) {
         setState(() {
@@ -62,20 +61,17 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
       return;
     }
 
-    // Move piece
     if (selectedRow != null && selectedCol != null) {
       final selectedPiece = board[selectedRow!][selectedCol!];
       final rowDiff = row - selectedRow!;
       final colDiff = (col - selectedCol!).abs();
 
-      // Simple move validation (diagonal move by 1)
       bool validMove = false;
       if (colDiff == 1) {
-        if (selectedPiece == 1 && rowDiff == -1) validMove = true; // Black moves up
-        if (selectedPiece == 2 && rowDiff == 1) validMove = true; // White moves down
+        if (selectedPiece == 1 && rowDiff == -1) validMove = true;
+        if (selectedPiece == 2 && rowDiff == 1) validMove = true;
       }
 
-      // Jump move (capture)
       if (colDiff == 2 && rowDiff.abs() == 2) {
         final midRow = (selectedRow! + row) ~/ 2;
         final midCol = (selectedCol! + col) ~/ 2;
@@ -84,12 +80,11 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
         if (midPiece != 0 && midPiece != selectedPiece) {
           if ((selectedPiece == 1 && rowDiff == -2) || (selectedPiece == 2 && rowDiff == 2)) {
             validMove = true;
-            // Remove captured piece
+
             setState(() {
               board[midRow][midCol] = 0;
             });
-            
-            // Check for win
+
             _checkWin();
           }
         }
@@ -111,14 +106,14 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
   void _checkWin() {
     int blackCount = 0;
     int whiteCount = 0;
-    
+
     for (var row in board) {
       for (var cell in row) {
         if (cell == 1) blackCount++;
         if (cell == 2) whiteCount++;
       }
     }
-    
+
     if (blackCount == 0 || whiteCount == 0) {
       final winner = blackCount == 0 ? 'ขาว' : 'ดำ';
       _showGameOver(winner);
@@ -127,8 +122,7 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
 
   Future<void> _showGameOver(String winner) async {
     final duration = DateTime.now().difference(_startTime!).inMinutes;
-    
-    // Save activity to database
+
     if (widget.user != null) {
       await ApiService.saveActivity(
         userId: widget.user!.id,
@@ -138,9 +132,9 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
         durationMinutes: duration > 0 ? duration : 1,
       );
     }
-    
+
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -216,7 +210,7 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
       ),
       body: Column(
         children: [
-          // Turn indicator and move count
+
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -254,8 +248,7 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
               ],
             ),
           ),
-          
-          // Board
+
           Expanded(
             child: Center(
               child: AspectRatio(
@@ -318,8 +311,7 @@ class _CheckersGameScreenState extends State<CheckersGameScreen> {
               ),
             ),
           ),
-          
-          // Reset Button
+
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(

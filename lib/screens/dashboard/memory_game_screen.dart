@@ -6,7 +6,7 @@ import '../../services/api_service.dart';
 
 class MemoryGameScreen extends StatefulWidget {
   final User? user;
-  
+
   const MemoryGameScreen({super.key, this.user});
 
   @override
@@ -47,14 +47,14 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
     setState(() {
       revealed[index] = true;
-      
+
       if (firstIndex == null) {
         firstIndex = index;
       } else {
         secondIndex = index;
         moves++;
         isChecking = true;
-        
+
         _checkMatch();
       }
     });
@@ -62,15 +62,15 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
   void _checkMatch() async {
     await Future.delayed(const Duration(milliseconds: 800));
-    
+
     if (!mounted) return;
-    
+
     setState(() {
       if (emojis[firstIndex!] == emojis[secondIndex!]) {
         matched[firstIndex!] = true;
         matched[secondIndex!] = true;
         matchedPairs++;
-        
+
         if (matchedPairs == 6) {
           _showWinDialog();
         }
@@ -78,7 +78,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         revealed[firstIndex!] = false;
         revealed[secondIndex!] = false;
       }
-      
+
       firstIndex = null;
       secondIndex = null;
       isChecking = false;
@@ -87,7 +87,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
   Future<void> _showWinDialog() async {
     final duration = DateTime.now().difference(_startTime!).inMinutes;
-    
+
     if (widget.user != null) {
       await ApiService.saveActivity(
         userId: widget.user!.id,
@@ -99,7 +99,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     }
 
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

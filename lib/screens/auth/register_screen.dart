@@ -70,7 +70,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    // Convert birth date format for database
     String? birthDate;
     if (_birthDateController.text.isNotEmpty) {
       final parts = _birthDateController.text.split('/');
@@ -142,26 +141,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Username Field
+
             _buildLabel('ชื่อผู้ใช้งาน'),
             _buildTextField(
               controller: _usernameController,
               hintText: 'username',
             ),
-            
+
             const SizedBox(height: 16),
 
-            // Email Field
             _buildLabel('อีเมล'),
             _buildTextField(
               controller: _emailController,
               hintText: 'example@email.com',
               keyboardType: TextInputType.emailAddress,
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Password Field
+
             _buildLabel('รหัสผ่าน'),
             _buildTextField(
               controller: _passwordController,
@@ -177,19 +174,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Full Name Field
+
             _buildLabel('ชื่อ-นามสกุล'),
             _buildTextField(
               controller: _fullNameController,
               hintText: 'example@example.com',
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Phone Field
+
             _buildLabel('เบอร์โทรศัพท์'),
             _buildTextField(
               controller: _phoneController,
@@ -197,10 +192,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               keyboardType: TextInputType.phone,
               maxLength: 10,
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Birth Date Field
+
             _buildLabel('วัน/เดือน/ปีเกิด'),
             GestureDetector(
               onTap: _selectDate,
@@ -211,10 +205,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 8),
-            
-            // Terms Text
+
             Text(
               'การสร้างบัญชีหมายความว่าคุณยอมรับ เงื่อนไขการใช้งาน\nและ นโยบายความเป็นส่วนตัว ของเรา',
               style: TextStyle(
@@ -224,10 +217,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 24),
-            
-            // Register Button
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -259,10 +251,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Login Link
+
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

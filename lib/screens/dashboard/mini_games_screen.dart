@@ -3,47 +3,37 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import 'settings_screen.dart';
 import 'memory_game_screen.dart';
-import 'color_sequence_screen.dart';
 import 'number_puzzle_screen.dart';
-import 'reaction_game_screen.dart';
 
 class MiniGamesScreen extends StatelessWidget {
   final User? user;
-  
+
   const MiniGamesScreen({super.key, this.user});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgBlue,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppGradients.primaryBlue,
+          ),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: AppColors.primaryBlue),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'มินิเกม',
+        title: const Text(
+          'มินิเกมคลายเครียด',
           style: TextStyle(
-            color: AppColors.primaryBlue,
+            color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              if (user != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SettingsScreen(user: user!)),
-                );
-              }
-            },
-            icon: Icon(Icons.settings, color: AppColors.primaryBlue),
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -51,129 +41,100 @@ class MiniGamesScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'เลือกเกมที่ต้องการเล่น',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.bold, 
+                  color: AppColors.textDark,
+                ),
               ),
-              const SizedBox(height: 20),
-              
-              // Games Grid using LayoutBuilder
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final itemWidth = (constraints.maxWidth - 16) / 2;
-                  final itemHeight = itemWidth * 0.9;
-                  
-                  return Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      SizedBox(
-                        width: itemWidth,
-                        height: itemHeight,
-                        child: _buildGameCard(
-                          context,
-                          emoji: '🎯',
-                          label: 'จับคู่',
-                          desc: 'ฝึกความจำ',
-                          color: Colors.pink,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => MemoryGameScreen(user: user)),
-                            );
-                          },
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        height: itemHeight,
-                        child: _buildGameCard(
-                          context,
-                          emoji: '🌈',
-                          label: 'จำสี',
-                          desc: 'ฝึกลำดับ',
-                          color: Colors.blue,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => ColorSequenceScreen(user: user)),
-                            );
-                          },
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        height: itemHeight,
-                        child: _buildGameCard(
-                          context,
-                          emoji: '🔢',
-                          label: 'ปริศนา',
-                          desc: 'เรียงตัวเลข',
-                          color: Colors.orange,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => NumberPuzzleScreen(user: user)),
-                            );
-                          },
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        height: itemHeight,
-                        child: _buildGameCard(
-                          context,
-                          emoji: '⚡',
-                          label: 'ปฏิกิริยา',
-                          desc: 'ทดสอบความเร็ว',
-                          color: Colors.green,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => ReactionGameScreen(user: user)),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+              const SizedBox(height: 6),
+              const Text(
+                'การเล่นเกมช่วยผ่อนคลายและกระตุ้นการทำงานของสมอง',
+                style: TextStyle(fontSize: 14, color: AppColors.textGray),
+              ),
+              const SizedBox(height: 24),
+
+              _buildGameCard(
+                context,
+                emoji: '🎯',
+                title: 'เกมจับคู่ความจำ',
+                desc: 'ฝึกความจำระยะสั้นและสมาธิ',
+                gradient: AppGradients.memoryGame,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => MemoryGameScreen(user: user)),
                   );
                 },
               ),
-              
-              const SizedBox(height: 24),
-              
-              // Tips Section
+              const SizedBox(height: 16),
+              _buildGameCard(
+                context,
+                emoji: '🔢',
+                title: 'เกมปริศนาตัวเลข',
+                desc: 'กระตุ้นสมองซีกซ้ายด้วยตรรกะตัวเลข',
+                gradient: AppGradients.triviaGame,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => NumberPuzzleScreen(user: user)),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 32),
+
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.2)),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryBlue.withValues(alpha: 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.lightbulb, color: Colors.amber, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'เคล็ดลับ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryBlue,
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.lightbulb_rounded, color: Colors.amber, size: 24),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'การเล่นเกมบริหารสมองวันละ 15-30 นาที ช่วยเสริมสร้างความจำและสมาธิได้ดี',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'เคล็ดลับสุขภาพสมอง',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'การเล่นเกมบริหารสมองวันละ 15-30 นาที จะช่วยชะลอความเสื่อมของสมอง เสริมสร้างความจำ และลดความเครียดได้เป็นอย่างดีครับ',
+                            style: TextStyle(fontSize: 13, color: AppColors.textGray, height: 1.5),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -184,48 +145,110 @@ class MiniGamesScreen extends StatelessWidget {
   Widget _buildGameCard(
     BuildContext context, {
     required String emoji,
-    required String label,
+    required String title,
     required String desc,
-    required Color color,
+    required Gradient gradient,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              color.withValues(alpha: 0.15),
-              color.withValues(alpha: 0.05),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 40),
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: gradient.colors.first.withValues(alpha: 0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color.withValues(alpha: 0.8),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              desc,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+            Positioned(
+              right: 40,
+              bottom: -40,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 32),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          desc,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

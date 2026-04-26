@@ -6,7 +6,7 @@ import '../../services/api_service.dart';
 
 class ColorSequenceScreen extends StatefulWidget {
   final User? user;
-  
+
   const ColorSequenceScreen({super.key, this.user});
 
   @override
@@ -89,7 +89,7 @@ class _ColorSequenceScreenState extends State<ColorSequenceScreen> {
 
   Future<void> _showGameOver() async {
     final duration = DateTime.now().difference(_startTime!).inMinutes;
-    
+
     if (widget.user != null) {
       await ApiService.saveActivity(
         userId: widget.user!.id,

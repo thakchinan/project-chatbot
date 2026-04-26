@@ -1,25 +1,27 @@
 import 'dart:math';
 
 class FFTCalculator {
-  /// Perform FFT on real input data
-  /// Input size must be power of 2 (e.g. 256)
+
   static List<double> computeMagnitudes(List<double> input) {
     int n = input.length;
     if ((n & (n - 1)) != 0) {
       throw Exception("Input size must be power of 2");
     }
 
-    // Prepare complex numbers
-    List<double> real = List.from(input);
+    // 1. หาค่าเฉลี่ย (Mean) เพื่อลบ DC Offset (สำคัญมาก!)
+    double sum = 0;
+    for (double val in input) sum += val;
+    double mean = sum / n;
+
+    List<double> real = List.filled(n, 0.0);
     List<double> imag = List.filled(n, 0.0);
 
-    // Apply Hanning Window (to reduce spectral leakage)
     for (int i = 0; i < n; i++) {
+        // 2. ลบ DC Offset ออก แล้วค่อยคูณด้วย Hanning Window
         double multiplier = 0.5 * (1 - cos(2 * pi * i / (n - 1)));
-        real[i] *= multiplier;
+        real[i] = (input[i] - mean) * multiplier;
     }
 
-    // Bit-reverse copy
     int j = 0;
     for (int i = 0; i < n - 1; i++) {
       if (i < j) {
@@ -35,12 +37,11 @@ class FFTCalculator {
       j += k;
     }
 
-    // Butterfly updates
     for (int len = 2; len <= n; len *= 2) {
       double ang = -2 * pi / len;
       double wlenR = cos(ang);
       double wlenI = sin(ang);
-      
+
       for (int i = 0; i < n; i += len) {
         double wR = 1.0;
         double wI = 0.0;
@@ -49,12 +50,12 @@ class FFTCalculator {
           double uI = imag[i + j];
           double vR = real[i + j + len ~/ 2] * wR - imag[i + j + len ~/ 2] * wI;
           double vI = real[i + j + len ~/ 2] * wI + imag[i + j + len ~/ 2] * wR;
-          
+
           real[i + j] = uR + vR;
           imag[i + j] = uI + vI;
           real[i + j + len ~/ 2] = uR - vR;
           imag[i + j + len ~/ 2] = uI - vI;
-          
+
           double tempR = wR * wlenR - wI * wlenI;
           wI = wR * wlenI + wI * wlenR;
           wR = tempR;
@@ -62,20 +63,19 @@ class FFTCalculator {
       }
     }
 
-    // Calculate magnitudes (Power Spectrum)
     List<double> magnitudes = List.filled(n ~/ 2, 0.0);
-    // Skip DC component (index 0)
+
     for (int i = 1; i < n ~/ 2; i++) {
+        // คำนวณ Magnitude
         magnitudes[i] = sqrt(real[i] * real[i] + imag[i] * imag[i]);
     }
-    
+
     return magnitudes;
   }
 
-  /// Calculate Absolute Band Power from FFT magnitudes using sampling rate
   static Map<String, double> calculateBandPowers(List<double> magnitudes, int samplingRate) {
     int fftSize = magnitudes.length * 2;
-    double resolution = samplingRate / fftSize; // usually 1 Hz for 256Hz/256samples
+    double resolution = samplingRate / fftSize;
 
     double delta = 0;
     double theta = 0;
@@ -85,7 +85,8 @@ class FFTCalculator {
 
     for (int i = 0; i < magnitudes.length; i++) {
         double freq = i * resolution;
-        double power = magnitudes[i];
+        // คิดเป็น Power ที่แท้จริง (ยกกำลังสอง) ตามหลักสัญญาณ PSD
+        double power = magnitudes[i] * magnitudes[i];
 
         if (freq >= 1 && freq < 4) delta += power;
         else if (freq >= 4 && freq < 8) theta += power;
@@ -94,9 +95,6 @@ class FFTCalculator {
         else if (freq >= 30 && freq < 50) gamma += power;
     }
 
-    // Logarithmic scale (dB) is standard for research visualization
-    // However, for raw power, we usually return average power density or sum
-    // Returning Sum Power for now
     return {
         'delta': delta,
         'theta': theta,

@@ -5,7 +5,7 @@ import '../../services/api_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   final User? user;
-  
+
   const NotificationSettingsScreen({super.key, this.user});
 
   @override
@@ -31,7 +31,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
 
     final result = await ApiService.getSettings(widget.user!.id);
-    
+
     if (result['success'] == true && result['settings'] != null) {
       final settings = result['settings'];
       setState(() {

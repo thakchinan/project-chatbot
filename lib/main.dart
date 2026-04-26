@@ -11,14 +11,10 @@ import 'services/rag_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
   await dotenv.load(fileName: ".env");
 
-  // Initialize Supabase
   await SupabaseService.initialize();
 
-  // สร้าง embeddings สำหรับ knowledge base (ทำงานใน background)
-  // จะสร้างเฉพาะ knowledge ที่ยังไม่มี embedding เท่านั้น
   RAGService.updateEmbeddings().then((result) {
     if (result['success'] == true && (result['updated_count'] ?? 0) > 0) {
       debugPrint('🧠 RAG: Updated ${result['updated_count']} embeddings');

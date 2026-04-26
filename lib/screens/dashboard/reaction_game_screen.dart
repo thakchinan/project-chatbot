@@ -7,7 +7,7 @@ import '../../services/api_service.dart';
 
 class ReactionGameScreen extends StatefulWidget {
   final User? user;
-  
+
   const ReactionGameScreen({super.key, this.user});
 
   @override
@@ -53,7 +53,7 @@ class _ReactionGameScreenState extends State<ReactionGameScreen> {
     });
 
     final waitDuration = Duration(milliseconds: 1500 + Random().nextInt(3000));
-    
+
     waitTimer = Timer(waitDuration, () {
       if (mounted) {
         setState(() {
@@ -84,12 +84,12 @@ class _ReactionGameScreenState extends State<ReactionGameScreen> {
       final now = DateTime.now();
       final reaction = now.difference(showTime!).inMilliseconds;
       reactionTimes.add(reaction);
-      
+
       setState(() {
         reactionTime = reaction;
         isReady = false;
         round++;
-        
+
         if (reaction < 300) {
           score += 30;
         } else if (reaction < 500) {
@@ -105,7 +105,7 @@ class _ReactionGameScreenState extends State<ReactionGameScreen> {
     final avgReaction = reactionTimes.isNotEmpty
         ? (reactionTimes.reduce((a, b) => a + b) / reactionTimes.length).round()
         : 0;
-    
+
     final duration = DateTime.now().difference(_startTime!).inMinutes;
 
     if (widget.user != null) {
@@ -169,7 +169,7 @@ class _ReactionGameScreenState extends State<ReactionGameScreen> {
   Widget build(BuildContext context) {
     Color bgColor;
     String text;
-    
+
     if (tooEarly) {
       bgColor = Colors.red;
       text = '❌ เร็วไป!\nแตะเพื่อลองใหม่';

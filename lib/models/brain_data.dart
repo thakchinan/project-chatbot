@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Test Result Model
 class TestResult {
   final int stressScore;
   final int depressionScore;
@@ -19,7 +18,6 @@ class TestResult {
 
 enum StressLevel { normal, mild, moderate, high }
 
-// Brainwave Data Model
 class BrainwaveData {
   final int alpha;
   final int beta;
@@ -58,7 +56,6 @@ class BrainwaveData {
 
 enum FocusLevel { low, moderate, high }
 
-// Activity Model
 class Activity {
   final String id;
   final String emoji;
@@ -77,7 +74,6 @@ class Activity {
   });
 }
 
-// Trivia Question Model
 class TriviaQuestion {
   final String question;
   final String correctAnswer;
@@ -96,9 +92,9 @@ class TriviaQuestion {
     final incorrectAnswers = (json['incorrect_answers'] as List)
         .map((a) => _decodeHtml(a.toString()))
         .toList();
-    
+
     final allAnswers = [...incorrectAnswers, correctAnswer]..shuffle();
-    
+
     return TriviaQuestion(
       question: _decodeHtml(json['question']),
       correctAnswer: correctAnswer,
@@ -119,7 +115,6 @@ class TriviaQuestion {
   }
 }
 
-// Memory Card Model
 class MemoryCard {
   final int id;
   final String emoji;

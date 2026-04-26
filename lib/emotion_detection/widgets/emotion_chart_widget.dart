@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/emotion_result.dart';
 import '../models/emotion_type.dart';
 
-/// Widget แสดงกราฟแท่งคะแนนอารมณ์ทั้งหมด
 class EmotionChartWidget extends StatelessWidget {
   final EmotionResult? emotionResult;
 

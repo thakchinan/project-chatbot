@@ -1,5 +1,4 @@
-/// Schedule Model - ตาม Class Diagram
-/// ตารางกิจกรรมประจำวัน
+
 class Schedule {
   final int? id;
   final int userId;
@@ -77,10 +76,6 @@ class Schedule {
     };
   }
 
-  /// updateSchedule(): Null - ตาม Class Diagram
-  /// ใช้ SupabaseService.updateScheduleCompletion() แทน
-
-  /// setAllDay(): Null - ตาม Class Diagram
   Schedule setAllDay() {
     return Schedule(
       id: id,

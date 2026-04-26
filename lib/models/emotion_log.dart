@@ -1,5 +1,4 @@
-/// EmotionLog Model - ตาม Class Diagram (ใหม่)
-/// บันทึกอารมณ์ของผู้ใช้
+
 class EmotionLog {
   final int? logId;
   final int userId;
@@ -39,7 +38,6 @@ class EmotionLog {
     };
   }
 
-  /// logDetailed(): Void - ตาม Class Diagram
   String logDetailed() {
     return '''
 บันทึกอารมณ์
@@ -51,7 +49,6 @@ ${triggerEvent != null ? 'เหตุการณ์กระตุ้น: $tri
 ''';
   }
 
-  /// Helper: ได้ emoji ตามประเภทอารมณ์
   String get emoji {
     switch (emotionType.toLowerCase()) {
       case 'happy':
@@ -77,7 +74,6 @@ ${triggerEvent != null ? 'เหตุการณ์กระตุ้น: $tri
     }
   }
 
-  /// Helper: ได้ชื่อภาษาไทยตามอารมณ์
   String get emotionNameThai {
     switch (emotionType.toLowerCase()) {
       case 'happy':

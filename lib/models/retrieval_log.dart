@@ -1,5 +1,4 @@
-/// RetrievalLog Model - ตาม Class Diagram
-/// บันทึกการดึงข้อมูลจาก Knowledge Base (RAG)
+
 class RetrievalLog {
   final int? logId;
   final int? messageId;
@@ -51,7 +50,6 @@ class RetrievalLog {
     };
   }
 
-  /// logDetailed(): Void - ตาม Class Diagram
   String logDetailed() {
     return 'RetrievalLog[query=$queryText, score=$similarityScore, method=$searchMethod, used=$wasUsed]';
   }

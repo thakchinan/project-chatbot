@@ -1,5 +1,4 @@
-/// StressTestResult Model - ตาม Class Diagram
-/// ผลการทดสอบความเครียด
+
 class StressTestResult {
   final int? id;
   final int userId;
@@ -49,7 +48,6 @@ class StressTestResult {
     };
   }
 
-  /// evaluateStress(): String - ตาม Class Diagram
   String evaluateStress() {
     if (stressScore >= 75) return 'ระดับความเครียดสูงมาก ควรพบแพทย์';
     if (stressScore >= 50) return 'ระดับความเครียดปานกลาง ควรพักผ่อน';
@@ -57,7 +55,6 @@ class StressTestResult {
     return 'ระดับความเครียดปกติ';
   }
 
-  /// generateReport(): String - ตาม Class Diagram
   String generateReport() {
     return '''
 รายงานผลการทดสอบความเครียด

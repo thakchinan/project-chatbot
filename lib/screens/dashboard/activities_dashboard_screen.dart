@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
-import '../../services/api_service.dart';
 import 'caretaker_screen.dart';
-import 'daily_routine_screen.dart';
 import 'mini_games_screen.dart';
 import 'nutrition_screen.dart';
 import 'settings_screen.dart';
@@ -17,202 +15,90 @@ class ActivitiesDashboardScreen extends StatefulWidget {
   State<ActivitiesDashboardScreen> createState() => _ActivitiesDashboardScreenState();
 }
 
-class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen> {
-  List<Map<String, dynamic>> schedules = [];
-  bool _isLoading = true;
+class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
-    _loadSchedules();
-  }
-
-  Future<void> _loadSchedules() async {
-    setState(() => _isLoading = true);
-    
-    final result = await ApiService.getSchedules(widget.user.id);
-    
-    if (result['success'] == true && result['schedules'] != null) {
-      setState(() {
-        schedules = List<Map<String, dynamic>>.from(result['schedules']);
-        _isLoading = false;
-      });
-    } else {
-      // Use default schedules if API fails
-      setState(() {
-        schedules = [
-          {
-            'id': 0,
-            'time': '09:00',
-            'title': 'ทดสอบความเครียด',
-            'description': 'แบบทดสอบรายสัปดาห์',
-            'icon_name': 'quiz',
-            'color': 'blue',
-          },
-          {
-            'id': 0,
-            'time': '12:00',
-            'title': 'พักผ่อนสายตา',
-            'description': 'มองไกลทุกๆ 20 นาที',
-            'icon_name': 'visibility',
-            'color': 'green',
-          },
-          {
-            'id': 0,
-            'time': '15:00',
-            'title': 'เล่นเกมบริหารสมอง',
-            'description': 'มินิเกม 15 นาที',
-            'icon_name': 'games',
-            'color': 'orange',
-          },
-        ];
-        _isLoading = false;
-      });
-    }
-  }
-
-  IconData _getIcon(String iconName) {
-    switch (iconName) {
-      case 'quiz': return Icons.quiz;
-      case 'visibility': return Icons.visibility;
-      case 'games': return Icons.games;
-      case 'event': return Icons.event;
-      case 'alarm': return Icons.alarm;
-      case 'fitness': return Icons.fitness_center;
-      case 'restaurant': return Icons.restaurant;
-      case 'book': return Icons.book;
-      default: return Icons.event;
-    }
-  }
-
-  Color _getColor(String colorName) {
-    switch (colorName) {
-      case 'blue': return Colors.blue;
-      case 'green': return Colors.green;
-      case 'orange': return Colors.orange;
-      case 'red': return Colors.red;
-      case 'purple': return Colors.purple;
-      case 'pink': return Colors.pink;
-      default: return Colors.purple;
-    }
-  }
-
-  Future<void> _addSchedule(String title, String time, String description) async {
-    final result = await ApiService.addSchedule(
-      userId: widget.user.id,
-      title: title,
-      description: description,
-      time: time,
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
     );
-    
-    if (result['success'] == true) {
-      await _loadSchedules();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('เพิ่มกำหนดการแล้ว')),
-        );
-      }
-    } else {
-      // Add locally if API fails
-      setState(() {
-        schedules.add({
-          'id': 0,
-          'time': time,
-          'title': title,
-          'description': description,
-          'icon_name': 'event',
-          'color': 'purple',
-        });
-      });
-    }
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic);
+    _animController.forward();
   }
 
-  Future<void> _deleteSchedule(int index, int scheduleId, String title) async {
-    if (scheduleId > 0) {
-      final result = await ApiService.deleteSchedule(
-        scheduleId: scheduleId,
-        userId: widget.user.id,
-      );
-      
-      if (result['success'] == true) {
-        await _loadSchedules();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ลบ "$title" แล้ว')),
-          );
-        }
-      }
-    } else {
-      setState(() {
-        schedules.removeAt(index);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ลบ "$title" แล้ว')),
-      );
-    }
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'กิจกรรม',
-          style: TextStyle(
-            color: AppColors.primaryBlue,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)),
-              );
-            },
-            icon: Icon(Icons.settings, color: AppColors.primaryBlue),
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _loadSchedules,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
+        child: FadeTransition(
+          opacity: _fadeAnim,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                _buildHeader(),
+
+                const SizedBox(height: 24),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ลำดับคิดแข่งขัน ตัวคุณเองด้วยมินิเกม',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        'เลือกกิจกรรม',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
                       ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final itemWidth = (constraints.maxWidth - 16) / 2;
-                          final itemHeight = itemWidth * 0.9;
-                          
-                          return Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
+                      const SizedBox(height: 4),
+                      Text(
+                        'กิจกรรมช่วยคลายเครียดและดูแลสุขภาพจิต',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Column(
+                        children: [
+
+                          Row(
                             children: [
-                              SizedBox(
-                                width: itemWidth,
-                                height: itemHeight,
-                                child: _buildActivityCard(
-                                  context,
-                                  icon: Icons.people,
+                              Expanded(
+                                child: _buildPremiumCard(
+                                  icon: Icons.people_alt_rounded,
                                   label: 'ผู้ดูแล',
+                                  subtitle: 'ติดต่อผู้ดูแลของคุณ',
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  iconBgColor: Colors.white.withOpacity(0.2),
+                                  delay: 0,
                                   onTap: () {
                                     Navigator.push(
                                       context,
@@ -221,13 +107,19 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen> {
                                   },
                                 ),
                               ),
-                              SizedBox(
-                                width: itemWidth,
-                                height: itemHeight,
-                                child: _buildActivityCard(
-                                  context,
-                                  icon: Icons.games,
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _buildPremiumCard(
+                                  icon: Icons.sports_esports_rounded,
                                   label: 'เกมคลายเครียด',
+                                  subtitle: 'บริหารสมองด้วยมินิเกม',
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  iconBgColor: Colors.white.withOpacity(0.2),
+                                  delay: 1,
                                   onTap: () {
                                     Navigator.push(
                                       context,
@@ -236,106 +128,393 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen> {
                                   },
                                 ),
                               ),
-                              SizedBox(
-                                width: itemWidth,
-                                height: itemHeight,
-                                child: _buildActivityCard(
-                                  context,
-                                  icon: Icons.restaurant,
-                                  label: 'รู้โภชนา',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const NutritionScreen()),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(
-                                width: itemWidth,
-                                height: itemHeight,
-                                child: _buildActivityCard(
-                                  context,
-                                  icon: Icons.access_time,
-                                  label: 'จากกิจวัตร',
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const DailyRoutineScreen()),
-                                    );
-                                  },
-                                ),
-                              ),
                             ],
-                          );
-                        },
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Schedule Section
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          _buildFeaturedNutritionCard(),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'กำหนดการ',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            width: 4,
+                            height: 20,
+                            decoration: BoxDecoration(
                               color: AppColors.primaryBlue,
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
-                          TextButton.icon(
-                            onPressed: () => _showAddScheduleDialog(context),
-                            icon: Icon(Icons.add, size: 18, color: AppColors.primaryBlue),
-                            label: Text('เพิ่ม', style: TextStyle(color: AppColors.primaryBlue)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'เคล็ดลับสุขภาพจิต',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      
-                      if (schedules.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(child: Text('ยังไม่มีกำหนดการ')),
-                        )
-                      else
-                        ...schedules.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final schedule = entry.value;
-                          final scheduleId = schedule['id'] is int ? schedule['id'] : int.tryParse(schedule['id'].toString()) ?? 0;
-                          
-                          return _buildScheduleCard(
-                            context,
-                            index: index,
-                            scheduleId: scheduleId,
-                            time: schedule['time'] ?? '',
-                            title: schedule['title'] ?? '',
-                            desc: schedule['description'] ?? '',
-                            icon: _getIcon(schedule['icon_name'] ?? 'event'),
-                            color: _getColor(schedule['color'] ?? 'purple'),
-                          );
-                        }),
+                      const SizedBox(height: 16),
+
+                      _buildTipCard(
+                        icon: Icons.self_improvement_rounded,
+                        title: 'หายใจลึกๆ 4-7-8',
+                        description: 'หายใจเข้า 4 วินาที กลั้น 7 วินาที หายใจออก 8 วินาที ช่วยลดความเครียดทันที',
+                        color: const Color(0xFF6C63FF),
+                      ),
+                      _buildTipCard(
+                        icon: Icons.directions_walk_rounded,
+                        title: 'เดินเล่น 15 นาที',
+                        description: 'การเดินเล่นในธรรมชาติช่วยลดระดับ cortisol (ฮอร์โมนความเครียด) ได้ถึง 20%',
+                        color: const Color(0xFF4CAF50),
+                      ),
+                      _buildTipCard(
+                        icon: Icons.music_note_rounded,
+                        title: 'ฟังเพลงที่ชอบ',
+                        description: 'ดนตรีช่วยกระตุ้นการหลั่ง dopamine ทำให้รู้สึกมีความสุขและผ่อนคลาย',
+                        color: const Color(0xFFFF6B6B),
+                      ),
                     ],
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 30),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildScheduleCard(
-    BuildContext context, {
-    required int index,
-    required int scheduleId,
-    required String time,
-    required String title,
-    required String desc,
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A7FC1).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'กิจกรรม',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'สวัสดี คุณ${widget.user.fullName ?? widget.user.username}',
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'ดูแลสุขภาพจิตกันเถอะ!',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumCard({
     required IconData icon,
+    required String label,
+    required String subtitle,
+    required Gradient gradient,
+    required Color iconBgColor,
+    required int delay,
+    required VoidCallback onTap,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 600 + (delay * 150)),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+        );
+      },
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 160,
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+
+              Positioned(
+                top: -20,
+                right: -20,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -30,
+                left: -10,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: iconBgColor,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 26),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withOpacity(0.75),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedNutritionCard() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+        );
+      },
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NutritionScreen()),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          height: 120,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF7E5F), Color(0xFFFEB47B)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF7E5F).withOpacity(0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+
+              Positioned(
+                right: -10,
+                top: -10,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 20,
+                bottom: -20,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.06),
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 30),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'โภชนาการคลายเครียด',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'อาหารและสารอาหารที่ช่วยลดความเครียด พร้อมสรรพคุณ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.85),
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTipCard({
+    required IconData icon,
+    required String title,
+    required String description,
     required Color color,
   }) {
     return Container(
@@ -343,167 +522,52 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              time,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primaryBlue),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: () => _confirmDelete(context, index, scheduleId, title),
-            icon: Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
-          ),
         ],
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, int index, int scheduleId, String title) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('ลบกำหนดการ'),
-        content: Text('คุณต้องการลบ "$title" หรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteSchedule(index, scheduleId, title);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('ลบ', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddScheduleDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final timeController = TextEditingController();
-    final descController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('เพิ่มกำหนดการ'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  labelText: 'ชื่อกำหนดการ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: timeController,
-                decoration: InputDecoration(
-                  labelText: 'เวลา',
-                  hintText: '09:00',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                decoration: InputDecoration(
-                  labelText: 'รายละเอียด',
-                  hintText: 'กิจกรรมที่ต้องทำ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (titleController.text.isNotEmpty && timeController.text.isNotEmpty) {
-                Navigator.pop(context);
-                _addSchedule(
-                  titleController.text,
-                  timeController.text,
-                  descController.text.isEmpty ? 'กิจกรรมใหม่' : descController.text,
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-            child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildActivityCard(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.primaryBlue.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primaryBlue.withOpacity(0.2)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: AppColors.primaryBlue),
-            const SizedBox(height: 12),
-            Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.primaryBlue)),
-          ],
-        ),
       ),
     );
   }

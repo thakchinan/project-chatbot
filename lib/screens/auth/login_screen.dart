@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Text
+
             Text(
               'ยินดีต้อนรับ',
               style: TextStyle(
@@ -106,19 +106,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 1.5,
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
-            // Username Field
+
             _buildLabel('ชื่อผู้ใช้งาน'),
             _buildTextField(
               controller: _usernameController,
               hintText: 'example@example.com',
             ),
-            
+
             const SizedBox(height: 20),
-            
-            // Password Field
+
             _buildLabel('รหัสผ่าน'),
             _buildTextField(
               controller: _passwordController,
@@ -134,13 +132,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
             ),
-            
-            // Forgot Password
+
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  // Navigate to forgot password
+
                 },
                 child: Text(
                   'ลืมรหัสผ่าน?',
@@ -151,10 +148,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 30),
-            
-            // Login Button
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -186,10 +182,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
-            // Register Link
+
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

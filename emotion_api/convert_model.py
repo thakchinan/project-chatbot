@@ -1,14 +1,3 @@
-"""
-Script แปลง Emotion_TSception.h5 → TFLite
-และแปลง .pkl → .json สำหรับใช้ใน Flutter
-
-วิธีใช้:
-  cd emotion_api
-  python3 -m venv venv
-  source venv/bin/activate
-  pip install tensorflow scikit-learn joblib numpy
-  python convert_model.py
-"""
 
 import os
 import sys
@@ -25,9 +14,7 @@ OUTPUT_TFLITE = os.path.join(MODELS_DIR, "emotion_model.tflite")
 OUTPUT_SCALER_JSON = os.path.join(MODELS_DIR, "scaler_params.json")
 OUTPUT_LABELS_JSON = os.path.join(MODELS_DIR, "emotion_labels.json")
 
-
 def convert_h5_to_tflite():
-    """แปลง .h5 → .tflite"""
     print("=" * 50)
     print("📦 แปลง Emotion_TSception.h5 → TFLite")
     print("=" * 50)
@@ -39,20 +26,16 @@ def convert_h5_to_tflite():
         return False
 
     try:
-        # Load Keras model
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         print(f"✅ โหลด model สำเร็จ")
         print(f"   Input shape:  {model.input_shape}")
         print(f"   Output shape: {model.output_shape}")
         model.summary()
 
-        # Convert to TFLite
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
 
-        # Optimization options
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
 
-        # Allow TF ops if needed (for complex layers)
         converter.target_spec.supported_ops = [
             tf.lite.OpsSet.TFLITE_BUILTINS,
             tf.lite.OpsSet.SELECT_TF_OPS,
@@ -61,7 +44,6 @@ def convert_h5_to_tflite():
 
         tflite_model = converter.convert()
 
-        # Save
         with open(OUTPUT_TFLITE, "wb") as f:
             f.write(tflite_model)
 
@@ -69,7 +51,6 @@ def convert_h5_to_tflite():
         print(f"✅ บันทึก TFLite model: {OUTPUT_TFLITE}")
         print(f"   ขนาด: {size_mb:.2f} MB")
 
-        # Verify the converted model
         interpreter = tf.lite.Interpreter(model_path=OUTPUT_TFLITE)
         interpreter.allocate_tensors()
         input_details = interpreter.get_input_details()
@@ -86,9 +67,7 @@ def convert_h5_to_tflite():
         traceback.print_exc()
         return False
 
-
 def convert_scaler_to_json():
-    """แปลง scaler_kmeans.pkl → JSON"""
     print("\n" + "=" * 50)
     print("📦 แปลง scaler_kmeans.pkl → JSON")
     print("=" * 50)
@@ -120,7 +99,6 @@ def convert_scaler_to_json():
             scaler_data["feature_names"] = scaler.feature_names_in_.tolist()
             print(f"   feature_names: {scaler.feature_names_in_}")
 
-        # Check for MinMaxScaler
         if hasattr(scaler, "data_min_"):
             scaler_data["data_min"] = scaler.data_min_.tolist()
         if hasattr(scaler, "data_max_"):
@@ -144,9 +122,7 @@ def convert_scaler_to_json():
         traceback.print_exc()
         return False
 
-
 def convert_label_encoder_to_json():
-    """แปลง label_encoder_kmeans.pkl → JSON"""
     print("\n" + "=" * 50)
     print("📦 แปลง label_encoder_kmeans.pkl → JSON")
     print("=" * 50)
@@ -170,11 +146,9 @@ def convert_label_encoder_to_json():
             labels_data["classes"] = [str(c) for c in classes]
             print(f"   classes: {labels_data['classes']}")
 
-            # Create index → label mapping
             labels_data["index_to_label"] = {str(i): str(c) for i, c in enumerate(classes)}
             labels_data["label_to_index"] = {str(c): i for i, c in enumerate(classes)}
 
-        # If it's a KMeans model, extract cluster info
         if hasattr(encoder, "cluster_centers_"):
             labels_data["cluster_centers"] = encoder.cluster_centers_.tolist()
             print(f"   cluster_centers shape: {encoder.cluster_centers_.shape}")
@@ -196,7 +170,6 @@ def convert_label_encoder_to_json():
         import traceback
         traceback.print_exc()
         return False
-
 
 if __name__ == "__main__":
     print("🚀 เริ่มแปลง model สำหรับ Flutter TFLite\n")

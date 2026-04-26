@@ -14,8 +14,7 @@ class WelcomeScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 40),
-            
-            // Logo - Smart Brain
+
             Column(
               children: [
                 Text(
@@ -38,10 +37,9 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 8),
-            
-            // Subtitle
+
             Text(
               'Smart Brain Center',
               style: TextStyle(
@@ -50,10 +48,9 @@ class WelcomeScreen extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
-            // Illustration Image
+
             Expanded(
               flex: 3,
               child: Padding(
@@ -64,10 +61,9 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 8),
-            
-            // Description
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
@@ -80,15 +76,14 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
-            // Buttons
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
                 children: [
-                  // Login Button (เข้าสู่ระบบ)
+
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -116,10 +111,9 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
-                  // Register Button (สมัครบัญชี)
+
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -149,7 +143,7 @@ class WelcomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 40),
           ],
         ),

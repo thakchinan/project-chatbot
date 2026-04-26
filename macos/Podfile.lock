@@ -24,6 +24,8 @@ PODS:
     - CwlCatchException
     - Flutter
     - FlutterMacOS
+  - tflite_flutter (0.0.1):
+    - FlutterMacOS
   - url_launcher_macos (0.0.1):
     - FlutterMacOS
 
@@ -37,6 +39,7 @@ DEPENDENCIES:
   - record_macos (from `Flutter/ephemeral/.symlinks/plugins/record_macos/macos`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
   - speech_to_text (from `Flutter/ephemeral/.symlinks/plugins/speech_to_text/darwin`)
+  - tflite_flutter (from `Flutter/ephemeral/.symlinks/plugins/tflite_flutter/macos`)
   - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
 
 SPEC REPOS:
@@ -63,6 +66,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
   speech_to_text:
     :path: Flutter/ephemeral/.symlinks/plugins/speech_to_text/darwin
+  tflite_flutter:
+    :path: Flutter/ephemeral/.symlinks/plugins/tflite_flutter/macos
   url_launcher_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos
 
@@ -78,6 +83,7 @@ SPEC CHECKSUMS:
   record_macos: 4680f37daeebf52162e715efb7ff682f0a5ce4fd
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   speech_to_text: 87bf9298952e8d9073be1b6aade6d5758db5170c
+  tflite_flutter: b186ea3c62c076a90652f47c01005fe36c75171e
   url_launcher_macos: 175a54c831f4375a6cf895875f716ee5af3888ce
 
 PODFILE CHECKSUM: 346bfb2deb41d4a6ebd6f6799f92188bde2d246f

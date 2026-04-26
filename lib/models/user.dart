@@ -1,5 +1,4 @@
-/// User Model - ตาม Class Diagram
-/// ตารางหลักเก็บข้อมูลผู้ใช้
+
 class User {
   final int id;
   final String username;
@@ -67,28 +66,23 @@ class User {
     };
   }
 
-  /// login(): bool - ตาม Class Diagram
   static Future<bool> login(String username, String password) async {
-    // Implemented in SupabaseService.login()
+
     throw UnimplementedError('Use SupabaseService.login() instead');
   }
 
-  /// register(): Void - ตาม Class Diagram
   static Future<void> register() async {
     throw UnimplementedError('Use SupabaseService.register() instead');
   }
 
-  /// getProfile(): Void - ตาม Class Diagram
   Future<void> getProfile() async {
     throw UnimplementedError('Use SupabaseService.getProfile() instead');
   }
 
-  /// updateProfile(): Void - ตาม Class Diagram
   Future<void> updateProfile() async {
     throw UnimplementedError('Use SupabaseService.updateProfile() instead');
   }
 
-  /// Helper: ชื่อเต็ม
   String get displayName {
     if (fullName != null && fullName!.isNotEmpty) return fullName!;
     if (firstName != null || lastName != null) {
@@ -97,7 +91,6 @@ class User {
     return username;
   }
 
-  /// สร้าง copy ของ User พร้อมค่าที่อัปเดต
   User copyWith({
     int? id,
     String? username,

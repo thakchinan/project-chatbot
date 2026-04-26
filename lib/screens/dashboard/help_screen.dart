@@ -30,7 +30,7 @@ class HelpScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===== Header =====
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -78,7 +78,6 @@ class HelpScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ===== วิธีใช้งาน =====
             Text(
               'วิธีใช้งาน',
               style: TextStyle(
@@ -122,7 +121,6 @@ class HelpScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ===== ติดต่อเรา =====
             Text(
               'ติดต่อเรา',
               style: TextStyle(
@@ -150,7 +148,6 @@ class HelpScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ===== เพิ่มเติม =====
             Text(
               'ข้อมูลเพิ่มเติม',
               style: TextStyle(
@@ -164,7 +161,7 @@ class HelpScreen extends StatelessWidget {
             _buildInfoCard(
               icon: Icons.info_outline,
               title: 'เวอร์ชัน',
-              value: 'v1.1.0',
+              value: 'v1.1.1',
             ),
             _buildInfoCard(
               icon: Icons.shield_outlined,

@@ -1,5 +1,4 @@
-/// EEGSession Model - ตาม Class Diagram
-/// ข้อมูลแต่ละ session การวัดคลื่นสมอง
+
 class EEGSession {
   final int? sessionId;
   final int userId;
@@ -88,14 +87,6 @@ class EEGSession {
     };
   }
 
-  /// startSession(): Null - ตาม Class Diagram
-  /// ใช้ SupabaseService.startEEGSession() แทน
-
-  /// endSession(): Null - ตาม Class Diagram
-  /// ใช้ SupabaseService.endEEGSession() แทน
-
-  /// autoAnalysis(self): Null - ตาม Class Diagram
-  /// วิเคราะห์ session อัตโนมัติ
   String autoAnalysis() {
     if (stressScore > 70) {
       return 'ระดับความเครียดสูง แนะนำทำกิจกรรมผ่อนคลาย';

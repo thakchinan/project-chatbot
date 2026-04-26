@@ -8,7 +8,7 @@ import 'settings_screen.dart';
 
 class RecommendationScreen extends StatefulWidget {
   final User? user;
-  
+
   const RecommendationScreen({super.key, this.user});
 
   @override
@@ -21,18 +21,16 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   final _scrollController = ScrollController();
   final TTSService _ttsService = TTSService();
   final STTService _sttService = STTService();
-  
+
   List<ChatMessage> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
-  bool _autoSpeak = true; // เปิด auto-speak เป็นค่าเริ่มต้น
+  bool _autoSpeak = true;
   int? _speakingMessageIndex;
-  
-  // STT States
-  bool _isVoiceMode = false; // กำลังอยู่ในโหมดพูดหรือไม่
-  String _partialText = ''; // ข้อความที่กำลังรับรู้ (ยังไม่จบ)
-  
-  // Animation controllers
+
+  bool _isVoiceMode = false;
+  String _partialText = '';
+
   late AnimationController _micPulseController;
   late AnimationController _waveController;
 
@@ -41,14 +39,12 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     super.initState();
     _initServices();
     _loadChatHistory();
-    
-    // Mic pulse animation
+
     _micPulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
-    
-    // Sound wave animation
+
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -58,8 +54,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   Future<void> _initServices() async {
     await _ttsService.init();
     await _sttService.init();
-    
-    // ตั้งค่า STT callbacks
+
     _sttService.onResult = _onSpeechResult;
     _sttService.onPartialResult = _onPartialResult;
     _sttService.onListeningStarted = _onListeningStarted;
@@ -78,15 +73,13 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     super.dispose();
   }
 
-  // ==================== STT CALLBACKS ====================
-
   void _onSpeechResult(String text) {
     if (text.isNotEmpty && mounted) {
       setState(() {
         _partialText = '';
         _isVoiceMode = false;
       });
-      // ส่งข้อความอัตโนมัติหลังรับเสียงเสร็จ
+
       _messageController.text = text;
       _sendMessage();
     }
@@ -132,25 +125,23 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     }
   }
 
-  // ==================== VOICE TOGGLE ====================
-
   Future<void> _toggleVoiceInput() async {
     if (_sttService.isListening) {
-      // กำลังฟัง → หยุดแล้วส่ง Whisper แปลงเสียง
+
       await _sttService.stopListening();
     } else {
-      // ถ้า STT ยังไม่พร้อม ลอง init
+
       if (!_sttService.isAvailable) {
         final success = await _sttService.init();
         if (!success) return;
-        // ตั้งค่า callbacks
+
         _sttService.onResult = _onSpeechResult;
         _sttService.onPartialResult = _onPartialResult;
         _sttService.onListeningStarted = _onListeningStarted;
         _sttService.onListeningStopped = _onListeningStopped;
         _sttService.onError = _onSpeechError;
       }
-      // หยุด TTS ก่อน (ถ้ากำลังพูดอยู่)
+
       if (_ttsService.isSpeaking) {
         await _ttsService.stop();
         setState(() => _speakingMessageIndex = null);
@@ -158,8 +149,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
       await _sttService.startListening();
     }
   }
-
-  // ==================== CHAT FUNCTIONS ====================
 
   Future<void> _loadChatHistory() async {
     if (widget.user == null) {
@@ -177,7 +166,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     }
 
     final result = await ApiService.getChatHistory(widget.user!.id);
-    
+
     if (result['success'] == true && result['messages'] != null) {
       setState(() {
         _messages = (result['messages'] as List).map((m) {
@@ -187,7 +176,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
             time: m['sent_at']?.toString().substring(11, 16) ?? '',
           );
         }).toList();
-        
+
         if (_messages.isEmpty) {
           _messages.add(ChatMessage(
             text: 'สวัสดีครับ! ผมสมาร์ทเบรน AI ผู้เชี่ยวชาญด้านคลื่นสมองและสุขภาพจิต พร้อมให้คำแนะนำครับ 🧠\n\nคุณสามารถพิมพ์หรือ กดปุ่มไมค์เพื่อพูดกับผมได้เลยครับ 🎤',
@@ -209,7 +198,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         ];
       });
     }
-    
+
     _scrollToBottom();
   }
 
@@ -227,7 +216,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
 
   Future<void> _speakMessage(int index) async {
     final message = _messages[index];
-    
+
     if (_speakingMessageIndex == index && _ttsService.isSpeaking) {
       await _ttsService.stop();
       setState(() => _speakingMessageIndex = null);
@@ -253,17 +242,16 @@ class _RecommendationScreenState extends State<RecommendationScreen>
       ));
       _isSending = true;
     });
-    
+
     _scrollToBottom();
 
-    // เตรียม chat history สำหรับส่งไป API
     final chatHistory = _messages.map((m) => {
       'message': m.text,
       'is_bot': m.isBot,
     }).toList();
 
     if (widget.user != null) {
-      // ใช้ ChatGPT API + บันทึกลง Supabase
+
       final result = await ApiService.sendChatGPTMessage(
         userId: widget.user!.id,
         message: messageText,
@@ -272,7 +260,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
 
       if (result['success'] == true && result['bot_response'] != null) {
         final botResponse = result['bot_response'];
-        
+
         setState(() {
           _messages.add(ChatMessage(
             text: botResponse,
@@ -282,8 +270,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           _isSending = false;
         });
         _scrollToBottom();
-        
-        // Auto-speak ถ้าเปิดไว้ → bot จะพูดตอบกลับอัตโนมัติ
+
         if (_autoSpeak) {
           setState(() => _speakingMessageIndex = _messages.length - 1);
           await _ttsService.speak(botResponse);
@@ -293,7 +280,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
       }
     }
 
-    // Fallback response
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
       final fallbackResponse = _getLocalBotResponse(messageText);
@@ -306,7 +292,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         _isSending = false;
       });
       _scrollToBottom();
-      
+
       if (_autoSpeak) {
         setState(() => _speakingMessageIndex = _messages.length - 1);
         await _ttsService.speak(fallbackResponse);
@@ -317,7 +303,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
 
   String _getLocalBotResponse(String message) {
     final lowerMessage = message.toLowerCase();
-    
+
     if (lowerMessage.contains('alpha') || lowerMessage.contains('อัลฟา')) {
       return 'คลื่น Alpha (8-12 Hz) เป็นคลื่นแห่งการผ่อนคลายและตื่นตัวอย่างสงบครับ มักเกิดขึ้นเมื่อเราผ่อนคลายแต่ยังตื่นอยู่ครับ';
     }
@@ -330,19 +316,24 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     if (lowerMessage.contains('คลื่นสมอง') || lowerMessage.contains('brainwave')) {
       return 'คลื่นสมองมี 5 ประเภทหลัก: Delta (นอนหลับลึก), Theta (สมาธิลึก), Alpha (ผ่อนคลาย), Beta (ทำงาน), Gamma (สมาธิสูง) ครับ';
     }
-    
+
     return 'ขอบคุณสำหรับคำถามครับ ผมพร้อมช่วยเรื่องคลื่นสมองและสุขภาพจิต ลองถามเกี่ยวกับ Alpha, Beta, Delta หรือเรื่องความเครียด การนอน สมาธิ ได้เลยครับ';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgBlue,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppGradients.primaryBlue,
+          ),
+        ),
         leading: Navigator.canPop(context) ? IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: AppColors.primaryBlue),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ) : null,
         title: Row(
@@ -351,28 +342,24 @@ class _RecommendationScreenState extends State<RecommendationScreen>
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.psychology, color: AppColors.primaryBlue, size: 20),
+              child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   'สมาร์ทเบรน AI',
-                  style: TextStyle(
-                    color: AppColors.primaryBlue,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
                 ),
                 Text(
                   _isVoiceMode ? '🎤 กำลังฟัง...' : 'ผู้เชี่ยวชาญคลื่นสมอง',
                   style: TextStyle(
-                    color: _isVoiceMode ? Colors.red[400] : Colors.grey[500],
+                    color: _isVoiceMode ? const Color(0xFFFFCDD2) : Colors.white.withOpacity(0.7),
                     fontSize: 11,
                     fontWeight: _isVoiceMode ? FontWeight.w600 : FontWeight.normal,
                   ),
@@ -383,7 +370,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         ),
         centerTitle: true,
         actions: [
-          // Toggle Auto-Speak
           IconButton(
             onPressed: () {
               setState(() => _autoSpeak = !_autoSpeak);
@@ -391,11 +377,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                 SnackBar(
                   content: Row(
                     children: [
-                      Icon(
-                        _autoSpeak ? Icons.volume_up : Icons.volume_off,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      Icon(_autoSpeak ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 20),
                       const SizedBox(width: 8),
                       Text(_autoSpeak ? 'เปิดพูดอัตโนมัติ 🔊' : 'ปิดพูดอัตโนมัติ 🔇'),
                     ],
@@ -408,8 +390,8 @@ class _RecommendationScreenState extends State<RecommendationScreen>
               );
             },
             icon: Icon(
-              _autoSpeak ? Icons.volume_up : Icons.volume_off,
-              color: _autoSpeak ? Colors.green : Colors.grey,
+              _autoSpeak ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+              color: _autoSpeak ? Colors.white : Colors.white.withOpacity(0.5),
             ),
           ),
           IconButton(
@@ -421,7 +403,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                 );
               }
             },
-            icon: Icon(Icons.settings, color: AppColors.primaryBlue),
+            icon: Icon(Icons.settings_rounded, color: Colors.white.withOpacity(0.8)),
           ),
         ],
       ),
@@ -440,8 +422,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                     },
                   ),
                 ),
-                
-                // Typing indicator
+
                 if (_isSending)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -476,20 +457,17 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                       ],
                     ),
                   ),
-                
-                // Voice listening overlay
+
                 if (_isVoiceMode) _buildVoiceListeningBar(),
-                
+
                 const SizedBox(height: 8),
-                
-                // Input area
+
                 _buildInputArea(),
               ],
             ),
     );
   }
 
-  /// แถบแสดงสถานะกำลังฟังเสียง
   Widget _buildVoiceListeningBar() {
     return AnimatedBuilder(
       animation: _waveController,
@@ -509,7 +487,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           ),
           child: Row(
             children: [
-              // Animated mic icon
+
               AnimatedBuilder(
                 animation: _micPulseController,
                 builder: (context, child) {
@@ -527,8 +505,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                 },
               ),
               const SizedBox(width: 12),
-              
-              // Voice text or status
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +522,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                     ),
                     if (_partialText.isEmpty)
                       Row(
-                        children: List.generate(5, (i) => 
+                        children: List.generate(5, (i) =>
                           AnimatedBuilder(
                             animation: _waveController,
                             builder: (context, child) {
@@ -566,8 +543,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                   ],
                 ),
               ),
-              
-              // Cancel button
+
               GestureDetector(
                 onTap: () async {
                   await _sttService.cancelListening();
@@ -592,23 +568,26 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     );
   }
 
-  /// Input area ด้านล่าง
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+            color: AppColors.primaryBlue.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Mic button
+
           GestureDetector(
             onTap: _isSending ? null : _toggleVoiceInput,
             child: AnimatedContainer(
@@ -616,8 +595,8 @@ class _RecommendationScreenState extends State<RecommendationScreen>
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _isVoiceMode 
-                    ? Colors.red 
+                color: _isVoiceMode
+                    ? Colors.red
                     : AppColors.primaryBlue.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
                 boxShadow: _isVoiceMode ? [
@@ -636,13 +615,12 @@ class _RecommendationScreenState extends State<RecommendationScreen>
             ),
           ),
           const SizedBox(width: 8),
-          
-          // Text input
+
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: AppColors.bgBlue.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(25),
               ),
               child: TextField(
@@ -657,19 +635,26 @@ class _RecommendationScreenState extends State<RecommendationScreen>
             ),
           ),
           const SizedBox(width: 8),
-          
-          // Send button
+
           GestureDetector(
             onTap: _isSending ? null : _sendMessage,
             child: Container(
-              width: 44,
-              height: 44,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: _isSending ? Colors.grey : AppColors.primaryBlue,
+                gradient: _isSending ? null : AppGradients.primaryBlue,
+                color: _isSending ? Colors.grey.shade300 : null,
                 shape: BoxShape.circle,
+                boxShadow: _isSending ? [] : [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.send,
+                Icons.send_rounded,
                 color: Colors.white,
                 size: 20,
               ),
@@ -682,7 +667,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
 
   Widget _buildMessageBubble(ChatMessage message, int index) {
     final isSpeaking = _speakingMessageIndex == index;
-    
+
     return Align(
       alignment: message.isBot ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -694,15 +679,27 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           crossAxisAlignment: message.isBot ? CrossAxisAlignment.start : CrossAxisAlignment.end,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               decoration: BoxDecoration(
-                color: message.isBot
-                    ? AppColors.primaryBlue.withValues(alpha: 0.1)
-                    : AppColors.primaryBlue,
-                borderRadius: BorderRadius.circular(20).copyWith(
-                  bottomLeft: message.isBot ? const Radius.circular(4) : null,
-                  bottomRight: message.isBot ? null : const Radius.circular(4),
+                gradient: message.isBot ? null : AppGradients.primaryBlue,
+                color: message.isBot ? Colors.white : null,
+                borderRadius: BorderRadius.circular(24).copyWith(
+                  bottomLeft: message.isBot ? const Radius.circular(6) : null,
+                  bottomRight: message.isBot ? null : const Radius.circular(6),
                 ),
+                boxShadow: message.isBot ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ] : [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,8 +708,8 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                     message.text,
                     style: TextStyle(
                       color: message.isBot ? AppColors.textDark : Colors.white,
-                      fontSize: 14,
-                      height: 1.4,
+                      fontSize: 15,
+                      height: 1.5,
                     ),
                   ),
                 ],
@@ -729,7 +726,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                     fontSize: 10,
                   ),
                 ),
-                // ปุ่ม Speaker สำหรับ bot messages
+
                 if (message.isBot) ...[
                   const SizedBox(width: 8),
                   GestureDetector(
@@ -738,11 +735,11 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                       duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isSpeaking 
+                        color: isSpeaking
                             ? Colors.green.withValues(alpha: 0.2)
                             : Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
-                        border: isSpeaking 
+                        border: isSpeaking
                             ? Border.all(color: Colors.green.withValues(alpha: 0.5))
                             : null,
                       ),

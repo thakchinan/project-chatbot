@@ -1,5 +1,4 @@
-/// ChatMessage Model - ตาม Class Diagram
-/// ข้อความแชทกับ AI
+
 class ChatMessage {
   final int? id;
   final int userId;
@@ -45,7 +44,6 @@ class ChatMessage {
     };
   }
 
-  /// exportData(int format): String - ตาม Class Diagram
   String exportData(int format) {
     if (format == 1) {
       return '[$senderRole] ${sentTimestamp.toString().substring(0, 16)}: $content';

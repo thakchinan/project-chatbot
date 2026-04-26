@@ -27,12 +27,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _emotionDetectionTimer;
   bool _isLoading = false;
 
-  // ข้อมูลสุขภาพจริงจาก Supabase (Realtime)
   Map<String, dynamic>? _latestTestResult;
   Map<String, dynamic>? _latestBrainwave;
   bool _healthLoaded = false;
 
-  // Realtime subscriptions
   StreamSubscription? _testResultSub;
   StreamSubscription? _brainwaveSub;
 
@@ -44,11 +42,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _initEmotionDetection();
   }
 
-  /// ✅ Supabase Realtime — stream ข้อมูลแบบ real-time
   void _subscribeRealtime() {
     final userId = widget.user.id;
 
-    // 🧪 Stream ผลทดสอบ PHQ-9 (test_results)
     _testResultSub = SupabaseService.client
         .from('test_results')
         .stream(primaryKey: ['id'])
@@ -66,11 +62,10 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }, onError: (e) {
       print('❌ [Realtime] test_results error: $e');
-      // Fallback: โหลดแบบ one-shot
+
       _loadTestResultFallback();
     });
 
-    // 🧠 Stream คลื่นสมอง (brainwave_data)
     _brainwaveSub = SupabaseService.client
         .from('brainwave_data')
         .stream(primaryKey: ['id'])
@@ -92,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// Fallback: ถ้า realtime ไม่ทำงาน ให้โหลดแบบเดิม
   Future<void> _loadTestResultFallback() async {
     try {
       final result = await ApiService.getTestResults(widget.user.id);
@@ -124,7 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  /// โหลดข้อมูลใหม่จาก Supabase (เรียกเมื่อกลับจากหน้าทดสอบ/หน้าอื่น)
   Future<void> _reloadHealthData() async {
     try {
       final testResult = await ApiService.getTestResults(widget.user.id);
@@ -152,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initEmotionDetection() async {
     await _emotionService.loadModel();
-    // Auto-detect emotion every 5 seconds when brainwave data is available
+
     _emotionDetectionTimer = Timer.periodic(
       const Duration(seconds: EmotionConstants.detectionIntervalSeconds),
       (_) => _autoDetectEmotion(),
@@ -183,7 +176,6 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentEmotion = result;
         });
 
-        // Save emotion log to Supabase
         if (result.confidence >= EmotionConstants.confidenceThreshold) {
           ApiService.saveEmotionLog(
             userId: widget.user.id,
@@ -204,10 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _emotionDetectionTimer?.cancel();
     _emotionService.dispose();
-    // ยกเลิก Realtime subscriptions
+
     _testResultSub?.cancel();
     _brainwaveSub?.cancel();
-    // ต้อง removeListener ก่อน! เพราะ stopSimulation() เรียก notifyListeners()
+
     _museService.removeListener(_onMuseDataUpdate);
     _museService.stopSimulation();
     _museService.dispose();
@@ -220,22 +212,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _scanAndConnect() async {
     setState(() => _isLoading = true);
-    
+
     final isAvailable = await _museService.isBluetoothAvailable();
-    
+
     if (!isAvailable) {
-      // Show dialog to use simulation
+
       _showNoBluetoothDialog();
     } else {
-      // Start scanning 
+
       await _museService.startScan();
-      
-      // Show device selection dialog
+
       if (mounted) {
         _showDeviceSelectionDialog();
       }
     }
-    
+
     setState(() => _isLoading = false);
   }
 
@@ -282,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showDeviceSelectionDialog() {
     VoidCallback? modalListener;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -291,12 +282,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       builder: (modalContext) => StatefulBuilder(
         builder: (modalContext, setModalState) {
-          // Create listener and store it for cleanup
+
           modalListener ??= () {
             if (modalContext.mounted) setModalState(() {});
           };
           _museService.addListener(modalListener!);
-          
+
           return Container(
             padding: const EdgeInsets.all(20),
             height: MediaQuery.of(modalContext).size.height * 0.6,
@@ -330,8 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
-                
-                // Scan Results
+
                 Expanded(
                   child: _museService.scanResults.isEmpty
                       ? Center(
@@ -345,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                _museService.isScanning 
+                                _museService.isScanning
                                     ? 'กำลังค้นหาอุปกรณ์...'
                                     : 'ไม่พบอุปกรณ์ Muse',
                                 style: TextStyle(color: Colors.grey[600]),
@@ -366,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             final result = _museService.scanResults[index];
                             final device = result.device;
                             final rssi = result.rssi;
-                            
+
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
@@ -375,8 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: Icon(Icons.bluetooth, color: AppColors.primaryBlue),
                                 ),
                                 title: Text(
-                                  device.platformName.isNotEmpty 
-                                      ? device.platformName 
+                                  device.platformName.isNotEmpty
+                                      ? device.platformName
                                       : 'Unknown Device',
                                   style: const TextStyle(fontWeight: FontWeight.w600),
                                 ),
@@ -405,9 +395,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 Row(
                   children: [
                     Expanded(
@@ -444,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     ).whenComplete(() {
-      // Clean up listener when modal closes
+
       if (modalListener != null) {
         _museService.removeListener(modalListener!);
       }
@@ -457,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveBrainwaveData() async {
     if (_museService.latestData == null) return;
-    
+
     final data = _museService.latestData!;
     final result = await ApiService.saveMuseBrainwave(
       userId: widget.user.id,
@@ -484,152 +474,254 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(28),
+                    bottomRight: Radius.circular(28),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4A7FC1).withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                    child: Icon(Icons.apps, color: AppColors.primaryBlue, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('สวัสดี!', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                      Text(
-                        widget.user.fullName ?? widget.user.username,
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        image: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(widget.user.avatarUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)));
-                    },
-                    icon: Icon(Icons.settings, color: AppColors.primaryBlue),
-                  ),
-                ],
+                      child: widget.user.avatarUrl == null || widget.user.avatarUrl!.isEmpty
+                          ? Center(
+                              child: Text(
+                                (widget.user.fullName ?? widget.user.username).isNotEmpty
+                                    ? (widget.user.fullName ?? widget.user.username)[0].toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF4A7FC1),
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'สวัสดี!',
+                            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.85)),
+                          ),
+                          Text(
+                            widget.user.fullName ?? widget.user.username,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 20),
 
-              // Muse S Connection Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _museService.isConnected
-                        ? [Colors.green.shade100, Colors.green.shade50]
-                        : [AppColors.primaryBlue.withOpacity(0.1), AppColors.primaryBlue.withOpacity(0.05)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _museService.isConnected
-                        ? Colors.green.withOpacity(0.3)
-                        : AppColors.primaryBlue.withOpacity(0.2),
-                  ),
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          _museService.isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
-                          color: _museService.isConnected ? Colors.green : AppColors.primaryBlue,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Muse S Headband',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: _museService.isConnected ? Colors.green.shade700 : AppColors.primaryBlue,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (_museService.isConnected)
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(color: Colors.green.withOpacity(0.5), blurRadius: 8, spreadRadius: 2),
-                              ],
-                            ),
-                          ),
-                      ],
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: _museService.isConnected
+                        ? [const Color(0xFF11998e), const Color(0xFF38ef7d)]
+                        : [const Color(0xFF667eea), const Color(0xFF764ba2)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_museService.isConnected ? const Color(0xFF11998e) : const Color(0xFF667eea)).withOpacity(0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
-                    const SizedBox(height: 8),
-                    Text(_museService.status, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    if (_museService.deviceName != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.devices, size: 14, color: Colors.grey[500]),
-                          const SizedBox(width: 4),
-                          Text('${_museService.deviceName}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _isLoading || _museService.isConnecting
-                                ? null
-                                : (_museService.isConnected ? _disconnectMuse : _scanAndConnect),
-                            icon: _isLoading || _museService.isConnecting
-                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : Icon(
-                                    _museService.isConnected ? Icons.bluetooth_disabled : Icons.bluetooth_searching,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                            label: Text(
-                              _museService.isConnecting 
-                                  ? 'กำลังเชื่อมต่อ...' 
-                                  : (_museService.isConnected ? 'ยกเลิกเชื่อมต่อ' : 'เชื่อมต่อ Muse S'),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _museService.isConnected ? Colors.red : AppColors.primaryBlue,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                          ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+
+                    Positioned(
+                      top: -15,
+                      right: -15,
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.08),
                         ),
-                        if (_museService.isConnected && _museService.latestData != null) ...[
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _saveBrainwaveData,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                _museService.isConnected ? Icons.bluetooth_connected_rounded : Icons.bluetooth_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
                             ),
-                            child: const Text('บันทึก', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Muse EEG Headband',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _museService.status,
+                                    style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_museService.isConnected)
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 8, spreadRadius: 2),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (_museService.deviceName != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.devices_rounded, size: 14, color: Colors.white.withOpacity(0.7)),
+                              const SizedBox(width: 4),
+                              Text('${_museService.deviceName}', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
+                            ],
                           ),
                         ],
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _isLoading || _museService.isConnecting
+                                    ? null
+                                    : (_museService.isConnected ? _disconnectMuse : _scanAndConnect),
+                                icon: _isLoading || _museService.isConnecting
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : Icon(
+                                        _museService.isConnected ? Icons.bluetooth_disabled_rounded : Icons.bluetooth_searching_rounded,
+                                        size: 18,
+                                        color: _museService.isConnected ? Colors.white : const Color(0xFF667eea),
+                                      ),
+                                label: Text(
+                                  _museService.isConnecting
+                                      ? 'กำลังเชื่อมต่อ...'
+                                      : (_museService.isConnected ? 'ยกเลิกเชื่อมต่อ' : 'เชื่อมต่อ Muse'),
+                                  style: TextStyle(
+                                    color: _museService.isConnected ? Colors.white : const Color(0xFF667eea),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _museService.isConnected ? Colors.white.withOpacity(0.2) : Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            if (_museService.isConnected && _museService.latestData != null) ...[
+                              const SizedBox(width: 10),
+                              ElevatedButton(
+                                onPressed: _saveBrainwaveData,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                                child: const Text('💾 บันทึก', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ],
@@ -638,14 +730,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 16),
 
-              // Brainwave Data Card
               if (_museService.isConnected && _museService.latestData != null) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.grey.shade100),
                     boxShadow: [
                       BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
                     ],
@@ -679,38 +770,51 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Emotion Detection Card
               if (_museService.isConnected) ...[
                 _buildEmotionDetectionCard(),
                 const SizedBox(height: 16),
               ],
 
-              // Brain Health Summary (ดึงข้อมูลจริงจาก Supabase)
               _buildHealthSummaryCard(),
 
               const SizedBox(height: 20),
 
-              // Quick Actions
               Row(
                 children: [
                   Expanded(
-                    child: _buildQuickAction(context, icon: Icons.history, label: 'ประวัติ', onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen(user: widget.user)));
-                    }),
+                    child: _buildQuickAction(
+                      context,
+                      icon: Icons.history_rounded,
+                      label: 'ประวัติ',
+                      gradient: const [Color(0xFF6C63FF), Color(0xFF8B7FFF)],
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => HistoryScreen(user: widget.user)));
+                      },
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
-                    child: _buildQuickAction(context, icon: Icons.quiz_outlined, label: 'แบบทดสอบ', onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => TestScreen(user: widget.user)),
-                      ).then((_) {
-                        // โหลดข้อมูลใหม่ทันทีเมื่อกลับจากหน้าทดสอบ
-                        _reloadHealthData();
-                      });
-                    }),
+                    child: _buildQuickAction(
+                      context,
+                      icon: Icons.quiz_rounded,
+                      label: 'แบบทดสอบ',
+                      gradient: const [Color(0xFFFF6B6B), Color(0xFFFF8E8E)],
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => TestScreen(user: widget.user)),
+                        ).then((_) {
+                          _reloadHealthData();
+                        });
+                      },
+                    ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ],
           ),
@@ -771,9 +875,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ==================== HEALTH SUMMARY (ข้อมูลจริงจาก Supabase) ====================
-
-  /// แปลง stress_level จาก DB เป็นข้อมูลแสดงผล
   Map<String, dynamic> _getStressDisplay(String? stressLevel, int? score) {
     switch (stressLevel) {
       case 'normal':
@@ -798,7 +899,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final display = _getStressDisplay(stressLevel, stressScore);
     final Color statusColor = display['color'];
 
-    // ข้อมูลคลื่นสมอง
     final alpha = (_latestBrainwave?['alpha_wave'] as num?)?.toDouble();
     final beta = (_latestBrainwave?['beta_wave'] as num?)?.toDouble();
     final attention = (_latestBrainwave?['attention_score'] as num?)?.toDouble();
@@ -830,12 +930,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
 
-          // สถานะจากผล PHQ-9 จริง
           if (_latestTestResult != null) ...[
             Row(
               children: [
-                Text(display['emoji'], style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -854,7 +951,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            // วันที่ทดสอบ
+
             if (_latestTestResult?['test_date'] != null)
               Text(
                 'ทดสอบล่าสุด: ${_formatDate(_latestTestResult!['test_date'])}',
@@ -863,8 +960,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ] else ...[
             Row(
               children: [
-                const Text('❓', style: TextStyle(fontSize: 22)),
-                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -880,8 +975,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // ==================== EMOTION DETECTION CARD ====================
 
   Widget _buildEmotionDetectionCard() {
     final emotion = _currentEmotion;
@@ -930,21 +1023,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
 
           if (emotion != null && emotionType != null) ...[
-            // Main emotion display
+
             Row(
               children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(emotionType.emoji, style: const TextStyle(fontSize: 32)),
-                  ),
-                ),
-                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -994,7 +1075,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
 
-            // All emotion scores
             if (emotion.allScores.isNotEmpty) ...[
               const SizedBox(height: 16),
               const Divider(height: 1),
@@ -1002,11 +1082,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ..._buildEmotionScoreBars(emotion.allScores),
             ],
           ] else ...[
-            // No emotion data yet
+
             Row(
               children: [
-                const Text('🔍', style: TextStyle(fontSize: 22)),
-                const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1027,7 +1105,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildEmotionScoreBars(Map<String, double> scores) {
     final sorted = scores.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    // Show top 5 emotions
+
     final top = sorted.take(5).toList();
 
     return top.map((entry) {
@@ -1036,8 +1114,6 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(
           children: [
-            Text(etype.emoji, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
             SizedBox(
               width: 65,
               child: Text(etype.label, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
@@ -1111,21 +1187,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _buildQuickAction(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap, List<Color> gradient = const [Color(0xFF4A7FC1), Color(0xFF6BA3E8)]}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: AppColors.primaryBlue.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primaryBlue.withOpacity(0.2)),
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: gradient[0].withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: AppColors.primaryBlue, size: 28),
+            Icon(icon, color: Colors.white, size: 30),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.primaryBlue)),
+            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
           ],
         ),
       ),

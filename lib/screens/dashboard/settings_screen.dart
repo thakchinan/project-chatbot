@@ -132,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog(BuildContext parentContext) {
-    // เก็บ reference ไว้ก่อน async เพื่อป้องกัน context ถูก dispose
+
     final navigator = Navigator.of(parentContext);
 
     showDialog(
@@ -163,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     ElevatedButton(
                       onPressed: () async {
-                        // อัปเดต state ให้แสดง loading
+
                         setState(() {
                           _isDeleting = true;
                         });
@@ -172,10 +172,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final result = await SupabaseService.deleteAccount(widget.user.id);
 
                         if (result['success'] == true) {
-                          // ปิด dialog ก่อน
+
                           Navigator.pop(dialogContext);
 
-                          // รอ frame ถัดไปแล้วค่อย navigate
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             navigator.pushAndRemoveUntil(
                               MaterialPageRoute(builder: (_) => const WelcomeScreen()),
@@ -187,7 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _isDeleting = false;
                           });
                           setDialogState(() {});
-                          
+
                           if (!mounted) return;
                           ScaffoldMessenger.of(parentContext).showSnackBar(
                             SnackBar(

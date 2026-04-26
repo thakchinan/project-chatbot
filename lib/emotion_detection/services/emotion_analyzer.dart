@@ -1,9 +1,8 @@
 import '../models/emotion_result.dart';
 import '../models/emotion_type.dart';
 
-/// วิเคราะห์แนวโน้มอารมณ์จากข้อมูลหลายจุด
 class EmotionAnalyzer {
-  /// วิเคราะห์อารมณ์หลักจากผลลัพธ์หลายรายการ
+
   EmotionType getDominantEmotion(List<EmotionResult> results) {
     if (results.isEmpty) return EmotionType.neutral;
 
@@ -20,14 +19,12 @@ class EmotionAnalyzer {
     return EmotionType.fromString(dominant);
   }
 
-  /// คำนวณค่าเฉลี่ย confidence score
   double getAverageConfidence(List<EmotionResult> results) {
     if (results.isEmpty) return 0.0;
     final total = results.fold<double>(0, (sum, r) => sum + r.confidence);
     return total / results.length;
   }
 
-  /// ตรวจสอบว่าอารมณ์มีแนวโน้มเปลี่ยนแปลงอย่างมากหรือไม่
   bool hasSignificantChange(List<EmotionResult> results, {double threshold = 0.3}) {
     if (results.length < 2) return false;
 
@@ -41,7 +38,6 @@ class EmotionAnalyzer {
     return false;
   }
 
-  /// สร้างสรุปอารมณ์ในรูปแบบข้อความ
   String generateSummary(List<EmotionResult> results) {
     if (results.isEmpty) return 'ยังไม่มีข้อมูลอารมณ์';
 

@@ -6,7 +6,7 @@ import 'settings_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   final User? user;
-  
+
   const HistoryScreen({super.key, this.user});
 
   @override
@@ -30,7 +30,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     final result = await ApiService.getTestResults(widget.user!.id);
-    
+
     if (result['success'] == true && result['results'] != null) {
       setState(() {
         _testHistory = List<Map<String, dynamic>>.from(result['results']);
@@ -90,7 +90,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   if (_testHistory.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -107,7 +107,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       final stressLevel = test['stress_level'] ?? 'normal';
                       String result;
                       Color color;
-                      
+
                       switch (stressLevel) {
                         case 'mild':
                           result = 'เครียดเล็กน้อย';
@@ -125,7 +125,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           result = 'ปกติ';
                           color = Colors.green;
                       }
-                      
+
                       return _buildHistoryItem(
                         date: test['test_date']?.toString().substring(0, 10) ?? '',
                         result: result,
@@ -137,7 +137,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
     );
   }
-
 
   Widget _buildHistoryItem({
     required String date,

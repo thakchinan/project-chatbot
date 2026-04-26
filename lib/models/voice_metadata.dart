@@ -1,5 +1,4 @@
-/// VoiceMetadata Model - ตาม Class Diagram
-/// ข้อมูล metadata จากการวิเคราะห์เสียง
+
 class VoiceMetadata {
   final int? voiceId;
   final int? messageId;
@@ -71,7 +70,6 @@ class VoiceMetadata {
     };
   }
 
-  /// analyzeAudioProficiency(): Null - ตาม Class Diagram
   Map<String, dynamic> analyzeAudioProficiency() {
     return {
       'emotion': emotionDetected ?? 'unknown',

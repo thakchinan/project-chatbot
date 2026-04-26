@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'fft_calculator.dart';
 
-/// Muse S Brainwave Data
 class BrainwaveData {
   final double alpha;
   final double beta;
@@ -41,42 +38,43 @@ class BrainwaveData {
   };
 }
 
-/// Muse S Bluetooth Service (Clean & Robust V3)
 class MuseService extends ChangeNotifier {
   BluetoothDevice? _connectedDevice;
   List<ScanResult> _scanResults = [];
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionSubscription;
   final List<StreamSubscription> _dataSubscriptions = [];
-  
+
   bool _isScanning = false;
   bool _isConnected = false;
   bool _isConnecting = false;
   String _status = 'ไม่ได้เชื่อมต่อ';
   String? _deviceName;
-  
+
   BrainwaveData? _latestData;
   final List<BrainwaveData> _dataHistory = [];
-  
-  // Floating buffers for FFT
+
   final int _windowSize = 256;
   final List<double> _tp9Window = [];
   final List<double> _af7Window = [];
   final List<double> _af8Window = [];
   final List<double> _tp10Window = [];
 
-  // Simulated data
+  bool _isMuse2 = false;
+
   Timer? _simulationTimer;
   bool _isSimulating = false;
   bool _isDisposed = false;
 
-  // Getters
   bool get isScanning => _isScanning;
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
   bool get isSimulating => _isSimulating;
   String get status => _status;
   String? get deviceName => _deviceName;
+  bool get isMuse2 => _isMuse2;
+
+  String get detectedDeviceType => _isMuse2 ? 'Muse 2' : 'Muse S';
   BrainwaveData? get latestData => _latestData;
   List<BrainwaveData> get dataHistory => _dataHistory;
   List<ScanResult> get scanResults => _scanResults;
@@ -85,7 +83,6 @@ class MuseService extends ChangeNotifier {
     if (!_isDisposed) notifyListeners();
   }
 
-  /// Check availability
   Future<bool> isBluetoothAvailable() async {
     if (kIsWeb) return false;
     try {
@@ -95,13 +92,12 @@ class MuseService extends ChangeNotifier {
     }
   }
 
-  /// Start scanning
   Future<void> startScan() async {
     if (_isScanning) return;
     if (kIsWeb) return;
 
     try {
-      // 1. Permissions Check
+
     if (!await _checkPermissions()) {
       _status = 'ต้องการสิทธิ์ Bluetooth/Location';
       _safeNotify();
@@ -110,7 +106,6 @@ class MuseService extends ChangeNotifier {
 
       if (!await FlutterBluePlus.isSupported) return;
 
-      // Ensure Bluetooth is On
       if (Platform.isAndroid) {
          try { await FlutterBluePlus.turnOn(); } catch (e) {}
       }
@@ -149,7 +144,6 @@ class MuseService extends ChangeNotifier {
     }
   }
 
-  /// Stop scanning
   Future<void> stopScan() async {
     await FlutterBluePlus.stopScan();
     _scanSubscription?.cancel();
@@ -161,10 +155,9 @@ class MuseService extends ChangeNotifier {
   bool _dataReceivedRecently = false;
   List<BluetoothCharacteristic> _writableChars = [];
 
-  /// Connect
   Future<void> connectToDevice(BluetoothDevice device) async {
     await stopScan();
-    
+
     try {
   _isConnecting = true;
   _status = 'เชื่อมต่อ ${device.platformName}...';
@@ -175,9 +168,14 @@ class MuseService extends ChangeNotifier {
       }
 
       await device.connect(timeout: const Duration(seconds: 20), autoConnect: false);
-      
+
   _connectedDevice = device;
   _deviceName = device.platformName;
+
+  _isMuse2 = device.platformName.toLowerCase().contains('muse-2') ||
+             device.platformName.toLowerCase().contains('muse 2') ||
+             device.platformName.toLowerCase() == 'muse2';
+  debugPrint('🎧 Detected device type: ${_isMuse2 ? "Muse 2 (12-bit)" : "Muse S (14-bit)"}');
   _isConnected = true;
   _isConnecting = false;
   _status = 'เชื่อมต่อแล้ว (รอ Set up)...';
@@ -189,7 +187,7 @@ class MuseService extends ChangeNotifier {
         }
       });
 
-      await Future.delayed(const Duration(seconds: 1)); // Stability waiting
+      await Future.delayed(const Duration(seconds: 1));
       await _setupMuseConnection();
 
     } catch (e) {
@@ -200,7 +198,6 @@ class MuseService extends ChangeNotifier {
     }
   }
 
-  /// Setup logic (Universal Listener)
   Future<void> _setupMuseConnection() async {
     if (_connectedDevice == null) return;
 
@@ -209,8 +206,7 @@ class MuseService extends ChangeNotifier {
   _safeNotify();
 
       List<BluetoothService> services = await _connectedDevice!.discoverServices();
-      
-      // Request MTU
+
       try { if (Platform.isAndroid) await _connectedDevice!.requestMtu(512); } catch (e) {}
 
       List<BluetoothCharacteristic> eegChars = [];
@@ -220,23 +216,22 @@ class MuseService extends ChangeNotifier {
       for (var service in services) {
         for (var c in service.characteristics) {
            final uuid = c.uuid.toString().toLowerCase();
-           
+
            if (c.properties.notify) {
               allNotifyChars.add(c);
-              // Standard EEG check
-              if (uuid.contains('273e0003') || uuid.contains('273e0004') || 
+
+              if (uuid.contains('273e0003') || uuid.contains('273e0004') ||
                   uuid.contains('273e0005') || uuid.contains('273e0006')) {
                  eegChars.add(c);
               }
            }
-           
+
            if (c.properties.write || c.properties.writeWithoutResponse) {
               _writableChars.add(c);
            }
         }
       }
 
-      // Universal Fallback: Use all notify chars if no specific EEG chars found
       if (eegChars.isEmpty) {
          eegChars = allNotifyChars;
       }
@@ -244,13 +239,12 @@ class MuseService extends ChangeNotifier {
     if (eegChars.isEmpty) {
       _status = 'Error: ไม่พบช่องสัญญาณ (Notify=0)';
       _safeNotify();
-      // But keep trying to write commands just in case
+
     } else {
       _status = 'Found ${eegChars.length} Channels. Subscribing...';
       _safeNotify();
     }
 
-      // Subscribe to all
       int subs = 0;
       for (var c in eegChars) {
          try {
@@ -258,26 +252,24 @@ class MuseService extends ChangeNotifier {
             var sub = c.lastValueStream.listen((value) {
                 _processEEGData(c.uuid.toString(), value);
             });
-            _dataSubscriptions.add(sub); // Use the REAL subscription
+            _dataSubscriptions.add(sub);
             subs++;
-            await Future.delayed(const Duration(milliseconds: 50)); 
+            await Future.delayed(const Duration(milliseconds: 50));
          } catch (e) {}
       }
-      
+
   _status = 'Ready (Subs:$subs). Sending Start...';
   _safeNotify();
 
-      // Initial Command Burst
       for (var char in _writableChars) {
           _sendStartCommands(char);
           await Future.delayed(const Duration(milliseconds: 50));
       }
-      
-      // Start Watchdog
+
       _dataWatchdog?.cancel();
       _dataWatchdog = Timer.periodic(const Duration(seconds: 2), (t) {
           if (!_isConnected) { t.cancel(); return; }
-          
+
           if (!_dataReceivedRecently) {
              _status = 'กำลังปลุก... (Wakeup ${t.tick})';
              _safeNotify();
@@ -285,7 +277,7 @@ class MuseService extends ChangeNotifier {
                 _sendStartCommands(char);
              }
           } else {
-             _dataReceivedRecently = false; // Reset for next check
+             _dataReceivedRecently = false;
           }
       });
 
@@ -296,17 +288,17 @@ class MuseService extends ChangeNotifier {
   }
 
   Future<void> _sendStartCommands(BluetoothCharacteristic c) async {
-     // Try all formats
-     await _writeRaw(c, [0x02, 0x64, 0x0a]); // Keep Alive 'd'
-     await _writeRaw(c, [0x02, 0x73, 0x0a]); // 's' (V2)
-     await _writeRaw(c, [0x73, 0x0a]);       // 's\n'
-     await _writeRaw(c, [0x73, 0x0d]);       // 's\r'
-     await _writeRaw(c, [0x70, 0x32, 0x31, 0x0a]); // 'p21'
+
+     await _writeRaw(c, [0x02, 0x64, 0x0a]);
+     await _writeRaw(c, [0x02, 0x73, 0x0a]);
+     await _writeRaw(c, [0x73, 0x0a]);
+     await _writeRaw(c, [0x73, 0x0d]);
+     await _writeRaw(c, [0x70, 0x32, 0x31, 0x0a]);
   }
 
   Future<void> _writeRaw(BluetoothCharacteristic c, List<int> cmd) async {
-    try { await c.write(cmd, withoutResponse: true); } catch (e) {} 
-    // Prefer withoutResponse for speed/compatibility
+    try { await c.write(cmd, withoutResponse: true); } catch (e) {}
+
   }
 
   void _processEEGData(String uuid, List<int> rawData) {
@@ -316,16 +308,18 @@ class MuseService extends ChangeNotifier {
 
      try {
        List<double> samples = _parseMuseEEGPacket(rawData);
-       
-       // Add to Window (Simple Round Robin or Mapping)
-       // If universal, map by order or hash? Let's just fill RR for now to get graph moving
-       if (_tp9Window.length < _windowSize) _addToWindow(_tp9Window, samples);
-       else if (_af7Window.length < _windowSize) _addToWindow(_af7Window, samples);
-       else if (_af8Window.length < _windowSize) _addToWindow(_af8Window, samples);
-       else _addToWindow(_tp10Window, samples); // Overflow to last
+       String lowerUuid = uuid.toLowerCase();
 
-       // Just calculate!
-       if (_tp9Window.isNotEmpty) _calculateFFT();
+       if (lowerUuid.contains('273e0003')) {
+         _addToWindow(_tp9Window, samples);
+         _calculateFFT(); // อัปเดตการคำนวณคลื่นเมื่อ TP9 ได้รับข้อมูล
+       } else if (lowerUuid.contains('273e0004')) {
+         _addToWindow(_af7Window, samples);
+       } else if (lowerUuid.contains('273e0005')) {
+         _addToWindow(_af8Window, samples);
+       } else if (lowerUuid.contains('273e0006')) {
+         _addToWindow(_tp10Window, samples);
+       }
 
      } catch (e) {}
   }
@@ -337,17 +331,35 @@ class MuseService extends ChangeNotifier {
 
   List<double> _parseMuseEEGPacket(List<int> rawData) {
     List<double> samples = [];
-    if (rawData.length >= 6) { // At least header + 1 sample
-      for (int i = 2; i < rawData.length - 1; i += 2) {
-         int s = (rawData[i] << 8) | rawData[i+1];
-         samples.add( (s / 65535.0) * 1682.0 );
+
+    if (_isMuse2 && rawData.length >= 20) {
+      // Muse 2 (12-bit Encoding): ข้อมูลเริ่มที่ Byte 2, ใช้ 3 Byte ต่อ 2 Samples
+      for (int i = 2; i < rawData.length - 2; i += 3) {
+        int b1 = rawData[i];
+        int b2 = rawData[i+1];
+        int b3 = rawData[i+2];
+
+        int s1 = (b1 << 4) | (b2 >> 4);
+        int s2 = ((b2 & 0x0F) << 8) | b3;
+
+        samples.add((s1 / 4095.0) * 1682.0);
+        samples.add((s2 / 4095.0) * 1682.0);
+      }
+    } else {
+      // รุ่นเก่า หรือการเข้ารหัสแบบ 16-bit
+      final double maxRawValue = 65535.0;
+      if (rawData.length >= 6) {
+        for (int i = 2; i < rawData.length - 1; i += 2) {
+           int s = (rawData[i] << 8) | rawData[i+1];
+           samples.add( (s / maxRawValue) * 1682.0 );
+        }
       }
     }
     return samples;
   }
 
   void _calculateFFT() {
-     // Helper
+
      Map<String, double> getPower(List<double> buf) {
         if (buf.isEmpty) return {};
         List<double> p = List.from(buf);
@@ -359,16 +371,31 @@ class MuseService extends ChangeNotifier {
      }
 
      var p1 = getPower(_tp9Window);
-     var p2 = getPower(_tp10Window); // Use two valid windows for now
-     
-     if (p1.isEmpty && p2.isEmpty) return;
-     
-     double totalAlpha = (p1['alpha'] ?? 0) + (p2['alpha'] ?? 0);
-     double totalBeta = (p1['beta'] ?? 0) + (p2['beta'] ?? 0);
-     double totalTheta = (p1['theta'] ?? 0) + (p2['theta'] ?? 0);
-     double totalDelta = (p1['delta'] ?? 0) + (p2['delta'] ?? 0);
-     double totalGamma = (p1['gamma'] ?? 0) + (p2['gamma'] ?? 0);
-     
+     var p2 = getPower(_af7Window);
+     var p3 = getPower(_af8Window);
+     var p4 = getPower(_tp10Window);
+
+     double totalAlpha = 0, totalBeta = 0, totalTheta = 0, totalDelta = 0, totalGamma = 0;
+     int validChannels = 0;
+
+     void addPower(Map<String, double> p) {
+       if (p.isNotEmpty) {
+         totalAlpha += (p['alpha'] ?? 0);
+         totalBeta += (p['beta'] ?? 0);
+         totalTheta += (p['theta'] ?? 0);
+         totalDelta += (p['delta'] ?? 0);
+         totalGamma += (p['gamma'] ?? 0);
+         validChannels++;
+       }
+     }
+
+     addPower(p1);
+     addPower(p2);
+     addPower(p3);
+     addPower(p4);
+
+     if (validChannels == 0) return;
+
      double sum = totalAlpha + totalBeta + totalTheta + totalDelta + totalGamma;
      if (sum == 0) sum = 1;
 
@@ -378,12 +405,16 @@ class MuseService extends ChangeNotifier {
         theta: (totalTheta/sum)*100,
         delta: (totalDelta/sum)*100,
         gamma: (totalGamma/sum)*100,
-        attention: 50, // Dummy for stability first
+        attention: 50,
         meditation: 50
      );
-     
+
      _dataHistory.add(_latestData!);
      if (_dataHistory.length > 100) _dataHistory.removeAt(0);
+     
+     // แสดงค่าออก Console เพื่อให้ดูได้สะดวกขึ้น
+     debugPrint('Brainwaves -> Alpha: ${_latestData!.alpha.toStringAsFixed(2)}%, Beta: ${_latestData!.beta.toStringAsFixed(2)}%, Theta: ${_latestData!.theta.toStringAsFixed(2)}%');
+     
     _safeNotify();
   }
 
@@ -416,12 +447,12 @@ class MuseService extends ChangeNotifier {
      if(_deviceName == null) _isConnected = false;
      _safeNotify();
   }
-  
+
   @override
   void dispose() {
-    // mark disposed so any async callbacks won't call notifyListeners
+
     _isDisposed = true;
-    // best-effort cleanup
+
     _dataWatchdog?.cancel();
     _scanSubscription?.cancel();
     _connectionSubscription?.cancel();

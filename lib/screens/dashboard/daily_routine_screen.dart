@@ -29,7 +29,7 @@ class DailyRoutineScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -68,7 +68,6 @@ class DailyRoutineScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // กิจวัตรประจำวัน
             Text(
               'กิจวัตรประจำวัน',
               style: TextStyle(
@@ -145,7 +144,6 @@ class DailyRoutineScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // คำแนะนำ
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -211,7 +209,7 @@ class DailyRoutineScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Time badge
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
