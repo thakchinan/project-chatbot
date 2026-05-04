@@ -66,6 +66,12 @@ class MuseService extends ChangeNotifier {
   bool _isSimulating = false;
   bool _isDisposed = false;
 
+  Timer? _fftDelayTimer;
+  final int _fftDelayMs = 5000;
+  final int _minBufferFill = 256;
+  int _packetCount = 0;
+  DateTime? _lastFFTTime;
+
   bool get isScanning => _isScanning;
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
@@ -304,7 +310,8 @@ class MuseService extends ChangeNotifier {
   void _processEEGData(String uuid, List<int> rawData) {
      if (rawData.isEmpty) return;
      _dataReceivedRecently = true;
-     _status = 'รับข้อมูล... (${rawData.length} bytes)';
+     _packetCount++;
+     _status = 'รับข้อมูล... (${rawData.length} bytes, packet #$_packetCount)';
 
      try {
        List<double> samples = _parseMuseEEGPacket(rawData);
@@ -312,7 +319,6 @@ class MuseService extends ChangeNotifier {
 
        if (lowerUuid.contains('273e0003')) {
          _addToWindow(_tp9Window, samples);
-         _calculateFFT(); // อัปเดตการคำนวณคลื่นเมื่อ TP9 ได้รับข้อมูล
        } else if (lowerUuid.contains('273e0004')) {
          _addToWindow(_af7Window, samples);
        } else if (lowerUuid.contains('273e0005')) {
@@ -321,7 +327,24 @@ class MuseService extends ChangeNotifier {
          _addToWindow(_tp10Window, samples);
        }
 
+       _scheduleFFT();
+
      } catch (e) {}
+  }
+
+  void _scheduleFFT() {
+    if (_tp9Window.length < _minBufferFill) {
+      _status = 'สะสมข้อมูล... (${_tp9Window.length}/$_minBufferFill samples)';
+      _safeNotify();
+      return;
+    }
+
+    _fftDelayTimer?.cancel();
+    _fftDelayTimer = Timer(Duration(milliseconds: _fftDelayMs), () {
+      _calculateFFT();
+      _lastFFTTime = DateTime.now();
+      debugPrint('FFT computed at ${_lastFFTTime} | Buffer: TP9=${_tp9Window.length}, AF7=${_af7Window.length}, AF8=${_af8Window.length}, TP10=${_tp10Window.length}');
+    });
   }
 
   void _addToWindow(List<double> window, List<double> newSamples) {
@@ -419,12 +442,15 @@ class MuseService extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    _fftDelayTimer?.cancel();
     _dataWatchdog?.cancel();
     _scanSubscription?.cancel();
     stopSimulation();
     try { await _connectedDevice?.disconnect(); } catch (e) {}
     _isConnected = false;
     _connectedDevice = null;
+    _packetCount = 0;
+    _lastFFTTime = null;
     _status = 'ไม่ได้เชื่อมต่อ';
     _safeNotify();
   }
@@ -453,6 +479,7 @@ class MuseService extends ChangeNotifier {
 
     _isDisposed = true;
 
+    _fftDelayTimer?.cancel();
     _dataWatchdog?.cancel();
     _scanSubscription?.cancel();
     _connectionSubscription?.cancel();
