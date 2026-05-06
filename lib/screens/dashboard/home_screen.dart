@@ -202,7 +202,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _museService.removeListener(_onMuseDataUpdate);
     _museService.stopSimulation();
-    _museService.dispose();
     super.dispose();
   }
 
@@ -729,6 +728,142 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 16),
+
+              if (_museService.isConnected && _museService.latestData == null && !_museService.isSimulating) ...[
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFE8F0FE)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 3)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _museService.isWaitingForFFT
+                                      ? 'กำลังวิเคราะห์คลื่นสมอง...'
+                                      : 'กำลังสะสมข้อมูล EEG...',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2D3748),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _museService.isWaitingForFFT
+                                      ? 'รอ FFT คำนวณ (~1 วินาที)'
+                                      : '${_museService.bufferFillLevel}/${_museService.minBufferRequired} samples',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_museService.packetCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF667eea).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                'Packet #${_museService.packetCount}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF667eea), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: _museService.isWaitingForFFT
+                              ? null
+                              : _museService.bufferProgress.clamp(0.0, 1.0),
+                          minHeight: 8,
+                          backgroundColor: const Color(0xFFE8F0FE),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _museService.isWaitingForFFT
+                                ? const Color(0xFF764ba2)
+                                : const Color(0xFF667eea),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_museService.packetCount == 0) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF8E1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFFE082)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, color: Color(0xFFF9A825), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'รอสัญญาณจากอุปกรณ์... ตรวจสอบว่าสวม Muse แนบหน้าผากแล้ว',
+                                  style: TextStyle(fontSize: 12, color: Colors.orange[900]),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F4FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.science_rounded, color: Color(0xFF667eea), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _museService.isWaitingForFFT
+                                      ? 'Buffer เต็มแล้ว กำลัง FFT แปลงสัญญาณเป็นคลื่นความถี่...'
+                                      : 'ต้องสะสม 256 samples เพื่อให้ FFT วิเคราะห์คลื่นสมองได้แม่นยำ',
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF5A67D8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               if (_museService.isConnected && _museService.latestData != null) ...[
                 Container(

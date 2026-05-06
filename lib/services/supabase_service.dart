@@ -304,21 +304,29 @@ class SupabaseService {
     double attentionScore = 0,
     double meditationScore = 0,
     String deviceName = 'Muse S',
+    String? emotionLabel,
+    String? activityType,
+    String? sessionPhase,
   }) async {
     try {
+      final insertData = <String, dynamic>{
+        'user_id': userId,
+        'alpha_wave': alphaWave,
+        'beta_wave': betaWave,
+        'theta_wave': thetaWave,
+        'delta_wave': deltaWave,
+        'gamma_wave': gammaWave,
+        'attention_score': attentionScore,
+        'meditation_score': meditationScore,
+        'device_name': deviceName,
+      };
+      if (emotionLabel != null) insertData['emotion_label'] = emotionLabel;
+      if (activityType != null) insertData['activity_type'] = activityType;
+      if (sessionPhase != null) insertData['session_phase'] = sessionPhase;
+
       final response = await client
           .from('brainwave_data')
-          .insert({
-            'user_id': userId,
-            'alpha_wave': alphaWave,
-            'beta_wave': betaWave,
-            'theta_wave': thetaWave,
-            'delta_wave': deltaWave,
-            'gamma_wave': gammaWave,
-            'attention_score': attentionScore,
-            'meditation_score': meditationScore,
-            'device_name': deviceName,
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -329,6 +337,76 @@ class SupabaseService {
       };
     } catch (e) {
       return {'success': false, 'message': 'ไม่สามารถบันทึกข้อมูลคลื่นสมองได้'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> saveEmotionSession({
+    required int userId,
+    required String targetEmotion,
+    required String activityType,
+    String? sessionName,
+    int durationSeconds = 0,
+    int samplesCollected = 0,
+    double avgAlpha = 0,
+    double avgBeta = 0,
+    double avgTheta = 0,
+    double avgDelta = 0,
+    double avgGamma = 0,
+    int? selfReportValence,
+    int? selfReportArousal,
+    String? notes,
+    bool isCompleted = false,
+  }) async {
+    try {
+      final insertData = <String, dynamic>{
+        'user_id': userId,
+        'target_emotion': targetEmotion,
+        'activity_type': activityType,
+        'duration_seconds': durationSeconds,
+        'samples_collected': samplesCollected,
+        'avg_alpha': avgAlpha,
+        'avg_beta': avgBeta,
+        'avg_theta': avgTheta,
+        'avg_delta': avgDelta,
+        'avg_gamma': avgGamma,
+        'is_completed': isCompleted,
+      };
+      if (sessionName != null) insertData['session_name'] = sessionName;
+      if (selfReportValence != null) insertData['self_report_valence'] = selfReportValence;
+      if (selfReportArousal != null) insertData['self_report_arousal'] = selfReportArousal;
+      if (notes != null) insertData['notes'] = notes;
+
+      final response = await client
+          .from('emotion_sessions')
+          .insert(insertData)
+          .select()
+          .single();
+
+      return {
+        'success': true,
+        'message': 'บันทึก session สำเร็จ',
+        'id': response['id'],
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถบันทึก session ได้: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getEmotionSessions(int userId, {int limit = 20}) async {
+    try {
+      final response = await client
+          .from('emotion_sessions')
+          .select()
+          .eq('user_id', userId)
+          .order('started_at', ascending: false)
+          .limit(limit);
+
+      return {
+        'success': true,
+        'sessions': response,
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถโหลด session ได้'};
     }
   }
 

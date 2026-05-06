@@ -39,6 +39,10 @@ class BrainwaveData {
 }
 
 class MuseService extends ChangeNotifier {
+  static final MuseService _instance = MuseService._internal();
+  factory MuseService() => _instance;
+  MuseService._internal();
+
   BluetoothDevice? _connectedDevice;
   List<ScanResult> _scanResults = [];
   StreamSubscription? _scanSubscription;
@@ -67,7 +71,7 @@ class MuseService extends ChangeNotifier {
   bool _isDisposed = false;
 
   Timer? _fftDelayTimer;
-  final int _fftDelayMs = 5000;
+  final int _fftDelayMs = 1000;
   final int _minBufferFill = 256;
   int _packetCount = 0;
   DateTime? _lastFFTTime;
@@ -84,6 +88,13 @@ class MuseService extends ChangeNotifier {
   BrainwaveData? get latestData => _latestData;
   List<BrainwaveData> get dataHistory => _dataHistory;
   List<ScanResult> get scanResults => _scanResults;
+
+  int get bufferFillLevel => _tp9Window.length;
+  int get minBufferRequired => _minBufferFill;
+  int get packetCount => _packetCount;
+  double get bufferProgress => _tp9Window.length / _minBufferFill;
+  bool get isBuffering => _isConnected && _latestData == null && _packetCount > 0;
+  bool get isWaitingForFFT => _tp9Window.length >= _minBufferFill && _latestData == null;
 
   void _safeNotify() {
     if (!_isDisposed) notifyListeners();
@@ -160,6 +171,7 @@ class MuseService extends ChangeNotifier {
   Timer? _dataWatchdog;
   bool _dataReceivedRecently = false;
   List<BluetoothCharacteristic> _writableChars = [];
+  BluetoothCharacteristic? _controlChar;
 
   Future<void> connectToDevice(BluetoothDevice device) async {
     await stopScan();
@@ -218,10 +230,13 @@ class MuseService extends ChangeNotifier {
       List<BluetoothCharacteristic> eegChars = [];
       List<BluetoothCharacteristic> allNotifyChars = [];
       _writableChars = [];
+      _controlChar = null;
 
       for (var service in services) {
+        debugPrint('🔍 Service: ${service.uuid}');
         for (var c in service.characteristics) {
            final uuid = c.uuid.toString().toLowerCase();
+           debugPrint('   📌 Char: $uuid | notify=${c.properties.notify} | write=${c.properties.write} | writeNoResp=${c.properties.writeWithoutResponse}');
 
            if (c.properties.notify) {
               allNotifyChars.add(c);
@@ -234,6 +249,10 @@ class MuseService extends ChangeNotifier {
 
            if (c.properties.write || c.properties.writeWithoutResponse) {
               _writableChars.add(c);
+              if (uuid.contains('273e0001')) {
+                _controlChar = c;
+                debugPrint('   ✅ Found Muse Control Characteristic: $uuid');
+              }
            }
         }
       }
@@ -267,20 +286,30 @@ class MuseService extends ChangeNotifier {
   _status = 'Ready (Subs:$subs). Sending Start...';
   _safeNotify();
 
-      for (var char in _writableChars) {
-          _sendStartCommands(char);
-          await Future.delayed(const Duration(milliseconds: 50));
+      if (_controlChar != null) {
+          debugPrint('🎯 Sending start commands to Control Char');
+          await _sendStartCommands(_controlChar!);
+      } else {
+          debugPrint('⚠️ No control char found, trying all writable chars');
+          for (var char in _writableChars) {
+              await _sendStartCommands(char);
+              await Future.delayed(const Duration(milliseconds: 50));
+          }
       }
 
       _dataWatchdog?.cancel();
-      _dataWatchdog = Timer.periodic(const Duration(seconds: 2), (t) {
+      _dataWatchdog = Timer.periodic(const Duration(seconds: 3), (t) {
           if (!_isConnected) { t.cancel(); return; }
 
           if (!_dataReceivedRecently) {
              _status = 'กำลังปลุก... (Wakeup ${t.tick})';
              _safeNotify();
-             for (var char in _writableChars) {
-                _sendStartCommands(char);
+             if (_controlChar != null) {
+                _sendStartCommands(_controlChar!);
+             } else {
+                for (var char in _writableChars) {
+                   _sendStartCommands(char);
+                }
              }
           } else {
              _dataReceivedRecently = false;
@@ -294,17 +323,34 @@ class MuseService extends ChangeNotifier {
   }
 
   Future<void> _sendStartCommands(BluetoothCharacteristic c) async {
+     // 1. Halt — หยุด streaming เก่า
+     await _writeRaw(c, [0x02, 0x68, 0x0a]);
+     await Future.delayed(const Duration(milliseconds: 100));
 
-     await _writeRaw(c, [0x02, 0x64, 0x0a]);
+     // 2. Request device info
+     await _writeRaw(c, [0x02, 0x76, 0x0a]);
+     await Future.delayed(const Duration(milliseconds: 100));
+
+     // 3. Set Preset 21 (EEG data) — ต้องมี length prefix!
+     await _writeRaw(c, [0x04, 0x70, 0x32, 0x31, 0x0a]);
+     await Future.delayed(const Duration(milliseconds: 100));
+
+     // 4. Start streaming
      await _writeRaw(c, [0x02, 0x73, 0x0a]);
-     await _writeRaw(c, [0x73, 0x0a]);
-     await _writeRaw(c, [0x73, 0x0d]);
-     await _writeRaw(c, [0x70, 0x32, 0x31, 0x0a]);
+     await Future.delayed(const Duration(milliseconds: 100));
+
+     // 5. Resume (ถ้าถูก pause)
+     await _writeRaw(c, [0x02, 0x64, 0x0a]);
+
+     debugPrint('📤 Start commands sent to ${c.uuid}');
   }
 
   Future<void> _writeRaw(BluetoothCharacteristic c, List<int> cmd) async {
-    try { await c.write(cmd, withoutResponse: true); } catch (e) {}
-
+    try {
+      await c.write(cmd, withoutResponse: true);
+    } catch (e) {
+      debugPrint('❌ BLE Write Error (${c.uuid}): $e | cmd=$cmd');
+    }
   }
 
   void _processEEGData(String uuid, List<int> rawData) {
@@ -339,12 +385,21 @@ class MuseService extends ChangeNotifier {
       return;
     }
 
-    _fftDelayTimer?.cancel();
-    _fftDelayTimer = Timer(Duration(milliseconds: _fftDelayMs), () {
+    // ครั้งแรก: คำนวณทันที ไม่ต้องรอ
+    if (_lastFFTTime == null) {
+      debugPrint('⚡ First FFT — computing immediately!');
       _calculateFFT();
       _lastFFTTime = DateTime.now();
-      debugPrint('FFT computed at ${_lastFFTTime} | Buffer: TP9=${_tp9Window.length}, AF7=${_af7Window.length}, AF8=${_af8Window.length}, TP10=${_tp10Window.length}');
-    });
+      return;
+    }
+
+    // ครั้งถัดไป: Throttle — คำนวณได้สูงสุดทุก 1 วินาที
+    final elapsed = DateTime.now().difference(_lastFFTTime!).inMilliseconds;
+    if (elapsed >= _fftDelayMs) {
+      _calculateFFT();
+      _lastFFTTime = DateTime.now();
+      debugPrint('🔄 FFT updated | Buffer: TP9=${_tp9Window.length}, AF7=${_af7Window.length}, AF8=${_af8Window.length}, TP10=${_tp10Window.length}');
+    }
   }
 
   void _addToWindow(List<double> window, List<double> newSamples) {

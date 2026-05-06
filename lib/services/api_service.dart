@@ -233,6 +233,9 @@ class ApiService {
     double attentionScore = 0,
     double meditationScore = 0,
     String deviceName = 'Muse 2',
+    String? emotionLabel,
+    String? activityType,
+    String? sessionPhase,
   }) async {
     return SupabaseService.saveBrainwaveData(
       userId: userId,
@@ -244,8 +247,52 @@ class ApiService {
       attentionScore: attentionScore,
       meditationScore: meditationScore,
       deviceName: deviceName,
+      emotionLabel: emotionLabel,
+      activityType: activityType,
+      sessionPhase: sessionPhase,
     );
   }
+
+  static Future<Map<String, dynamic>> saveEmotionSession({
+    required int userId,
+    required String targetEmotion,
+    required String activityType,
+    String? sessionName,
+    int durationSeconds = 0,
+    int samplesCollected = 0,
+    double avgAlpha = 0,
+    double avgBeta = 0,
+    double avgTheta = 0,
+    double avgDelta = 0,
+    double avgGamma = 0,
+    int? selfReportValence,
+    int? selfReportArousal,
+    String? notes,
+    bool isCompleted = false,
+  }) async {
+    return SupabaseService.saveEmotionSession(
+      userId: userId,
+      targetEmotion: targetEmotion,
+      activityType: activityType,
+      sessionName: sessionName,
+      durationSeconds: durationSeconds,
+      samplesCollected: samplesCollected,
+      avgAlpha: avgAlpha,
+      avgBeta: avgBeta,
+      avgTheta: avgTheta,
+      avgDelta: avgDelta,
+      avgGamma: avgGamma,
+      selfReportValence: selfReportValence,
+      selfReportArousal: selfReportArousal,
+      notes: notes,
+      isCompleted: isCompleted,
+    );
+  }
+
+  static Future<Map<String, dynamic>> getEmotionSessions(int userId, {int limit = 20}) async {
+    return SupabaseService.getEmotionSessions(userId, limit: limit);
+  }
+
 
   static Future<Map<String, dynamic>> getEmergencyContacts(int userId) async {
     return SupabaseService.getEmergencyContacts(userId);
