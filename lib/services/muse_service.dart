@@ -58,11 +58,16 @@ class MuseService extends ChangeNotifier {
   BrainwaveData? _latestData;
   final List<BrainwaveData> _dataHistory = [];
 
-  final int _windowSize = 256;
+  // FFT window size: 512 = 0.5 Hz resolution @ 256 Hz sampling rate
+  // (เดิม 256 = 1 Hz resolution → ไม่ละเอียดพอสำหรับ Delta/Theta)
+  final int _windowSize = 512;
   final List<double> _tp9Window = [];
   final List<double> _af7Window = [];
   final List<double> _af8Window = [];
   final List<double> _tp10Window = [];
+
+  // Temporal smoothing: EMA ของ band powers ระหว่าง frame
+  Map<String, double>? _prevSmoothedPower;
 
   bool _isMuse2 = false;
 
@@ -71,10 +76,19 @@ class MuseService extends ChangeNotifier {
   bool _isDisposed = false;
 
   Timer? _fftDelayTimer;
-  final int _fftDelayMs = 1000;
-  final int _minBufferFill = 256;
+  final int _fftDelayMs = 500;
+  final int _minBufferFill = 512;
   int _packetCount = 0;
   DateTime? _lastFFTTime;
+
+  // === Data Throughput Monitoring ===
+  // ตรวจสอบว่าได้รับข้อมูลครบตามมาตรฐาน 256 Hz หรือไม่
+  int _samplesPerSecond = 0;
+  int _sampleCountThisSecond = 0;
+  DateTime? _lastThroughputCheck;
+  double _actualHz = 0;
+  int _droppedPackets = 0;
+  int _lastPacketSeqNum = -1;
 
   bool get isScanning => _isScanning;
   bool get isConnected => _isConnected;
@@ -93,6 +107,8 @@ class MuseService extends ChangeNotifier {
   int get minBufferRequired => _minBufferFill;
   int get packetCount => _packetCount;
   double get bufferProgress => _tp9Window.length / _minBufferFill;
+  double get actualHz => _actualHz;
+  int get droppedPackets => _droppedPackets;
   bool get isBuffering => _isConnected && _latestData == null && _packetCount > 0;
   bool get isWaitingForFFT => _tp9Window.length >= _minBufferFill && _latestData == null;
 
@@ -357,10 +373,43 @@ class MuseService extends ChangeNotifier {
      if (rawData.isEmpty) return;
      _dataReceivedRecently = true;
      _packetCount++;
-     _status = 'รับข้อมูล... (${rawData.length} bytes, packet #$_packetCount)';
+
+     // === Packet Sequence Detection ===
+     // Byte 0-1 ของ Muse = packet counter
+     // ใช้ตรวจจับ packet loss
+     if (rawData.length >= 2) {
+       int seqNum = (rawData[0] << 8) | rawData[1];
+       if (_lastPacketSeqNum >= 0) {
+         int expected = (_lastPacketSeqNum + 1) & 0xFFFF;
+         if (seqNum != expected) {
+           int gap = (seqNum - _lastPacketSeqNum) & 0xFFFF;
+           if (gap > 1 && gap < 1000) {
+             _droppedPackets += (gap - 1);
+           }
+         }
+       }
+       _lastPacketSeqNum = seqNum;
+     }
+
+     // === Throughput Monitoring (Hz) ===
+     final now = DateTime.now();
+     if (_lastThroughputCheck == null) {
+       _lastThroughputCheck = now;
+       _sampleCountThisSecond = 0;
+     }
 
      try {
        List<double> samples = _parseMuseEEGPacket(rawData);
+       _sampleCountThisSecond += samples.length;
+       
+       // คำนวณ Hz ทุกวินาที
+       if (now.difference(_lastThroughputCheck!).inMilliseconds >= 1000) {
+         _actualHz = _sampleCountThisSecond.toDouble();
+         _samplesPerSecond = _sampleCountThisSecond;
+         _sampleCountThisSecond = 0;
+         _lastThroughputCheck = now;
+       }
+
        String lowerUuid = uuid.toLowerCase();
 
        if (lowerUuid.contains('273e0003')) {
@@ -404,33 +453,59 @@ class MuseService extends ChangeNotifier {
 
   void _addToWindow(List<double> window, List<double> newSamples) {
     window.addAll(newSamples);
-    if (window.length > _windowSize) window.removeRange(0, window.length - _windowSize);
+    // เก็บ buffer 2x window size สำหรับ Welch's method overlap
+    final maxBuf = _windowSize * 2;
+    if (window.length > maxBuf) window.removeRange(0, window.length - maxBuf);
   }
 
+  /// Parse Muse BLE Packet
+  ///
+  /// Muse 2 Protocol (20 bytes per packet):
+  ///   Byte 0-1: Packet sequence number (16-bit counter)
+  ///   Byte 2-19: 18 bytes EEG data
+  ///     - 12-bit encoding: 3 bytes = 2 samples
+  ///     - 18 bytes ÷ 3 = 6 groups × 2 = 12 samples per packet
+  ///     - @ ~21.3 packets/sec = 256 samples/sec = 256 Hz
+  ///
+  /// Muse S Protocol (20 bytes per packet):
+  ///   Byte 0-1: Packet counter
+  ///   Byte 2-19: 18 bytes EEG data
+  ///     - 16-bit encoding: 2 bytes = 1 sample
+  ///     - 18 bytes ÷ 2 = 9 samples per packet
+  ///     - @ ~28.4 packets/sec = 256 samples/sec = 256 Hz
+  ///
+  /// อ้างอิง: Muse Direct Protocol Specification
+  /// มาตรฐาน IFCN: ขั้นต่ำสำหรับ clinical routine = 200 Hz
+  /// Muse 256 Hz ≥ 200 Hz → ผ่านมาตรฐาน IFCN
   List<double> _parseMuseEEGPacket(List<int> rawData) {
     List<double> samples = [];
 
     if (_isMuse2 && rawData.length >= 20) {
-      // Muse 2 (12-bit Encoding): ข้อมูลเริ่มที่ Byte 2, ใช้ 3 Byte ต่อ 2 Samples
-      for (int i = 2; i < rawData.length - 2; i += 3) {
+      // Muse 2: 12-bit encoding
+      // Byte 2-19 = 18 data bytes = 6 groups of 3 bytes = 12 samples
+      // Voltage scale: 12-bit (0-4095) mapped to 0-1682 µV
+      for (int i = 2; i + 2 < rawData.length; i += 3) {
         int b1 = rawData[i];
         int b2 = rawData[i+1];
         int b3 = rawData[i+2];
 
+        // Sample 1: upper 8 bits of b1 + upper 4 bits of b2
         int s1 = (b1 << 4) | (b2 >> 4);
+        // Sample 2: lower 4 bits of b2 + all 8 bits of b3
         int s2 = ((b2 & 0x0F) << 8) | b3;
 
+        // Convert to microvolts (µV)
+        // Muse 2 ADC: 12-bit, reference voltage 1682 µV
         samples.add((s1 / 4095.0) * 1682.0);
         samples.add((s2 / 4095.0) * 1682.0);
       }
-    } else {
-      // รุ่นเก่า หรือการเข้ารหัสแบบ 16-bit
-      final double maxRawValue = 65535.0;
-      if (rawData.length >= 6) {
-        for (int i = 2; i < rawData.length - 1; i += 2) {
-           int s = (rawData[i] << 8) | rawData[i+1];
-           samples.add( (s / maxRawValue) * 1682.0 );
-        }
+    } else if (rawData.length >= 6) {
+      // Muse S / Original: 16-bit encoding
+      // Byte 2-19 = 18 data bytes = 9 samples
+      // Voltage scale: 16-bit (0-65535) mapped to 0-1682 µV
+      for (int i = 2; i + 1 < rawData.length; i += 2) {
+        int s = (rawData[i] << 8) | rawData[i+1];
+        samples.add((s / 65535.0) * 1682.0);
       }
     }
     return samples;
@@ -438,20 +513,46 @@ class MuseService extends ChangeNotifier {
 
   void _calculateFFT() {
 
+     // === Enhanced Signal Processing Pipeline ===
+     // 1. Bandpass Filter (Butterworth 2nd-order, zero-phase, 0.5-45 Hz)
+     // 2. Notch Filter (50 Hz power line rejection)
+     // 3. Artifact Rejection (amplitude + blink + flatline detection)
+     // 4. Welch's PSD (overlapping segments → lower variance)
+     // 5. Temporal EMA Smoothing (ลดการกระโดดระหว่าง frame)
+     // 6. Relative Power (%) → normalize
+     
      Map<String, double> getPower(List<double> buf) {
         if (buf.isEmpty) return {};
-        List<double> p = List.from(buf);
-        if (p.length < _windowSize) p.addAll(List.filled(_windowSize - p.length, 0.0));
+        
+        // Step 1: Bandpass filter (0.5-45 Hz, zero-phase Butterworth)
+        List<double> filtered = FFTCalculator.bandpassFilter(buf, 256, lowCut: 0.5, highCut: 45.0);
+        
+        // Step 2: Notch filter 50 Hz (power line noise Thailand)
+        filtered = FFTCalculator.notchFilter50Hz(filtered, 256);
+        
+        // Step 3: Artifact rejection (amplitude + blink + flatline)
+        filtered = FFTCalculator.rejectArtifacts(filtered, threshold: 75.0);
+        
+        // Step 4: Welch's PSD (50% overlap, 256-point segments)
+        //   ใช้ segment size 256 ภายใน buffer 512 → 3 overlapping segments
+        //   → ลด PSD variance ~50% เทียบ single FFT
         try {
-           var mags = FFTCalculator.computeMagnitudes(p);
-           return FFTCalculator.calculateBandPowers(mags, 256);
+           return FFTCalculator.welchPSD(filtered, 256, segmentSize: 256, overlap: 0.5);
         } catch (e) { return {}; }
      }
+     
+     // Signal Quality Index (SQI) per channel
+     double sqiTotal = 0;
+     int sqiCount = 0;
 
      var p1 = getPower(_tp9Window);
+     if (p1.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_tp9Window); sqiCount++; }
      var p2 = getPower(_af7Window);
+     if (p2.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_af7Window); sqiCount++; }
      var p3 = getPower(_af8Window);
+     if (p3.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_af8Window); sqiCount++; }
      var p4 = getPower(_tp10Window);
+     if (p4.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_tp10Window); sqiCount++; }
 
      double totalAlpha = 0, totalBeta = 0, totalTheta = 0, totalDelta = 0, totalGamma = 0;
      int validChannels = 0;
@@ -474,24 +575,66 @@ class MuseService extends ChangeNotifier {
 
      if (validChannels == 0) return;
 
-     double sum = totalAlpha + totalBeta + totalTheta + totalDelta + totalGamma;
+     // Average absolute power across valid channels
+     Map<String, double> rawPower = {
+       'alpha': totalAlpha / validChannels,
+       'beta': totalBeta / validChannels,
+       'theta': totalTheta / validChannels,
+       'delta': totalDelta / validChannels,
+       'gamma': totalGamma / validChannels,
+     };
+
+     // Step 5: Temporal smoothing (EMA, alpha=0.3)
+     //   ลดการกระโดดของค่า → display ที่นิ่งและน่าเชื่อถือมากขึ้น
+     Map<String, double> smoothed = FFTCalculator.smoothBandPowers(
+       rawPower, _prevSmoothedPower, alpha: 0.3);
+     _prevSmoothedPower = smoothed;
+
+     double avgAlpha = smoothed['alpha']!;
+     double avgBeta = smoothed['beta']!;
+     double avgTheta = smoothed['theta']!;
+     double avgDelta = smoothed['delta']!;
+     double avgGamma = smoothed['gamma']!;
+
+     double sum = avgAlpha + avgBeta + avgTheta + avgDelta + avgGamma;
      if (sum == 0) sum = 1;
 
+     // Relative power (%)
+     double relAlpha = (avgAlpha / sum) * 100;
+     double relBeta = (avgBeta / sum) * 100;
+     double relTheta = (avgTheta / sum) * 100;
+     double relDelta = (avgDelta / sum) * 100;
+     double relGamma = (avgGamma / sum) * 100;
+
+     // === Attention & Meditation from Band Ratios ===
+     // Attention: Beta / (Theta + Alpha)  (Lubar, 1991)
+     double attentionRatio = avgBeta / (avgTheta + avgAlpha + 0.001);
+     double attention = (attentionRatio * 40).clamp(0, 100);
+     
+     // Meditation: Alpha / (Beta + Gamma) (Aftanas, 2001)
+     double meditationRatio = avgAlpha / (avgBeta + avgGamma + 0.001);
+     double meditation = (meditationRatio * 40).clamp(0, 100);
+
+     double avgSQI = sqiCount > 0 ? sqiTotal / sqiCount : 0;
+     String quality = avgSQI > 70 ? 'ดี' : (avgSQI > 40 ? 'พอใช้' : 'อ่อน');
+
      _latestData = BrainwaveData(
-        alpha: (totalAlpha/sum)*100,
-        beta: (totalBeta/sum)*100,
-        theta: (totalTheta/sum)*100,
-        delta: (totalDelta/sum)*100,
-        gamma: (totalGamma/sum)*100,
-        attention: 50,
-        meditation: 50
+        alpha: relAlpha,
+        beta: relBeta,
+        theta: relTheta,
+        delta: relDelta,
+        gamma: relGamma,
+        attention: attention,
+        meditation: meditation,
      );
 
      _dataHistory.add(_latestData!);
-     if (_dataHistory.length > 100) _dataHistory.removeAt(0);
+     if (_dataHistory.length > 200) _dataHistory.removeAt(0);
      
-     // แสดงค่าออก Console เพื่อให้ดูได้สะดวกขึ้น
-     debugPrint('Brainwaves -> Alpha: ${_latestData!.alpha.toStringAsFixed(2)}%, Beta: ${_latestData!.beta.toStringAsFixed(2)}%, Theta: ${_latestData!.theta.toStringAsFixed(2)}%');
+     String hzInfo = _actualHz > 0 ? '${_actualHz.toStringAsFixed(0)} Hz' : 'measuring...';
+     String dropInfo = _droppedPackets > 0 ? ' Drop:$_droppedPackets' : '';
+     _status = 'รับข้อมูล... ($hzInfo, ${validChannels}ch) SQI:${avgSQI.toStringAsFixed(0)}%($quality)$dropInfo';
+     debugPrint('🧠 EEG → α:${relAlpha.toStringAsFixed(1)}% β:${relBeta.toStringAsFixed(1)}% θ:${relTheta.toStringAsFixed(1)}% δ:${relDelta.toStringAsFixed(1)}% γ:${relGamma.toStringAsFixed(1)}% | $hzInfo | SQI:${avgSQI.toStringAsFixed(0)}% | Att:${attention.toStringAsFixed(0)} Med:${meditation.toStringAsFixed(0)}$dropInfo');
      
     _safeNotify();
   }

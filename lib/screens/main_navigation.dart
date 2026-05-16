@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import 'dashboard/home_screen.dart';
+import 'dashboard/phq9_tab_screen.dart';
 import 'dashboard/recommendation_screen.dart';
 import 'dashboard/profile_screen.dart';
 import 'dashboard/activities_dashboard_screen.dart';
@@ -30,6 +31,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   List<Widget> get _screens => [
     HomeScreen(user: _currentUser),
+    Phq9TabScreen(user: _currentUser),
     RecommendationScreen(user: _currentUser),
     ProfileScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
     ActivitiesDashboardScreen(user: _currentUser),
@@ -69,9 +71,10 @@ class _MainNavigationState extends State<MainNavigation> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_rounded, 'หน้าแรก'),
-                _buildNavItem(1, Icons.chat_bubble_rounded, 'คำแนะนำ'),
-                _buildNavItem(2, Icons.person_rounded, 'โปรไฟล์'),
-                _buildNavItem(3, Icons.grid_view_rounded, 'กิจกรรม'),
+                _buildNavItem(1, Icons.quiz_rounded, 'PHQ-9'),
+                _buildNavItem(2, Icons.chat_bubble_rounded, 'คำแนะนำ'),
+                _buildNavItem(3, Icons.person_rounded, 'โปรไฟล์'),
+                _buildNavItem(4, Icons.grid_view_rounded, 'กิจกรรม'),
               ],
             ),
           ),
@@ -90,7 +93,7 @@ class _MainNavigationState extends State<MainNavigation> {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
-          horizontal: isActive ? 16 : 12,
+          horizontal: isActive ? 10 : 8,
           vertical: 8,
         ),
         decoration: BoxDecoration(
