@@ -1282,4 +1282,75 @@ class SupabaseService {
       return {'success': false, 'message': 'ไม่สามารถลบบัญชีได้: $e'};
     }
   }
+
+  static Future<Map<String, dynamic>> saveEegAssessmentReport({
+    required int userId,
+    required Map<String, dynamic> reportData,
+  }) async {
+    try {
+      final eegIndex = (reportData['eegIndex'] as num?)?.toDouble() ?? 0;
+      final response = await client
+          .from('eeg_assessment_reports')
+          .insert({
+            'user_id': userId,
+            'eeg_index': eegIndex,
+            'risk_level': reportData['riskLevel'],
+            'risk_level_en': reportData['riskLevelEn'],
+            'samples_collected': reportData['samplesCollected'] ?? 0,
+            'duration_seconds': reportData['durationSeconds'] ?? 120,
+            'report_data': reportData,
+          })
+          .select()
+          .single();
+
+      return {
+        'success': true,
+        'message': 'บันทึกใบสรุปสำเร็จ',
+        'report': response,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'ไม่สามารถบันทึกใบสรุปได้: $e',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> getEegAssessmentReports(
+    int userId, {
+    int limit = 50,
+  }) async {
+    try {
+      final response = await client
+          .from('eeg_assessment_reports')
+          .select()
+          .eq('user_id', userId)
+          .order('recorded_at', ascending: false)
+          .limit(limit);
+
+      return {'success': true, 'reports': response};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'ไม่สามารถโหลดประวัติใบสรุปได้',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> getEegAssessmentReport(int reportId) async {
+    try {
+      final response = await client
+          .from('eeg_assessment_reports')
+          .select()
+          .eq('id', reportId)
+          .single();
+
+      return {'success': true, 'report': response};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'ไม่พบใบสรุป',
+      };
+    }
+  }
 }
