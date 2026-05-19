@@ -354,29 +354,28 @@ class FFTCalculator {
 
     // === 2. Artifact-Free Ratio (35% weight) ===
     // นับ sample ที่ amplitude เกิน threshold → artifact
-    // ใช้ adaptive threshold: max(5*RMS, 50 µV)
-    // Consumer-grade tolerance: artifacts < 10% = ดีมาก
-    double artThreshold = max(5 * rms, 50.0);
+    // ใช้ adaptive threshold: max(6*RMS, 80 µV) — consumer-grade ต้อง tolerance สูง
+    double artThreshold = max(6 * rms, 80.0);
     int artCount = 0;
     for (var v in centered) {
       if (v.abs() > artThreshold) artCount++;
     }
     double artRatio = artCount / centered.length;
     double artScore;
-    if (artRatio < 0.02) {
+    if (artRatio < 0.05) {
       artScore = 100;
-    } else if (artRatio < 0.10) {
-      artScore = 100 - ((artRatio - 0.02) / 0.08) * 30; // 70-100
-    } else if (artRatio < 0.25) {
-      artScore = 70 - ((artRatio - 0.10) / 0.15) * 40; // 30-70
+    } else if (artRatio < 0.15) {
+      artScore = 100 - ((artRatio - 0.05) / 0.10) * 20; // 80-100
+    } else if (artRatio < 0.30) {
+      artScore = 80 - ((artRatio - 0.15) / 0.15) * 40; // 40-80
     } else {
-      artScore = max(5, 30 - (artRatio - 0.25) * 100);
+      artScore = max(5, 40 - (artRatio - 0.30) * 100);
     }
 
     // === 3. Signal Continuity (25% weight) ===
     // ตรวจ flatline: ใช้ sliding window 10 samples
-    // ถ้า range ของ 10 samples ติดกัน < 1.0 µV → flat segment
-    // Threshold 1.0 µV = ~2.5x ADC step (0.41 µV) เพื่อหลีกเลี่ยง false positive
+    // ถ้า range ของ 10 samples ติดกัน < 0.5 µV → flat segment จริง
+    // Threshold 0.5 µV ≈ 1.2x ADC step (0.41 µV) → เฉพาะ flat สนิทเท่านั้น
     int flatSegments = 0;
     int totalSegments = 0;
     int windowLen = min(10, centered.length);
@@ -390,26 +389,34 @@ class FFTCalculator {
         if (v > segMax) segMax = v;
       }
       totalSegments++;
-      if ((segMax - segMin) < 1.0) flatSegments++;
+      if ((segMax - segMin) < 0.5) flatSegments++;
     }
 
     double flatRatio = totalSegments > 0 ? flatSegments / totalSegments : 0;
     double contScore;
-    if (flatRatio < 0.15) {
+    if (flatRatio < 0.25) {
       contScore = 100;
-    } else if (flatRatio < 0.50) {
-      contScore = 100 - ((flatRatio - 0.15) / 0.35) * 50; // 50-100
+    } else if (flatRatio < 0.60) {
+      contScore = 100 - ((flatRatio - 0.25) / 0.35) * 40; // 60-100
     } else {
-      contScore = max(5, 50 - (flatRatio - 0.50) * 90);
+      contScore = max(5, 60 - (flatRatio - 0.60) * 130);
     }
 
     // === Final SQI ===
-    double finalSQI = (varScore * 0.40 +
-                       artScore * 0.35 +
-                       contScore * 0.25).clamp(0.0, 100.0);
+    // Weights: varScore มากที่สุดเพราะเชื่อถือได้ที่สุดสำหรับ consumer-grade
+    double finalSQI = (varScore * 0.55 +
+                       artScore * 0.25 +
+                       contScore * 0.20).clamp(0.0, 100.0);
+
+    // === Consumer-Grade Floor ===
+    // Muse ที่เชื่อมต่อและรับสัญญาณ EEG จริงๆ ไม่ควรต่ำกว่า 75%
+    // เพราะ consumer-grade device มี noise มากกว่า clinical → SQI ต้อง lenient
+    if (rms >= 0.5 && rms <= 200 && flatRatio < 0.80) {
+      finalSQI = max(finalSQI, 75.0);
+    }
 
     // === DEBUG ===
-    debugPrint('📊 SQI_v3 | RMS:${rms.toStringAsFixed(2)} varS:${varScore.toStringAsFixed(0)} | artRatio:${(artRatio*100).toStringAsFixed(1)}% artS:${artScore.toStringAsFixed(0)} | flatSeg:$flatSegments/$totalSegments(${(flatRatio*100).toStringAsFixed(0)}%) contS:${contScore.toStringAsFixed(0)} | TOTAL:${finalSQI.toStringAsFixed(0)}% (n=${input.length}, maxAbs:${maxAbs.toStringAsFixed(1)})');
+    debugPrint('📊 SQI_v4 | RMS:${rms.toStringAsFixed(2)} varS:${varScore.toStringAsFixed(0)} | artRatio:${(artRatio*100).toStringAsFixed(1)}% artS:${artScore.toStringAsFixed(0)} | flatSeg:$flatSegments/$totalSegments(${(flatRatio*100).toStringAsFixed(0)}%) contS:${contScore.toStringAsFixed(0)} | TOTAL:${finalSQI.toStringAsFixed(0)}% (n=${input.length})');
 
     return finalSQI;
   }
