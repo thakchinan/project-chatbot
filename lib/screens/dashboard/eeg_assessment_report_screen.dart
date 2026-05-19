@@ -21,14 +21,29 @@ class EegAssessmentReportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'ใบสรุปประเมินภาวะซึมเศร้า',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
         ),
-        backgroundColor: const Color(0xFF1a237e),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF0F1B4C),
         foregroundColor: Colors.white,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0F1B4C), Color(0xFF1E3A8A)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),

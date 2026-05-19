@@ -1289,16 +1289,19 @@ class SupabaseService {
   }) async {
     try {
       final eegIndex = (reportData['eegIndex'] as num?)?.toDouble() ?? 0;
+      // Store in eeg_sessions with session_type = 'qeeg_assessment'
+      // Report JSON data goes into 'notes' column
       final response = await client
-          .from('eeg_assessment_reports')
+          .from('eeg_sessions')
           .insert({
             'user_id': userId,
-            'eeg_index': eegIndex,
-            'risk_level': reportData['riskLevel'],
-            'risk_level_en': reportData['riskLevelEn'],
-            'samples_collected': reportData['samplesCollected'] ?? 0,
-            'duration_seconds': reportData['durationSeconds'] ?? 120,
-            'report_data': reportData,
+            'session_type': 'qeeg_assessment',
+            'duration_seconds': reportData['durationSeconds'] ?? 90,
+            'avg_attention_score': eegIndex,
+            'avg_relaxation_score': (reportData['avgAlpha'] as num?)?.toDouble(),
+            'avg_stress_score': (reportData['avgBeta'] as num?)?.toDouble(),
+            'data_quality_grade': _riskCode(reportData['riskLevelEn'] as String?),
+            'notes': _encodeReportJson(reportData),
           })
           .select()
           .single();
@@ -1322,13 +1325,27 @@ class SupabaseService {
   }) async {
     try {
       final response = await client
-          .from('eeg_assessment_reports')
+          .from('eeg_sessions')
           .select()
           .eq('user_id', userId)
-          .order('recorded_at', ascending: false)
+          .eq('session_type', 'qeeg_assessment')
+          .order('started_at', ascending: false)
           .limit(limit);
 
-      return {'success': true, 'reports': response};
+      // Transform to expected format
+      final reports = (response as List).map((row) {
+        final reportData = _decodeReportJson(row['notes'] as String?);
+        return {
+          ...row,
+          'id': row['session_id'],
+          'eeg_index': row['avg_attention_score'],
+          'risk_level': row['data_quality_grade'],
+          'recorded_at': row['started_at'],
+          'report_data': reportData,
+        };
+      }).toList();
+
+      return {'success': true, 'reports': reports};
     } catch (e) {
       return {
         'success': false,
@@ -1340,17 +1357,71 @@ class SupabaseService {
   static Future<Map<String, dynamic>> getEegAssessmentReport(int reportId) async {
     try {
       final response = await client
-          .from('eeg_assessment_reports')
+          .from('eeg_sessions')
           .select()
-          .eq('id', reportId)
+          .eq('session_id', reportId)
           .single();
 
-      return {'success': true, 'report': response};
+      final reportData = _decodeReportJson(response['notes'] as String?);
+      return {
+        'success': true,
+        'report': {
+          ...response,
+          'id': response['session_id'],
+          'eeg_index': response['avg_attention_score'],
+          'risk_level': response['data_quality_grade'],
+          'recorded_at': response['started_at'],
+          'report_data': reportData,
+        },
+      };
     } catch (e) {
       return {
         'success': false,
         'message': 'ไม่พบใบสรุป',
       };
     }
+  }
+
+  /// Encode report data to JSON string for 'notes' column
+  static String _encodeReportJson(Map<String, dynamic> data) {
+    try {
+      // Remove non-serializable values
+      final clean = Map<String, dynamic>.from(data);
+      clean.remove('riskColor');
+      return clean.entries.map((e) => '${e.key}=${e.value}').join('|');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// Decode report data from 'notes' column
+  static Map<String, dynamic> _decodeReportJson(String? notes) {
+    if (notes == null || notes.isEmpty) return {};
+    try {
+      final map = <String, dynamic>{};
+      for (final part in notes.split('|')) {
+        final idx = part.indexOf('=');
+        if (idx > 0) {
+          final key = part.substring(0, idx);
+          final val = part.substring(idx + 1);
+          // Try to parse as number
+          final numVal = double.tryParse(val);
+          map[key] = numVal ?? val;
+        }
+      }
+      return map;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Map risk level to short code (max 10 chars for varchar(10))
+  static String _riskCode(String? riskLevelEn) {
+    if (riskLevelEn == null) return 'unknown';
+    final lower = riskLevelEn.toLowerCase();
+    if (lower.contains('high')) return 'high';
+    if (lower.contains('moderate')) return 'moderate';
+    if (lower.contains('low')) return 'low';
+    return 'unknown';
   }
 }

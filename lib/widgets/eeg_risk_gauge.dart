@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// เกจครึ่งวงกลมสรุประดับความเสี่ยง (0–100)
+/// เกจครึ่งวงกลมสรุประดับความเสี่ยง (0–100) — Premium Design
 class EegRiskGauge extends StatelessWidget {
   final double value;
   final Color accentColor;
@@ -15,7 +15,7 @@ class EegRiskGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 90,
+      height: 130,
       width: double.infinity,
       child: CustomPaint(
         painter: _GaugePainter(value.clamp(0, 100), accentColor),
@@ -32,16 +32,31 @@ class _GaugePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height - 8);
-    final radius = size.width * 0.42;
+    final center = Offset(size.width / 2, size.height - 12);
+    final radius = size.width * 0.40;
     const startAngle = math.pi;
     const sweep = math.pi;
 
     final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Draw track (shadow)
+    canvas.drawArc(
+      rect,
+      startAngle,
+      sweep,
+      false,
+      Paint()
+        ..color = Colors.grey.shade200
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 20
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Draw colored segments with gradient feel
     final segments = [
-      (0.33, const Color(0xFF4CAF50)),
-      (0.33, const Color(0xFFFF9800)),
-      (0.34, const Color(0xFFF44336)),
+      (0.33, const Color(0xFF43A047), const Color(0xFF66BB6A)),
+      (0.33, const Color(0xFFF57C00), const Color(0xFFFFB74D)),
+      (0.34, const Color(0xFFE53935), const Color(0xFFEF5350)),
     ];
     var start = startAngle;
     for (final seg in segments) {
@@ -52,28 +67,57 @@ class _GaugePainter extends CustomPainter {
         sweepSeg,
         false,
         Paint()
-          ..color = seg.$2
+          ..shader = SweepGradient(
+            startAngle: start,
+            endAngle: start + sweepSeg,
+            colors: [seg.$2, seg.$3],
+          ).createShader(rect)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 14
-          ..strokeCap = StrokeCap.round,
+          ..strokeWidth = 18
+          ..strokeCap = StrokeCap.butt,
       );
       start += sweepSeg;
     }
 
+    // Glow behind needle
     final needleAngle = startAngle + (value / 100) * sweep;
+    final glowEnd = Offset(
+      center.dx + radius * 0.75 * math.cos(needleAngle),
+      center.dy + radius * 0.75 * math.sin(needleAngle),
+    );
+    canvas.drawCircle(
+      glowEnd,
+      12,
+      Paint()
+        ..color = accent.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+
+    // Needle
     final needleEnd = Offset(
-      center.dx + radius * 0.85 * math.cos(needleAngle),
-      center.dy + radius * 0.85 * math.sin(needleAngle),
+      center.dx + radius * 0.78 * math.cos(needleAngle),
+      center.dy + radius * 0.78 * math.sin(needleAngle),
     );
     canvas.drawLine(
       center,
       needleEnd,
       Paint()
         ..color = accent
-        ..strokeWidth = 3
+        ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round,
     );
-    canvas.drawCircle(center, 6, Paint()..color = accent);
+
+    // Center dot with ring
+    canvas.drawCircle(center, 9, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      center,
+      9,
+      Paint()
+        ..color = accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    canvas.drawCircle(center, 4, Paint()..color = accent);
   }
 
   @override
