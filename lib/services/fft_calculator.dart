@@ -298,32 +298,27 @@ class FFTCalculator {
   }
 
   // =========================================================
-  //  Signal Quality
+  //  Signal Quality — Optimized for Muse 2 (12-bit ADC)
   // =========================================================
 
-  /// Signal Quality Index (0-100) — Optimized for Muse Consumer-Grade EEG
+  /// Signal Quality Index (0-100)
   ///
-  /// ปรับปรุงจากเวอร์ชันเดิมที่ได้ SQI ต่ำเกินจริง (~59%) เนื่องจาก:
-  /// - ใช้ raw data (มี DC offset/drift) ทำให้ SD สูงเกินไป
-  /// - Flatline threshold เข้มงวดเกินสำหรับ consumer-grade
-  /// - Spectral Entropy ใช้ amplitude histogram แทน frequency-domain
+  /// Muse 2 specs:
+  ///   ADC: 12-bit → 4096 levels → range 0-1682 µV
+  ///   Quantization step: 1682/4095 = 0.41 µV
+  ///   Sampling: 256 Hz, 4 channels (TP9, AF7, AF8, TP10)
   ///
-  /// เวอร์ชันใหม่:
-  /// 1. Pre-filter: ลบ DC offset ก่อนคำนวณ (สำคัญมาก!)
-  /// 2. SD Score: ปรับ range ให้เหมาะกับ Muse (3-150 µV)
-  /// 3. Flatline: ลด sensitivity เป็น 0.1 µV (Muse ADC quantization noise)
-  /// 4. Artifact: ใช้ 4σ rule แทน 3σ (consumer-grade มี noise มากกว่า clinical)
-  /// 5. Spectral Entropy: ใช้ FFT-based frequency domain จริง
-  /// 6. Alpha Presence: ตรวจว่ามีคลื่น Alpha (สัญญาณว่า electrode แนบดี)
+  /// SQI ประกอบด้วย 3 metrics หลักที่เชื่อถือได้:
+  ///   1. Signal Variability (SD) — 40%
+  ///   2. Artifact-Free Ratio — 35%
+  ///   3. Signal Continuity (non-flatline) — 25%
   ///
   /// อ้างอิง: Krigolson et al. (2017), Muse validation study
   static double calculateSQI(List<double> input) {
     if (input.isEmpty) return 0;
-    if (input.length < 32) return 20; // ข้อมูลน้อยเกินไป
+    if (input.length < 32) return 20;
 
-    // === Step 0: Remove DC offset (zero-mean) ===
-    // สำคัญ! Raw Muse data มี DC offset ~400-800 µV
-    // ถ้าไม่ลบ DC → SD จะสูงเกินจริง → SQI ต่ำ
+    // === Step 0: Remove DC offset ===
     double rawSum = 0;
     for (var v in input) rawSum += v;
     double rawMean = rawSum / input.length;
@@ -333,194 +328,90 @@ class FFTCalculator {
       centered[i] = input[i] - rawMean;
     }
 
-    // === Compute stats on centered (DC-removed) data ===
-    double sum = 0, sqSum = 0;
-    for (var v in centered) { sum += v; sqSum += v * v; }
-    double mean = sum / centered.length;
-    double variance = (sqSum / centered.length) - (mean * mean);
-    double sd = sqrt(variance.abs());
-
-    // === 1. SD Score (30% weight) ===
-    // สัญญาณ EEG ดีจะมี SD อยู่ในช่วง 0.5-150 µV (centered)
-    // Muse consumer-grade: centered SD อาจเล็กมาก ~1-50 µV
-    double sdScore;
-    if (sd >= 0.5 && sd <= 150) {
-      sdScore = 100;
-    } else if (sd < 0.5) {
-      // สัญญาณแบนเกินไป (electrode อาจไม่แนบ)
-      sdScore = (sd / 0.5) * 60;
-    } else {
-      // Noise สูงเกินไป (sd > 150 → กระดิก/สิ่งรบกวน)
-      sdScore = max(0, 100 - (sd - 150) * 0.5);
-    }
-
-    // === 2. Flatline Detection (15% weight) ===
-    // ใช้ threshold 0.1 µV แทน 0.01 (Muse ADC quantization ~0.4 µV)
-    int flatCount = 0;
-    for (int i = 1; i < centered.length; i++) {
-      if ((centered[i] - centered[i-1]).abs() < 0.1) flatCount++;
-    }
-    double flatRatio = flatCount / (centered.length - 1);
-    // Flatline < 30% ถือว่าปกติ (consumer-grade อาจมี flat spots เล็กน้อย)
-    double flatScore;
-    if (flatRatio < 0.3) {
-      flatScore = 100;
-    } else if (flatRatio < 0.7) {
-      flatScore = 100 - ((flatRatio - 0.3) / 0.4) * 80;
-    } else {
-      flatScore = max(0, 20 - (flatRatio - 0.7) * 60);
-    }
-
-    // === 3. Artifact Ratio (20% weight) ===
-    // ใช้ 4σ rule สำหรับ consumer-grade (เดิม 3σ เข้มเกิน)
-    int artCount = 0;
-    double artThreshold = max(4 * sd, 10.0); // ขั้นต่ำ 10 µV
+    // === Stats on centered data ===
+    double sqSum = 0;
+    double maxAbs = 0;
     for (var v in centered) {
-      if ((v - mean).abs() > artThreshold) artCount++;
+      sqSum += v * v;
+      double a = v.abs();
+      if (a > maxAbs) maxAbs = a;
+    }
+    double rms = sqrt(sqSum / centered.length);
+
+    // === 1. Signal Variability Score (40% weight) ===
+    // RMS ของ centered data:
+    //   - ต่ำเกินไป (< 0.5 µV) = electrode ไม่แนบ / flat
+    //   - ดี (0.5 - 200 µV) = สัญญาณ EEG ปกติ
+    //   - สูงเกินไป (> 200 µV) = noise / movement artifact
+    double varScore;
+    if (rms >= 0.5 && rms <= 200) {
+      varScore = 100;
+    } else if (rms < 0.5) {
+      varScore = (rms / 0.5) * 50;
+    } else {
+      varScore = max(10, 100 - (rms - 200) * 0.3);
+    }
+
+    // === 2. Artifact-Free Ratio (35% weight) ===
+    // นับ sample ที่ amplitude เกิน threshold → artifact
+    // ใช้ adaptive threshold: max(5*RMS, 50 µV)
+    // Consumer-grade tolerance: artifacts < 10% = ดีมาก
+    double artThreshold = max(5 * rms, 50.0);
+    int artCount = 0;
+    for (var v in centered) {
+      if (v.abs() > artThreshold) artCount++;
     }
     double artRatio = artCount / centered.length;
     double artScore;
-    if (artRatio < 0.05) {
+    if (artRatio < 0.02) {
       artScore = 100;
-    } else if (artRatio < 0.20) {
-      artScore = 100 - ((artRatio - 0.05) / 0.15) * 60;
+    } else if (artRatio < 0.10) {
+      artScore = 100 - ((artRatio - 0.02) / 0.08) * 30; // 70-100
+    } else if (artRatio < 0.25) {
+      artScore = 70 - ((artRatio - 0.10) / 0.15) * 40; // 30-70
     } else {
-      artScore = max(0, 40 - (artRatio - 0.20) * 200);
+      artScore = max(5, 30 - (artRatio - 0.25) * 100);
     }
 
-    // === 4. Spectral Entropy — Frequency Domain (20% weight) ===
-    double entropyScore = _spectralEntropyFFT(centered);
+    // === 3. Signal Continuity (25% weight) ===
+    // ตรวจ flatline: ใช้ sliding window 10 samples
+    // ถ้า range ของ 10 samples ติดกัน < 1.0 µV → flat segment
+    // Threshold 1.0 µV = ~2.5x ADC step (0.41 µV) เพื่อหลีกเลี่ยง false positive
+    int flatSegments = 0;
+    int totalSegments = 0;
+    int windowLen = min(10, centered.length);
 
-    // === 5. Alpha Presence Check (15% weight) ===
-    double alphaScore = _alphaBandPresence(centered);
+    for (int i = 0; i <= centered.length - windowLen; i += windowLen) {
+      double segMin = centered[i];
+      double segMax = centered[i];
+      for (int j = 1; j < windowLen; j++) {
+        double v = centered[i + j];
+        if (v < segMin) segMin = v;
+        if (v > segMax) segMax = v;
+      }
+      totalSegments++;
+      if ((segMax - segMin) < 1.0) flatSegments++;
+    }
 
-    // === Weighted Average ===
-    double finalSQI = (sdScore * 0.30 +
-                       flatScore * 0.15 +
-                       artScore * 0.20 +
-                       entropyScore * 0.20 +
-                       alphaScore * 0.15).clamp(0.0, 100.0);
+    double flatRatio = totalSegments > 0 ? flatSegments / totalSegments : 0;
+    double contScore;
+    if (flatRatio < 0.15) {
+      contScore = 100;
+    } else if (flatRatio < 0.50) {
+      contScore = 100 - ((flatRatio - 0.15) / 0.35) * 50; // 50-100
+    } else {
+      contScore = max(5, 50 - (flatRatio - 0.50) * 90);
+    }
 
-    // === DEBUG: แสดง sub-scores เพื่อวินิจฉัย ===
-    debugPrint('📊 SQI_v2 | SD:${sd.toStringAsFixed(2)} sdS:${sdScore.toStringAsFixed(0)} | flat:${(flatRatio*100).toStringAsFixed(1)}% flatS:${flatScore.toStringAsFixed(0)} | art:${(artRatio*100).toStringAsFixed(1)}% artS:${artScore.toStringAsFixed(0)} | entS:${entropyScore.toStringAsFixed(0)} | alpS:${alphaScore.toStringAsFixed(0)} | TOTAL:${finalSQI.toStringAsFixed(0)}% (n=${input.length})');
+    // === Final SQI ===
+    double finalSQI = (varScore * 0.40 +
+                       artScore * 0.35 +
+                       contScore * 0.25).clamp(0.0, 100.0);
+
+    // === DEBUG ===
+    debugPrint('📊 SQI_v3 | RMS:${rms.toStringAsFixed(2)} varS:${varScore.toStringAsFixed(0)} | artRatio:${(artRatio*100).toStringAsFixed(1)}% artS:${artScore.toStringAsFixed(0)} | flatSeg:$flatSegments/$totalSegments(${(flatRatio*100).toStringAsFixed(0)}%) contS:${contScore.toStringAsFixed(0)} | TOTAL:${finalSQI.toStringAsFixed(0)}% (n=${input.length}, maxAbs:${maxAbs.toStringAsFixed(1)})');
 
     return finalSQI;
-  }
-
-  /// Spectral Entropy (Frequency Domain) — ใช้ FFT จริง
-  /// สัญญาณ EEG ดีจะมี entropy ปานกลาง (มีหลาย frequency bands)
-  /// Noise ขาวจะมี entropy สูงมาก, สัญญาณ flat จะมี entropy ต่ำมาก
-  static double _spectralEntropyFFT(List<double> input) {
-    if (input.length < 64) return 50;
-
-    // หา power-of-2 ที่ใกล้ที่สุดและ ≤ ความยาว input
-    int fftSize = 64;
-    while (fftSize * 2 <= input.length && fftSize < 512) {
-      fftSize *= 2;
-    }
-
-    // ตัด input ให้พอดี fftSize
-    List<double> segment = input.sublist(input.length - fftSize);
-    
-    try {
-      List<double> mags = computeMagnitudes(segment);
-      
-      // คำนวณ Power Spectral Density
-      double totalPower = 0;
-      List<double> powers = List.filled(mags.length, 0.0);
-      for (int i = 1; i < mags.length; i++) {
-        powers[i] = mags[i] * mags[i];
-        totalPower += powers[i];
-      }
-      
-      if (totalPower < 1e-10) return 0; // No signal
-
-      // Shannon Entropy ของ normalized PSD
-      double entropy = 0;
-      for (int i = 1; i < powers.length; i++) {
-        double p = powers[i] / totalPower;
-        if (p > 1e-10) {
-          entropy -= p * log(p);
-        }
-      }
-
-      // Normalize: max entropy = log(N-1) สำหรับ uniform distribution
-      double maxEntropy = log(powers.length - 1);
-      if (maxEntropy < 1e-10) return 50;
-
-      double normalizedEntropy = entropy / maxEntropy; // 0-1
-
-      // EEG ดีจะมี entropy อยู่กลางๆ (0.4-0.85)
-      // ต่ำเกินไป = single frequency = artifact/power line
-      // สูงเกินไป = white noise = electrode ไม่ดี
-      double score;
-      if (normalizedEntropy >= 0.4 && normalizedEntropy <= 0.85) {
-        score = 100; // Sweet spot
-      } else if (normalizedEntropy < 0.4) {
-        score = (normalizedEntropy / 0.4) * 85; // Too narrow-band
-      } else {
-        // > 0.85: leaning towards noise
-        score = max(40, 100 - ((normalizedEntropy - 0.85) / 0.15) * 60);
-      }
-
-      return score.clamp(0.0, 100.0);
-    } catch (e) {
-      return 50; // Fallback
-    }
-  }
-
-  /// Alpha Band Presence — ตรวจว่ามีคลื่น Alpha หรือไม่
-  /// Alpha (8-13 Hz) เป็นตัวบ่งชี้ว่า electrode แนบหนังศีรษะดี
-  /// ถ้าไม่มี Alpha เลย = อาจเป็น noise/electrode หลุด
-  static double _alphaBandPresence(List<double> input) {
-    if (input.length < 64) return 50;
-
-    int fftSize = 64;
-    while (fftSize * 2 <= input.length && fftSize < 512) {
-      fftSize *= 2;
-    }
-
-    List<double> segment = input.sublist(input.length - fftSize);
-    
-    try {
-      List<double> mags = computeMagnitudes(segment);
-      double resolution = 256.0 / fftSize; // Assuming 256 Hz
-
-      double alphaPower = 0;
-      double totalPower = 0;
-
-      for (int i = 1; i < mags.length; i++) {
-        double freq = i * resolution;
-        double power = mags[i] * mags[i];
-        totalPower += power;
-        if (freq >= 8 && freq < 13) {
-          alphaPower += power;
-        }
-      }
-
-      if (totalPower < 1e-10) return 30;
-
-      double alphaRatio = alphaPower / totalPower;
-
-      // EEG ปกติ: alpha = 10-40% ของ total power (relaxed, eyes closed)
-      // Active: alpha = 5-15%
-      // Consumer-grade (Muse): alpha ~8-25% typically
-      double score;
-      if (alphaRatio >= 0.05) {
-        // มี alpha = electrode contact ดี
-        score = min(100, 70 + (alphaRatio / 0.30) * 30);
-      } else if (alphaRatio >= 0.02) {
-        // Alpha น้อยแต่พอมี
-        score = 50 + (alphaRatio / 0.05) * 20;
-      } else {
-        // ไม่มี alpha เลย = น่าสงสัย
-        score = max(20, alphaRatio * 1000);
-      }
-
-      return score.clamp(0.0, 100.0);
-    } catch (e) {
-      return 50;
-    }
   }
 
   // =========================================================
