@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 class FFTCalculator {
 
@@ -340,14 +341,14 @@ class FFTCalculator {
     double sd = sqrt(variance.abs());
 
     // === 1. SD Score (30% weight) ===
-    // สัญญาณ EEG ดีจะมี SD อยู่ในช่วง 3-150 µV
-    // Muse consumer-grade: ADC 12-bit, range 0-1682 µV → centered SD ~10-80 µV ปกติ
+    // สัญญาณ EEG ดีจะมี SD อยู่ในช่วง 0.5-150 µV (centered)
+    // Muse consumer-grade: centered SD อาจเล็กมาก ~1-50 µV
     double sdScore;
-    if (sd >= 3 && sd <= 150) {
+    if (sd >= 0.5 && sd <= 150) {
       sdScore = 100;
-    } else if (sd < 3) {
+    } else if (sd < 0.5) {
       // สัญญาณแบนเกินไป (electrode อาจไม่แนบ)
-      sdScore = (sd / 3.0) * 70;
+      sdScore = (sd / 0.5) * 60;
     } else {
       // Noise สูงเกินไป (sd > 150 → กระดิก/สิ่งรบกวน)
       sdScore = max(0, 100 - (sd - 150) * 0.5);
@@ -372,14 +373,12 @@ class FFTCalculator {
 
     // === 3. Artifact Ratio (20% weight) ===
     // ใช้ 4σ rule สำหรับ consumer-grade (เดิม 3σ เข้มเกิน)
-    // ~0.006% ของข้อมูลปกติจะเกิน 4σ
     int artCount = 0;
     double artThreshold = max(4 * sd, 10.0); // ขั้นต่ำ 10 µV
     for (var v in centered) {
       if ((v - mean).abs() > artThreshold) artCount++;
     }
     double artRatio = artCount / centered.length;
-    // < 5% artifacts = perfect, > 20% = poor
     double artScore;
     if (artRatio < 0.05) {
       artScore = 100;
@@ -390,12 +389,9 @@ class FFTCalculator {
     }
 
     // === 4. Spectral Entropy — Frequency Domain (20% weight) ===
-    // ใช้ FFT-based spectral entropy จริง (ไม่ใช่ amplitude histogram)
     double entropyScore = _spectralEntropyFFT(centered);
 
     // === 5. Alpha Presence Check (15% weight) ===
-    // ถ้ามีคลื่น Alpha (8-13 Hz) = electrode แนบหน้าผากดี
-    // อ้างอิง: Alpha rhythm เป็น hallmark ของ EEG ที่มี electrode contact ดี
     double alphaScore = _alphaBandPresence(centered);
 
     // === Weighted Average ===
@@ -404,6 +400,9 @@ class FFTCalculator {
                        artScore * 0.20 +
                        entropyScore * 0.20 +
                        alphaScore * 0.15).clamp(0.0, 100.0);
+
+    // === DEBUG: แสดง sub-scores เพื่อวินิจฉัย ===
+    debugPrint('📊 SQI_v2 | SD:${sd.toStringAsFixed(2)} sdS:${sdScore.toStringAsFixed(0)} | flat:${(flatRatio*100).toStringAsFixed(1)}% flatS:${flatScore.toStringAsFixed(0)} | art:${(artRatio*100).toStringAsFixed(1)}% artS:${artScore.toStringAsFixed(0)} | entS:${entropyScore.toStringAsFixed(0)} | alpS:${alphaScore.toStringAsFixed(0)} | TOTAL:${finalSQI.toStringAsFixed(0)}% (n=${input.length})');
 
     return finalSQI;
   }
