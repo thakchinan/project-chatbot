@@ -3,7 +3,7 @@ import '../../models/user.dart';
 import '../../widgets/eeg_assessment_report_view.dart';
 import 'eeg_report_history_screen.dart';
 
-/// แสดงใบสรุป qEEG แบบเต็มหน้าจอ (หลังวัด 2 นาที หรือจากประวัติ)
+/// แสดงใบสรุป qEEG แบบเต็มหน้าจอ (หลังวัด 90 วินาที หรือจากประวัติ)
 class EegAssessmentReportScreen extends StatelessWidget {
   final User user;
   final Map<String, dynamic> summary;

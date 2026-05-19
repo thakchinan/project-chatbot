@@ -48,7 +48,7 @@ class EegPdfService {
               pw.SizedBox(width: 12),
               pw.Expanded(child: _buildInfoBox(font, fontBold, 'รายละเอียดการทดสอบ', [
                 'ประเภท: Quantitative EEG (qEEG)', 'เครื่องมือ: Muse EEG System',
-                'ความยาวสัญญาณ: 2 นาที', 'Samples: ${s['samplesCollected']}',
+                'ความยาวสัญญาณ: 1.5 นาที (90s)', 'Samples: ${s['samplesCollected']}',
               ])),
             ]),
             pw.SizedBox(height: 16),

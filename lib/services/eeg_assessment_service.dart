@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// คำนวณและจัดการข้อมูลใบสรุป qEEG (2 นาที)
+/// คำนวณและจัดการข้อมูลใบสรุป qEEG (90 วินาที — DEAP Protocol 60s + 30s margin)
 class EegAssessmentService {
   static Map<String, dynamic> computeFromSamples(List<Map<String, double>> samples) {
     if (samples.isEmpty) {
@@ -89,7 +89,7 @@ class EegAssessmentService {
       'riskLevelEn': riskLevelEn,
       'riskColorValue': riskColorValue,
       'samplesCollected': n,
-      'durationSeconds': 120,
+      'durationSeconds': 90,
       'normRef': 'Krigolson et al. (2017), DEAP Dataset, Elderly 60+ Norms',
       'recordedAt': DateTime.now().toIso8601String(),
     };
@@ -116,7 +116,7 @@ class EegAssessmentService {
       'riskLevelEn': 'No Data',
       'riskColorValue': 0xFF9E9E9E,
       'samplesCollected': 0,
-      'durationSeconds': 120,
+      'durationSeconds': 90,
       'recordedAt': DateTime.now().toIso8601String(),
     };
   }

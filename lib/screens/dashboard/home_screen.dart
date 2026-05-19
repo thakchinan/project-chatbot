@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // EEG Countdown Timer State
   bool _isEegCountdownRunning = false;
   bool _isEegCountdownDone = false;
-  int _eegCountdownSeconds = 120; // 2 minutes
+  int _eegCountdownSeconds = 90; // 90s = DEAP 60s + 30s artifact margin
   Timer? _eegCountdownTimer;
   Timer? _eegSampleTimer; // Fast sampling timer (250ms)
   Map<String, dynamic>? _eegSummaryResult;
@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // === EEG 2-Minute Countdown Methods ===
+  // === EEG 90-Second Countdown Methods (DEAP Protocol) ===
 
   void _startEegCountdown() {
     if (!_museService.isConnected) {
@@ -236,12 +236,12 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _isEegCountdownRunning = true;
       _isEegCountdownDone = false;
-      _eegCountdownSeconds = 120;
+      _eegCountdownSeconds = 90;
       _eegSamples.clear();
       _eegSummaryResult = null;
     });
 
-    // Fast sampling timer - collect every 250ms (~480 samples in 2 min)
+    // Fast sampling timer - collect every 250ms (~360 samples in 90s)
     _eegSampleTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (!mounted) { timer.cancel(); return; }
       _collectEegSample();
@@ -268,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _eegSampleTimer?.cancel();
     setState(() {
       _isEegCountdownRunning = false;
-      _eegCountdownSeconds = 120;
+      _eegCountdownSeconds = 90;
       _eegSamples.clear();
     });
   }
@@ -308,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
         attentionScore: summary['avgAttention'] as double,
         meditationScore: summary['avgMeditation'] as double,
         deviceName: _museService.deviceName ?? 'Muse',
-        sessionPhase: 'qeeq_2min',
+        sessionPhase: 'qeeg_90s',
       );
     }
 
@@ -1511,7 +1511,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const Icon(Icons.timer_rounded, color: Color(0xFF1a237e), size: 22),
               const SizedBox(width: 8),
               const Text(
-                'ทดสอบคลื่นสมอง EEG (2 นาที)',
+                'ทดสอบคลื่นสมอง EEG (1.5 นาที)',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1a237e)),
               ),
               const Spacer(),

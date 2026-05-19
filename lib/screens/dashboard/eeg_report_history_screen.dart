@@ -72,7 +72,7 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'ทำการวัดคลื่นสมอง 2 นาทีเพื่อสร้างใบสรุป',
+                        'ทำการวัดคลื่นสมอง 1.5 นาทีเพื่อสร้างใบสรุป',
                         style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                       ),
                     ],

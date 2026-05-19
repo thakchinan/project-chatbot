@@ -213,7 +213,7 @@ class EegAssessmentReportView extends StatelessWidget {
       'ประเภท: qEEG',
       'เครื่องมือ: Muse EEG',
       'สภาวะ: หลับตา (Eyes Closed)',
-      'ระยะเวลา: 2 นาที',
+      'ระยะเวลา: 1.5 นาที (90 วินาที)',
       'ผู้ทดสอบ: $userName',
     ]);
   }
