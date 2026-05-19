@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
+import 'dart:math' show Random, cos, log, max, min, pi, sqrt, tan;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -49,6 +49,20 @@ class MuseService extends ChangeNotifier {
   final int _minBufferFill = 512;
   int _packetCount = 0;
   DateTime? _lastFFTTime;
+
+  // === Per-Channel Signal Quality ===
+  // ติดตาม SQI แยกแต่ละช่อง เพื่อ Weighted Averaging
+  Map<String, double> _channelSQI = {
+    'TP9': 0, 'AF7': 0, 'AF8': 0, 'TP10': 0,
+  };
+  Map<String, double> get channelSQI => Map.unmodifiable(_channelSQI);
+
+  // === Frontal Alpha Asymmetry (FAA) ===
+  // FAA = ln(Alpha_AF8) - ln(Alpha_AF7)
+  // Positive = Left-dominant = Approach/Happy (Davidson, 1992)
+  // Negative = Right-dominant = Withdrawal/Sad
+  double _frontalAlphaAsymmetry = 0;
+  double get frontalAlphaAsymmetry => _frontalAlphaAsymmetry;
 
   // === Data Throughput Monitoring ===
   // ตรวจสอบว่าได้รับข้อมูลครบตามมาตรฐาน 256 Hz หรือไม่
@@ -192,6 +206,20 @@ class MuseService extends ChangeNotifier {
 
       await device.connect(timeout: const Duration(seconds: 20), autoConnect: false);
 
+      // === BLE Connection Priority (Android) ===
+      // Request high-priority connection for lowest latency
+      // ลด connection interval → ลด packet loss และได้ data rate ใกล้ 256 Hz มากขึ้น
+      if (Platform.isAndroid) {
+        try {
+          await device.requestConnectionPriority(
+            connectionPriorityRequest: ConnectionPriority.high,
+          );
+          debugPrint('⚡ BLE Connection Priority: HIGH');
+        } catch (e) {
+          debugPrint('⚠️ Failed to set connection priority: $e');
+        }
+      }
+
   _connectedDevice = device;
   _deviceName = device.platformName;
 
@@ -203,6 +231,9 @@ class MuseService extends ChangeNotifier {
   _isConnecting = false;
   _status = 'เชื่อมต่อแล้ว (รอ Set up)...';
   _safeNotify();
+
+      // Reset all buffers to prevent stale data from previous sessions
+      _resetBuffers();
 
       _connectionSubscription = device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
@@ -500,6 +531,28 @@ class MuseService extends ChangeNotifier {
     return samples;
   }
 
+  /// Reset all signal buffers — เรียกเมื่อเชื่อมต่อใหม่
+  /// ป้องกันข้อมูลเก่าจาก session ก่อนหน้าปะปน
+  void _resetBuffers() {
+    _tp9Window.clear();
+    _af7Window.clear();
+    _af8Window.clear();
+    _tp10Window.clear();
+    _prevSmoothedPower = null;
+    _latestData = null;
+    _dataHistory.clear();
+    _packetCount = 0;
+    _lastFFTTime = null;
+    _droppedPackets = 0;
+    _lastPacketSeqNum = -1;
+    _actualHz = 0;
+    _sampleCountThisSecond = 0;
+    _lastThroughputCheck = null;
+    _frontalAlphaAsymmetry = 0;
+    _channelSQI = {'TP9': 0, 'AF7': 0, 'AF8': 0, 'TP10': 0};
+    debugPrint('🧹 All signal buffers reset');
+  }
+
   void _calculateFFT() {
 
      // === Enhanced Signal Processing Pipeline ===
@@ -507,8 +560,10 @@ class MuseService extends ChangeNotifier {
      // 2. Notch Filter (50 Hz power line rejection)
      // 3. Artifact Rejection (amplitude + blink + flatline detection)
      // 4. Welch's PSD (overlapping segments → lower variance)
-     // 5. Temporal EMA Smoothing (ลดการกระโดดระหว่าง frame)
-     // 6. Relative Power (%) → normalize
+     // 5. Per-channel SQI → Weighted Averaging (ช่องดี = น้ำหนักมาก)
+     // 6. Adaptive EMA Smoothing (ปรับตาม SQI)
+     // 7. Frontal Alpha Asymmetry (FAA) for Emotion Detection
+     // 8. Relative Power (%) → normalize
      
      Map<String, double> getPower(List<double> buf) {
         if (buf.isEmpty) return {};
@@ -523,60 +578,68 @@ class MuseService extends ChangeNotifier {
         filtered = FFTCalculator.rejectArtifacts(filtered, threshold: 75.0);
         
         // Step 4: Welch's PSD (50% overlap, 256-point segments)
-        //   ใช้ segment size 256 ภายใน buffer 512 → 3 overlapping segments
-        //   → ลด PSD variance ~50% เทียบ single FFT
         try {
            return FFTCalculator.welchPSD(filtered, 256, segmentSize: 256, overlap: 0.5);
         } catch (e) { return {}; }
      }
      
-     // Signal Quality Index (SQI) per channel
-     double sqiTotal = 0;
-     int sqiCount = 0;
+     // === Per-Channel SQI (Signal Quality Index) ===
+     // คำนวณ SQI แยกแต่ละช่อง เพื่อใช้ Weighted Averaging
+     double sqi1 = _tp9Window.isNotEmpty ? FFTCalculator.calculateSQI(_tp9Window) : 0;
+     double sqi2 = _af7Window.isNotEmpty ? FFTCalculator.calculateSQI(_af7Window) : 0;
+     double sqi3 = _af8Window.isNotEmpty ? FFTCalculator.calculateSQI(_af8Window) : 0;
+     double sqi4 = _tp10Window.isNotEmpty ? FFTCalculator.calculateSQI(_tp10Window) : 0;
+     _channelSQI = {'TP9': sqi1, 'AF7': sqi2, 'AF8': sqi3, 'TP10': sqi4};
 
      var p1 = getPower(_tp9Window);
-     if (p1.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_tp9Window); sqiCount++; }
      var p2 = getPower(_af7Window);
-     if (p2.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_af7Window); sqiCount++; }
      var p3 = getPower(_af8Window);
-     if (p3.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_af8Window); sqiCount++; }
      var p4 = getPower(_tp10Window);
-     if (p4.isNotEmpty) { sqiTotal += FFTCalculator.calculateSQI(_tp10Window); sqiCount++; }
 
-     double totalAlpha = 0, totalBeta = 0, totalTheta = 0, totalDelta = 0, totalGamma = 0;
-     int validChannels = 0;
+     // === SQI-Weighted Channel Averaging ===
+     // ช่องที่มี SQI สูง (Electrode แน่น) จะมีน้ำหนักมากกว่า
+     // ช่องที่ SQI ต่ำ (Electrode หลวม/หลุด) จะถูกลดน้ำหนักลง
+     double totalAlpha = 0, totalBeta = 0, totalTheta = 0;
+     double totalDelta = 0, totalGamma = 0;
+     double totalWeight = 0;
 
-     void addPower(Map<String, double> p) {
-       if (p.isNotEmpty) {
-         totalAlpha += (p['alpha'] ?? 0);
-         totalBeta += (p['beta'] ?? 0);
-         totalTheta += (p['theta'] ?? 0);
-         totalDelta += (p['delta'] ?? 0);
-         totalGamma += (p['gamma'] ?? 0);
-         validChannels++;
+     void addWeighted(Map<String, double> p, double sqi) {
+       if (p.isNotEmpty && sqi > 10) { // ช่อง SQI < 10% ถือว่าใช้ไม่ได้
+         double w = sqi / 100.0; // Normalize SQI to 0-1 as weight
+         totalAlpha += (p['alpha'] ?? 0) * w;
+         totalBeta  += (p['beta'] ?? 0) * w;
+         totalTheta += (p['theta'] ?? 0) * w;
+         totalDelta += (p['delta'] ?? 0) * w;
+         totalGamma += (p['gamma'] ?? 0) * w;
+         totalWeight += w;
        }
      }
 
-     addPower(p1);
-     addPower(p2);
-     addPower(p3);
-     addPower(p4);
+     addWeighted(p1, sqi1);
+     addWeighted(p2, sqi2);
+     addWeighted(p3, sqi3);
+     addWeighted(p4, sqi4);
 
-     if (validChannels == 0) return;
+     if (totalWeight == 0) return;
 
-     // Average absolute power across valid channels
+     // Weighted average power
      Map<String, double> rawPower = {
-       'alpha': totalAlpha / validChannels,
-       'beta': totalBeta / validChannels,
-       'theta': totalTheta / validChannels,
-       'delta': totalDelta / validChannels,
-       'gamma': totalGamma / validChannels,
+       'alpha': totalAlpha / totalWeight,
+       'beta':  totalBeta / totalWeight,
+       'theta': totalTheta / totalWeight,
+       'delta': totalDelta / totalWeight,
+       'gamma': totalGamma / totalWeight,
      };
 
-     // Step 5: Temporal smoothing (EMA, alpha=0.3)
-     //   ลดการกระโดดของค่า → display ที่นิ่งและน่าเชื่อถือมากขึ้น
+     // === Adaptive EMA Smoothing ===
+     // SQI สูง → alpha 0.4 (responsive, เห็นการเปลี่ยนแปลงเร็ว)
+     // SQI ต่ำ → alpha 0.15 (smooth มาก, กรอง noise)
+     double avgSQI = (sqi1 + sqi2 + sqi3 + sqi4) / 4.0;
+     double adaptiveAlpha = 0.15 + (avgSQI / 100.0) * 0.25; // 0.15 - 0.40
+     adaptiveAlpha = adaptiveAlpha.clamp(0.15, 0.40);
+
      Map<String, double> smoothed = FFTCalculator.smoothBandPowers(
-       rawPower, _prevSmoothedPower, alpha: 0.3);
+       rawPower, _prevSmoothedPower, alpha: adaptiveAlpha);
      _prevSmoothedPower = smoothed;
 
      double avgAlpha = smoothed['alpha']!;
@@ -595,6 +658,17 @@ class MuseService extends ChangeNotifier {
      double relDelta = (avgDelta / sum) * 100;
      double relGamma = (avgGamma / sum) * 100;
 
+     // === Frontal Alpha Asymmetry (FAA) ===
+     // FAA = ln(Alpha_Right/AF8) - ln(Alpha_Left/AF7)
+     // อ้างอิง: Davidson (1992), Harmon-Jones (2004)
+     // Positive FAA → Left-hemisphere dominant → Approach / Happy
+     // Negative FAA → Right-hemisphere dominant → Withdrawal / Sad
+     if (p2.isNotEmpty && p3.isNotEmpty) {
+       double af7Alpha = (p2['alpha'] ?? 0) + 0.001; // AF7 = Left
+       double af8Alpha = (p3['alpha'] ?? 0) + 0.001; // AF8 = Right
+       _frontalAlphaAsymmetry = log(af8Alpha) - log(af7Alpha);
+     }
+
      // === Attention & Meditation from Band Ratios ===
      // Attention: Beta / (Theta + Alpha)  (Lubar, 1991)
      double attentionRatio = avgBeta / (avgTheta + avgAlpha + 0.001);
@@ -604,7 +678,7 @@ class MuseService extends ChangeNotifier {
      double meditationRatio = avgAlpha / (avgBeta + avgGamma + 0.001);
      double meditation = (meditationRatio * 40).clamp(0, 100);
 
-     double avgSQI = sqiCount > 0 ? sqiTotal / sqiCount : 0;
+     int validChannels = [sqi1, sqi2, sqi3, sqi4].where((s) => s > 10).length;
      String quality = avgSQI > 70 ? 'ดี' : (avgSQI > 40 ? 'พอใช้' : 'อ่อน');
 
      _latestData = BrainwaveData(
@@ -622,8 +696,9 @@ class MuseService extends ChangeNotifier {
      
      String hzInfo = _actualHz > 0 ? '${_actualHz.toStringAsFixed(0)} Hz' : 'measuring...';
      String dropInfo = _droppedPackets > 0 ? ' Drop:$_droppedPackets' : '';
+     String faaInfo = ' FAA:${_frontalAlphaAsymmetry.toStringAsFixed(2)}';
      _status = 'รับข้อมูล... ($hzInfo, ${validChannels}ch) SQI:${avgSQI.toStringAsFixed(0)}%($quality)$dropInfo';
-     debugPrint('🧠 EEG → α:${relAlpha.toStringAsFixed(1)}% β:${relBeta.toStringAsFixed(1)}% θ:${relTheta.toStringAsFixed(1)}% δ:${relDelta.toStringAsFixed(1)}% γ:${relGamma.toStringAsFixed(1)}% | $hzInfo | SQI:${avgSQI.toStringAsFixed(0)}% | Att:${attention.toStringAsFixed(0)} Med:${meditation.toStringAsFixed(0)}$dropInfo');
+     debugPrint('🧠 EEG → α:${relAlpha.toStringAsFixed(1)}% β:${relBeta.toStringAsFixed(1)}% θ:${relTheta.toStringAsFixed(1)}% δ:${relDelta.toStringAsFixed(1)}% γ:${relGamma.toStringAsFixed(1)}% | $hzInfo | SQI:${avgSQI.toStringAsFixed(0)}% | EMA:${adaptiveAlpha.toStringAsFixed(2)}$faaInfo | Att:${attention.toStringAsFixed(0)} Med:${meditation.toStringAsFixed(0)}$dropInfo');
      
     _safeNotify();
   }

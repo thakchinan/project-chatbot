@@ -33,8 +33,8 @@ class _MainNavigationState extends State<MainNavigation> {
     HomeScreen(user: _currentUser),
     Phq9TabScreen(user: _currentUser),
     RecommendationScreen(user: _currentUser),
-    ProfileScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
     ActivitiesDashboardScreen(user: _currentUser),
+    ProfileScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
   ];
 
   @override
@@ -73,8 +73,8 @@ class _MainNavigationState extends State<MainNavigation> {
                 _buildNavItem(0, Icons.home_rounded, 'หน้าแรก'),
                 _buildNavItem(1, Icons.quiz_rounded, 'PHQ-9'),
                 _buildNavItem(2, Icons.chat_bubble_rounded, 'คำแนะนำ'),
-                _buildNavItem(3, Icons.person_rounded, 'โปรไฟล์'),
-                _buildNavItem(4, Icons.grid_view_rounded, 'กิจกรรม'),
+                _buildNavItem(3, Icons.grid_view_rounded, 'กิจกรรม'),
+                _buildNavItem(4, Icons.person_rounded, 'โปรไฟล์'),
               ],
             ),
           ),
