@@ -547,4 +547,25 @@ class ApiService {
   static Future<Map<String, dynamic>> getEmotionSummary(int userId) async {
     return SupabaseService.getEmotionSummary(userId);
   }
+
+  static Future<Map<String, dynamic>> saveEegAssessmentReport({
+    required int userId,
+    required Map<String, dynamic> reportData,
+  }) async {
+    return SupabaseService.saveEegAssessmentReport(
+      userId: userId,
+      reportData: reportData,
+    );
+  }
+
+  static Future<Map<String, dynamic>> getEegAssessmentReports(
+    int userId, {
+    int limit = 50,
+  }) async {
+    return SupabaseService.getEegAssessmentReports(userId, limit: limit);
+  }
+
+  static Future<Map<String, dynamic>> getEegAssessmentReport(int reportId) async {
+    return SupabaseService.getEegAssessmentReport(reportId);
+  }
 }
