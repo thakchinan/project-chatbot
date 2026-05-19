@@ -131,8 +131,21 @@ class FFTCalculator {
   static List<double> bandpassFilter(List<double> input, int samplingRate,
       {double lowCut = 0.5, double highCut = 45.0}) {
     if (input.length < 6) return List.from(input);
+    
+    // IMPORTANT: Remove DC offset (Mean) before filtering!
+    // ถ้าไม่ลบ DC offset ออกก่อน IIR filter จะเกิด Transient ขนาดใหญ่มาก 
+    // ทำให้ค่า SD พุ่งทะลุหลอด และ SQI ร่วงลงเหลือ 58% ตลอดเวลา
+    double sum = 0;
+    for (var v in input) sum += v;
+    double mean = sum / input.length;
+    
+    List<double> zeroMeanInput = List.filled(input.length, 0.0);
+    for (int i = 0; i < input.length; i++) {
+      zeroMeanInput[i] = input[i] - mean;
+    }
+
     // Forward-backward filter (zero-phase) for better results
-    List<double> hp = _butterworthHP(input, lowCut, samplingRate);
+    List<double> hp = _butterworthHP(zeroMeanInput, lowCut, samplingRate);
     List<double> lp = _butterworthLP(hp, highCut, samplingRate);
     return lp;
   }
