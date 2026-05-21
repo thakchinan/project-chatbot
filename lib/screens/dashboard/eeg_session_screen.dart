@@ -223,6 +223,17 @@ class _EegSessionScreenState extends State<EegSessionScreen>
     bool _isSaving = false;
     final session = _sessions[_currentSessionIndex];
 
+    final n = _samplesCollected > 0 ? _samplesCollected : 1;
+    final avgA = _totalAlpha / n;
+    final avgB = _totalBeta / n;
+    final avgT = _totalTheta / n;
+    final avgD = _totalDelta / n;
+    final avgG = _totalGamma / n;
+
+    final eval = _evaluateEEG(session['emotion'], avgA, avgB, avgT, avgD, avgG);
+    final isMatch = eval['isMatch'] as bool;
+    final feedback = eval['feedback'] as String;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -245,6 +256,79 @@ class _EegSessionScreenState extends State<EegSessionScreen>
             children: [
               Text('เก็บได้ $_samplesCollected samples ใน $_elapsedSeconds วินาที',
                   style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              const SizedBox(height: 12),
+              
+              // ─── การตรวจสอบผลลัพธ์คลื่นสมองเบื้องต้น ───
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isMatch ? Colors.green.withOpacity(0.08) : Colors.orange.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isMatch ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isMatch ? Icons.check_circle_outline : Icons.info_outline,
+                          color: isMatch ? Colors.green[700] : Colors.orange[800],
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isMatch ? 'สรุป: ตรงตามเป้าหมาย ($feedback)' : 'สรุป: ยังไม่ตรงเป้า ($feedback)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isMatch ? Colors.green[800] : Colors.orange[900],
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if ((eval['details'] as List).isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Divider(height: 1, thickness: 0.5),
+                      const SizedBox(height: 8),
+                      ...(eval['details'] as List).map((d) {
+                        final p = d['pass'] as bool;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 1.5),
+                                child: Icon(
+                                  p ? Icons.check_circle : Icons.cancel,
+                                  color: p ? Colors.green[600] : Colors.red[400],
+                                  size: 14,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  d['text'] as String,
+                                  style: TextStyle(
+                                    fontSize: 11.5, 
+                                    color: Colors.grey[800],
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ]
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 20),
               const Text('ตอนนี้คุณรู้สึกอย่างไร?', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
@@ -415,6 +499,111 @@ class _EegSessionScreenState extends State<EegSessionScreen>
         ),
       ),
     );
+  }
+
+  Map<String, dynamic> _evaluateEEG(String emotion, double alpha, double beta, double theta, double delta, double gamma) {
+    bool isMatch = false;
+    String feedback = '';
+    List<Map<String, dynamic>> details = [];
+
+    void addDetail(bool pass, String text) {
+      details.add({'pass': pass, 'text': text});
+    }
+
+    final totalPower = alpha + beta + theta + delta + gamma;
+    if (totalPower <= 0) {
+      return {'isMatch': false, 'feedback': 'ไม่พบสัญญาณสมอง', 'details': []};
+    }
+
+    switch (emotion) {
+      case 'neutral':
+        isMatch = true;
+        feedback = 'เส้นฐาน (Baseline) สมบูรณ์แบบ';
+        addDetail(true, 'เก็บข้อมูลคลื่นสมองได้ครบถ้วน (Baseline)');
+        break;
+        
+      case 'calm':
+        final baRatio = beta / (alpha > 0 ? alpha : 1);
+        if (baRatio < 3.5) {
+          isMatch = true;
+          feedback = 'ผ่อนคลายได้ดีมาก';
+          addDetail(true, 'คลื่นความเครียด (Beta) อยู่ในระดับต่ำ');
+        } else {
+          feedback = 'สมองยังมีความตื่นตัวสูง';
+          addDetail(false, 'คลื่น Beta ยังค่อนข้างสูง (สัดส่วน Beta/Alpha = ${baRatio.toStringAsFixed(1)})');
+        }
+        
+        if (alpha > 6.5) {
+          addDetail(true, 'คลื่นผ่อนคลาย (Alpha) ทำงานได้ดี (${alpha.toStringAsFixed(1)})');
+        } else {
+          addDetail(false, 'คลื่น Alpha ยังค่อนข้างต่ำ ลองหลับตาและหายใจลึกๆ');
+        }
+        break;
+        
+      case 'focused':
+        if (beta > 25.0) {
+          isMatch = true;
+          feedback = 'สมาธิดีมาก (จดจ่อสูง)';
+          addDetail(true, 'คลื่น Beta พุ่งสูงสะท้อนการคิดวิเคราะห์ (${beta.toStringAsFixed(1)})');
+        } else {
+          feedback = 'สมาธิอยู่ในระดับปานกลาง';
+          addDetail(false, 'คลื่น Beta ยังไม่สูงมาก อาจจะหลุดโฟกัส');
+        }
+        if (gamma > 10.0) {
+          addDetail(true, 'คลื่น Gamma (การประมวลผลขั้นสูง) ทำงานได้ดี (${gamma.toStringAsFixed(1)})');
+        } else {
+          addDetail(false, 'คลื่น Gamma ยังอยู่ในระดับปกติ');
+        }
+        break;
+        
+      case 'stressed':
+        if (beta > 20.0 && delta > 30.0) {
+          isMatch = true;
+          feedback = 'พบรูปแบบความเครียดชัดเจน';
+          addDetail(true, 'คลื่นความเครียด (Beta) พุ่งสูง (${beta.toStringAsFixed(1)})');
+          addDetail(true, 'พบการเกร็งกล้ามเนื้อ/หน้าเครียด (Delta = ${delta.toStringAsFixed(1)})');
+        } else if (beta > 25.0) {
+          isMatch = true;
+          feedback = 'มีความเครียดทางจิตใจ (Cognitive Stress)';
+          addDetail(true, 'คลื่น Beta พุ่งสูง (${beta.toStringAsFixed(1)})');
+          addDetail(false, 'ไม่พบการเกร็งกล้ามเนื้อรุนแรง');
+        } else {
+          feedback = 'คุณดูผ่อนคลายกว่าที่คิด';
+          addDetail(false, 'คลื่นความเครียดยังอยู่ในเกณฑ์ปกติ');
+          addDetail(false, 'ไม่มีสัญญาณการเกร็งหน้าหรือขมวดคิ้ว');
+        }
+        break;
+        
+      case 'happy':
+        if (alpha > 5.5 && beta > 20.0) {
+          isMatch = true;
+          feedback = 'อารมณ์เบิกบาน/ตื่นตัวในทางบวก';
+          addDetail(true, 'Beta ทำงานดี แสดงถึงความตื่นตัว (Arousal)');
+          addDetail(true, 'Alpha อยู่ในเกณฑ์ดี สะท้อนอารมณ์ผ่อนคลาย (Positive Valence)');
+        } else {
+          feedback = 'อารมณ์ยังค่อนข้างเป็นกลาง';
+          addDetail(false, 'ระดับความตื่นตัวทางบวกยังไม่เด่นชัด');
+        }
+        break;
+        
+      case 'sad':
+        if (delta > 35.0 || theta > 18.0) {
+          isMatch = true;
+          feedback = 'พบความถี่ต่ำสอดคล้องกับความเศร้า';
+          if (delta > 35.0) addDetail(true, 'Delta พุ่งสูง (อาจมีการขมวดคิ้ว/น้ำตาคลอ/สะอื้น)');
+          if (theta > 18.0) addDetail(true, 'Theta สูง (${theta.toStringAsFixed(1)}) สะท้อนความรู้สึกดิ่งลึก');
+        } else {
+          feedback = 'ควบคุมอารมณ์ได้ดี ไม่ค่อยดิ่ง';
+          addDetail(false, 'ไม่พบคลื่นความถี่ต่ำที่บ่งชี้ความเศร้ารุนแรง');
+        }
+        break;
+        
+      default:
+        isMatch = true;
+        feedback = 'เก็บข้อมูลสำเร็จ';
+    }
+    
+    return {'isMatch': isMatch, 'feedback': feedback, 'details': details};
   }
 
   @override
@@ -690,7 +879,10 @@ class _EegSessionScreenState extends State<EegSessionScreen>
           ...List.generate(_sessions.length, (i) {
             final s = _sessions[i];
             final colors = s['gradient'] as List<Color>;
-            final minutes = (s['duration'] as int) ~/ 60;
+            final durationSecs = s['duration'] as int;
+            final durationStr = durationSecs % 60 == 0 
+                ? '${durationSecs ~/ 60} นาที' 
+                : '${durationSecs / 60} นาที';
 
             return GestureDetector(
               onTap: isConnected ? () => _startSession(i) : null,
@@ -756,7 +948,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                                     Icon(Icons.timer, size: 12, color: Colors.white.withOpacity(0.7)),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '$minutes นาที',
+                                      durationStr,
                                       style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
                                     ),
                                     const SizedBox(width: 12),
