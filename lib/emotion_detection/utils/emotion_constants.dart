@@ -7,7 +7,7 @@ class EmotionConstants {
 
   static const String emotionLabelsPath = 'assets/models/emotion_labels.json';
 
-  static const int numClasses = 4;
+  static const int numClasses = 3;
 
   static const double confidenceThreshold = 0.3;
 
@@ -24,18 +24,20 @@ class EmotionConstants {
   };
 
   static const Map<String, String> emotionLabelsTh = {
+    'calm': 'ผ่อนคลาย',
+    'neutral': 'ปกติ',
+    'focused': 'มีสมาธิ',
     'stressed': 'เครียด/กลัว',
     'happy': 'มีความสุข',
-    'calm': 'ผ่อนคลาย',
     'sad': 'เศร้า',
-    'neutral': 'ปกติ',
   };
 
   static const Map<String, String> emotionEmojis = {
+    'calm': '😌',
+    'neutral': '😐',
+    'focused': '🧠',
     'stressed': '😰',
     'happy': '😊',
-    'calm': '😌',
     'sad': '😢',
-    'neutral': '😐',
   };
 }

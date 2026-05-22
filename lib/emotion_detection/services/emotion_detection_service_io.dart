@@ -20,7 +20,7 @@ class EmotionDetectionService {
   String? get lastError => _lastError;
 
   static const int _numFeatures = 988;
-  static const int _numClasses = 4;
+  static const int _numClasses = 3;
 
   Future<void> loadModel() async {
     try {
@@ -72,7 +72,7 @@ class EmotionDetectionService {
       debugPrint('✅ Labels loaded: $_emotionLabels');
     } catch (e) {
       debugPrint('⚠️ Labels load failed: $e');
-      _emotionLabels = ['Angry/Fear', 'Happy', 'Relaxed', 'Sad'];
+      _emotionLabels = ['Relaxed', 'Neutral', 'Concentrating'];
     }
   }
 
@@ -228,15 +228,23 @@ class EmotionDetectionService {
 
   String _mapModelLabel(String label) {
     switch (label.toLowerCase()) {
+      // === New 3-class model (Bird et al., 2018) ===
+      case 'relaxed':
+      case 'calm':
+        return 'calm';
+      case 'neutral':
+        return 'neutral';
+      case 'concentrating':
+      case 'focused':
+      case 'focus':
+        return 'focused';
+      // === Legacy 4-class model (backward compatible) ===
       case 'angry/fear':
       case 'angry':
       case 'fear':
         return 'stressed';
       case 'happy':
         return 'happy';
-      case 'relaxed':
-      case 'calm':
-        return 'calm';
       case 'sad':
         return 'sad';
       default:
@@ -275,13 +283,15 @@ class EmotionDetectionService {
 
     Map<String, double> scores = {};
 
-    scores['calm'] = (aPct * 1.5 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
+    // Relaxed: Alpha สูง + Beta ต่ำ → สงบผ่อนคลาย
+    scores['calm'] = (aPct * 1.5 + tPct * 0.3 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
 
-    scores['stressed'] = (bPct * 1.2 + gPct * 0.8).clamp(0.0, 1.0);
+    // Neutral: สมดุลทุก band → สภาวะปกติ
+    double balance = 1.0 - ((aPct - 0.2).abs() + (bPct - 0.2).abs() + (tPct - 0.2).abs());
+    scores['neutral'] = balance.clamp(0.0, 1.0);
 
-    scores['happy'] = (aPct * 1.2 + tPct * 0.5 + (1 - bPct) * 0.3).clamp(0.0, 1.0);
-
-    scores['sad'] = (tPct * 1.0 + dPct * 0.8 + (1 - aPct) * 0.2).clamp(0.0, 1.0);
+    // Concentrating: Beta + Gamma สูง → มีสมาธิ/ตื่นตัว
+    scores['focused'] = (bPct * 1.3 + gPct * 0.8 + (1 - dPct) * 0.3).clamp(0.0, 1.0);
 
     double maxScore = scores.values.reduce((a, b) => a > b ? a : b);
     if (maxScore > 0) {
