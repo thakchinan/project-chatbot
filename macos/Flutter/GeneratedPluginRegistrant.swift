@@ -28,5 +28,11 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
   SpeechToTextPlugin.register(with: registry.registrar(forPlugin: "SpeechToTextPlugin"))
   UrlLauncherPlugin.register(with: registry.registrar(forPlugin: "UrlLauncherPlugin"))
-  WebViewFlutterPlugin.register(with: registry.registrar(forPlugin: "WebViewFlutterPlugin"))
+
+  // Temporarily disable WebView plugin on macOS to diagnose an
+  // UnimplementedError related to 'opaque' that can occur when a
+  // plugin calls a method the macOS implementation doesn't provide.
+  // If this stops the crash, update or replace the plugin with a
+  // macOS-compatible implementation.
+  // WebViewFlutterPlugin.register(with: registry.registrar(forPlugin: "WebViewFlutterPlugin"))
 }
