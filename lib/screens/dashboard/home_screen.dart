@@ -77,8 +77,11 @@ class _HomeScreenState extends State<HomeScreen> {
     ''';
 
     _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0F1629))
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
+      _webViewController.setBackgroundColor(const Color(0xFF0F1629));
+    }
+    _webViewController
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (url) {
           _webViewController.runJavaScript(splineJS);
@@ -88,8 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
 
     _popupWebViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0F1629))
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
+      _popupWebViewController.setBackgroundColor(const Color(0xFF0F1629));
+    }
+    _popupWebViewController
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (url) {
           _popupWebViewController.runJavaScript(splineJS);
