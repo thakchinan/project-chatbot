@@ -27,6 +27,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final MuseService _museService = MuseService();
   final EmotionDetectionService _emotionService = EmotionDetectionService();
   late final WebViewController _webViewController;
+  late final WebViewController _popupWebViewController;
+  bool _is3DModelLoaded = false;
   EmotionResult? _currentEmotion;
   bool _isDetectingEmotion = false;
   Timer? _emotionDetectionTimer;
@@ -54,9 +56,45 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    // JavaScript to hide Spline watermark and set dark bg
+    const splineJS = '''
+      (function() {
+        document.body.style.backgroundColor = '#0F1629';
+        function hideWatermark() {
+          var els = document.querySelectorAll('a[href*="spline"], div[class*="watermark"], div[class*="logo"]');
+          els.forEach(function(el) { el.style.display = 'none'; });
+          var allDivs = document.querySelectorAll('div');
+          allDivs.forEach(function(d) {
+            if (d.textContent && d.textContent.includes('Built with Spline')) {
+              d.style.display = 'none';
+            }
+          });
+        }
+        hideWatermark();
+        setInterval(hideWatermark, 1000);
+      })();
+    ''';
+
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFFF5F7FA))
+      ..setBackgroundColor(const Color(0xFF0F1629))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (url) {
+          _webViewController.runJavaScript(splineJS);
+          if (mounted) setState(() => _is3DModelLoaded = true);
+        },
+      ))
+      ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
+
+    _popupWebViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF0F1629))
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (url) {
+          _popupWebViewController.runJavaScript(splineJS);
+        },
+      ))
       ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
 
     _museService.addListener(_onMuseDataUpdate);
@@ -637,74 +675,227 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _reset3DModel({bool popupOnly = false}) {
+    const splineUrl = 'https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/';
+    if (popupOnly) {
+      _popupWebViewController.loadRequest(Uri.parse(splineUrl));
+    } else {
+      _webViewController.loadRequest(Uri.parse(splineUrl));
+    }
+  }
+
   void _show3DModelPopup() {
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-        child: Container(
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F7FA),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              )
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: Stack(
-              children: [
-                WebViewWidget(controller: _webViewController),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
+      barrierDismissible: true,
+      barrierLabel: 'Close 3D Model',
+      barrierColor: Colors.black.withOpacity(0.85),
+      transitionDuration: const Duration(milliseconds: 400),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width - 32,
+              height: MediaQuery.of(context).size.height * 0.72,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                Positioned(
-                  bottom: 20,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: const Color(0xFF4A7FC1).withOpacity(0.4),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4A7FC1).withOpacity(0.25),
+                    blurRadius: 40,
+                    spreadRadius: 2,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 60,
+                    offset: const Offset(0, 20),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: Stack(
+                  children: [
+                    // 3D Model WebView (uses separate controller)
+                    Positioned.fill(
+                      child: WebViewWidget(
+                        controller: _popupWebViewController,
+                        gestureRecognizers: {
+                          Factory<OneSequenceGestureRecognizer>(
+                            () => EagerGestureRecognizer(),
                           ),
-                        ],
+                        },
                       ),
-                      child: const Text(
-                        'Interactive 3D Muse Model',
-                        style: TextStyle(
-                          color: Color(0xFF4A7FC1),
-                          fontWeight: FontWeight.bold,
+                    ),
+
+                    // Top gradient overlay for header
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 80,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF0F1629).withOpacity(0.95),
+                                const Color(0xFF0F1629).withOpacity(0.0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+
+                    // Header with title and close button
+                    Positioned(
+                      top: 16,
+                      left: 20,
+                      right: 16,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.view_in_ar_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Muse EEG Headband',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Interactive 3D Model',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.6),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => _reset3DModel(popupOnly: true),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.15)),
+                              ),
+                              child: Icon(Icons.replay_rounded, color: Colors.white.withOpacity(0.7), size: 20),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withOpacity(0.15)),
+                              ),
+                              child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Bottom gradient overlay
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: 90,
+                      child: IgnorePointer(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF0F1629).withOpacity(0.0),
+                                const Color(0xFF0F1629).withOpacity(0.95),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Bottom hint
+                    Positioned(
+                      bottom: 20,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white.withOpacity(0.12)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.touch_app_rounded, size: 16, color: Colors.white.withOpacity(0.7)),
+                              const SizedBox(width: 8),
+                              Text(
+                                'ลากเพื่อหมุน • บีบเพื่อซูม',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -817,66 +1008,243 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-              // 3D Model Embedded View
-              Container(
-                width: double.infinity,
-                height: 350,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 5)),
-                  ],
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: Stack(
-                    children: [
-                      WebViewWidget(
-                        controller: _webViewController,
-                        gestureRecognizers: {
-                          Factory<OneSequenceGestureRecognizer>(
-                            () => EagerGestureRecognizer(),
-                          ),
-                        },
+              // 3D Model Embedded View — Premium Dark Card
+              GestureDetector(
+                onDoubleTap: _show3DModelPopup,
+                child: Container(
+                  width: double.infinity,
+                  height: 380,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: const Color(0xFF4A7FC1).withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF4A7FC1).withOpacity(0.15),
+                        blurRadius: 24,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 4),
                       ),
-                      Positioned(
-                        bottom: 12,
-                        left: 0,
-                        right: 0,
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Stack(
+                      children: [
+                        // WebView with 3D model
+                        Positioned.fill(
+                          child: WebViewWidget(
+                            controller: _webViewController,
+                            gestureRecognizers: {
+                              Factory<OneSequenceGestureRecognizer>(
+                                () => EagerGestureRecognizer(),
+                              ),
+                            },
+                          ),
+                        ),
+
+                        // Loading overlay
+                        if (!_is3DModelLoaded)
+                          Positioned.fill(
+                            child: Container(
+                              color: const Color(0xFF0F1629),
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                        color: const Color(0xFF4A7FC1).withOpacity(0.8),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'กำลังโหลด 3D Model...',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                            child: const Row(
+                          ),
+
+                        // Top label badge
+                        Positioned(
+                          top: 14,
+                          left: 14,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            ),
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.touch_app, size: 16, color: Color(0xFF4A7FC1)),
-                                SizedBox(width: 6),
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6BA3E8),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF6BA3E8).withOpacity(0.6),
+                                        blurRadius: 6,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 Text(
-                                  'หมุนหรือซูมเพื่อดู 3D Model',
+                                  '3D Model',
                                   style: TextStyle(
-                                    color: Color(0xFF4A7FC1),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white.withOpacity(0.8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Top-right action buttons (reset + expand)
+                        Positioned(
+                          top: 14,
+                          right: 14,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Reset button
+                              GestureDetector(
+                                onTap: () => _reset3DModel(),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                  ),
+                                  child: Icon(
+                                    Icons.replay_rounded,
+                                    color: Colors.white.withOpacity(0.7),
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Expand button
+                              GestureDetector(
+                                onTap: _show3DModelPopup,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                  ),
+                                  child: Icon(
+                                    Icons.fullscreen_rounded,
+                                    color: Colors.white.withOpacity(0.7),
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Bottom gradient overlay
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: 80,
+                          child: IgnorePointer(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF0F1629).withOpacity(0.0),
+                                    const Color(0xFF0F1629).withOpacity(0.9),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Bottom info row
+                        Positioned(
+                          bottom: 14,
+                          left: 16,
+                          right: 16,
+                          child: Row(
+                            children: [
+                              // Touch hint
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.touch_app_rounded, size: 14, color: Colors.white.withOpacity(0.5)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'หมุนหรือซูมเพื่อดู',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.5),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              // Muse label
+                              Text(
+                                'Muse Headband',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.4),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
