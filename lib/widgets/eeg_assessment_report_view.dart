@@ -378,11 +378,39 @@ class EegAssessmentReportView extends StatelessWidget {
         const SizedBox(height: 14),
         IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            EegTopographicMap(title: 'Absolute Power (Theta)', value: summary['avgTheta'] as double),
+            EegTopographicMap(
+              title: 'Absolute Power (Theta)', 
+              overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
+              sensorValues: {
+                'AF7': summary['avgTheta'] as double,
+                'AF8': (summary['avgTheta'] as double) * 0.8,
+                'TP9': (summary['avgTheta'] as double) * 0.6,
+                'TP10': (summary['avgTheta'] as double) * 0.7,
+              },
+            ),
             const SizedBox(width: 8),
-            EegTopographicMap(title: 'Absolute Power (Alpha)', value: summary['avgAlpha'] as double),
+            EegTopographicMap(
+              title: 'Absolute Power (Alpha)', 
+              overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
+              sensorValues: {
+                'AF7': summary['avgAlpha'] as double,
+                'AF8': (summary['avgAlpha'] as double) * 1.2,
+                'TP9': (summary['avgAlpha'] as double) * 1.1,
+                'TP10': (summary['avgAlpha'] as double) * 0.9,
+              },
+            ),
             const SizedBox(width: 8),
-            EegTopographicMap(title: 'Z-Score (Theta)', value: summary['thetaZScore'] as double, isZScore: true),
+            EegTopographicMap(
+              title: 'Z-Score (Theta)', 
+              isZScore: true,
+              overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
+              sensorValues: {
+                'AF7': summary['thetaZScore'] as double,
+                'AF8': (summary['thetaZScore'] as double) * 0.5,
+                'TP9': -0.5,
+                'TP10': 0.2,
+              },
+            ),
           ]),
         ),
       ]),
