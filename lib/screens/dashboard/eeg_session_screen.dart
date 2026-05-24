@@ -394,10 +394,42 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                   style: TextStyle(color: Colors.grey[600], fontSize: 14)),
             ),
             const SizedBox(height: 8),
+
+            // Warning when results don't match session target
+            if (!isMatch) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFB74D).withOpacity(0.5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_outline_rounded, color: Color(0xFFE65100), size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'ผลคลื่นสมองยังไม่ตรงตาม Session "${ session['name'] }" ไม่สามารถบันทึกได้ — ลองทำ Session ใหม่อีกครั้ง',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFE65100),
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isSaving
+                onPressed: (!isMatch || _isSaving)
                     ? null
                     : () async {
                         setDialogState(() => _isSaving = true);
@@ -483,13 +515,21 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.save_rounded, color: Colors.white, size: 20),
+                    : Icon(
+                        isMatch ? Icons.save_rounded : Icons.lock_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                 label: Text(
-                  _isSaving ? 'กำลังบันทึก...' : 'บันทึก',
+                  _isSaving
+                      ? 'กำลังบันทึก...'
+                      : isMatch
+                          ? 'บันทึก'
+                          : 'ไม่สามารถบันทึกได้',
                   style: const TextStyle(color: Colors.white, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: session['color'],
+                  backgroundColor: isMatch ? session['color'] : Colors.grey[400],
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
