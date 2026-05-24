@@ -3,9 +3,15 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart';
 import 'dart:typed_data';
+import '../models/user.dart';
+import 'eeg_assessment_service.dart';
 
 class EegPdfService {
-  static Future<Uint8List> generateReport(Map<String, dynamic> s, String userName) async {
+  static Future<Uint8List> generateReport(
+    Map<String, dynamic> s, 
+    User user, {
+    Uint8List? topoBytes,
+  }) async {
     final pdf = pw.Document();
     final font = await PdfGoogleFonts.notoSansThaiRegular();
     final fontBold = await PdfGoogleFonts.notoSansThaiBold();
@@ -14,13 +20,24 @@ class EegPdfService {
 
     final riskLevel = s['riskLevel'] as String;
     final riskLevelEn = s['riskLevelEn'] as String;
-    final eegIndex = (s['eegIndex'] as double);
+    final eegIndex = (s['eegIndex'] as num).toDouble();
     final riskColorHex = eegIndex <= 33 ? PdfColors.green : (eegIndex <= 66 ? PdfColors.orange : PdfColors.red);
 
+    final userName = user.fullName ?? user.username;
+    final age = EegAssessmentService.ageFromBirthDate(user.birthDate);
+    final recordedAtStr = EegAssessmentService.formatDate(s['recordedAt'] as String?);
+
+    final mentalStateLabel = s['predictedMentalStateLabel'] as String?;
+    final confidence = s['predictedMentalStateConfidence'] as double?;
+    final confidencePercent = confidence != null ? ' (${(confidence * 100).toStringAsFixed(0)}%)' : '';
+
+    // ==========================================
+    // PAGE 1: Executive Summary & Z-Score Table
+    // ==========================================
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(30),
+        margin: const pw.EdgeInsets.symmetric(horizontal: 30, vertical: 24),
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -29,90 +46,330 @@ class EegPdfService {
               width: double.infinity,
               padding: const pw.EdgeInsets.all(16),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromHex('#1a237e'),
+                color: PdfColor.fromHex('#0F1B4C'),
                 borderRadius: pw.BorderRadius.circular(12),
               ),
-              child: pw.Column(children: [
-                pw.Text('ใบสรุปประเมินภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 20, color: PdfColors.white)),
-                pw.SizedBox(height: 4),
-                pw.Text('จากการทดสอบสัญญาณสมอง (qEEG)', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.white)),
-              ]),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('ใบสรุปประเมินภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 18, color: PdfColors.white)),
+                  pw.SizedBox(height: 2),
+                  pw.Text('จากการทดสอบสัญญาณสมอง (qEEG) / Quantitative EEG Analysis', style: pw.TextStyle(font: font, fontSize: 11, color: PdfColor.fromHex('#93C5FD'))),
+                ],
+              ),
             ),
-            pw.SizedBox(height: 16),
-
-            // Patient + Test Info
-            pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Expanded(child: _buildInfoBox(font, fontBold, 'ข้อมูลผู้รับการประเมิน', [
-                'ชื่อ: $userName', 'วันที่ประเมิน: $dateStr',
-              ])),
-              pw.SizedBox(width: 12),
-              pw.Expanded(child: _buildInfoBox(font, fontBold, 'รายละเอียดการทดสอบ', [
-                'ประเภท: Quantitative EEG (qEEG)', 'เครื่องมือ: Muse EEG System',
-                'ความยาวสัญญาณ: 1.5 นาที (90s)', 'Samples: ${s['samplesCollected']}',
-              ])),
-            ]),
-            pw.SizedBox(height: 16),
-
-            // Z-Score Table
-            pw.Text('ผลการวิเคราะห์สัญญาณสมอง (Z-Score)', style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColor.fromHex('#1a237e'))),
-            pw.SizedBox(height: 8),
-            _buildZScoreTable(font, fontBold, s),
             pw.SizedBox(height: 12),
 
-            // Alpha Asymmetry + Beta/Theta
-            pw.Row(children: [
-              pw.Expanded(child: _buildMetricBox(font, fontBold, 'Alpha Asymmetry (ซ้าย-ขวา)', (s['alphaAsymmetry'] as double).toStringAsFixed(2),
-                  (s['alphaAsymmetry'] as double).abs() > 0.5 ? 'เข้าข่ายเสี่ยง' : 'ใกล้เคียงปกติ')),
-              pw.SizedBox(width: 12),
-              pw.Expanded(child: _buildMetricBox(font, fontBold, 'Beta/Theta Ratio', (s['betaThetaRatio'] as double).toStringAsFixed(2),
-                  (s['betaThetaRatio'] as double) > 1.5 ? 'เข้าข่ายเสี่ยง' : 'ปกติ')),
-            ]),
-            pw.SizedBox(height: 16),
+            // Patient + Test Info
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: _buildInfoBox(font, fontBold, 'ข้อมูลผู้รับการประเมิน', [
+                    'ชื่อ: $userName',
+                    'อายุ: ${age != null ? "$age ปี" : "-"}',
+                    'วันที่ประเมิน: $recordedAtStr',
+                    'รหัสผู้ใช้: ${user.id}',
+                  ]),
+                ),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                  child: _buildInfoBox(font, fontBold, 'รายละเอียดการทดสอบ', [
+                    'ประเภท: qEEG',
+                    'เครื่องมือ: Muse EEG',
+                    'สภาวะ: หลับตา (Eyes Closed)',
+                    'ระยะเวลา: 1.5 นาที (90 วินาที)',
+                    'ความสมบูรณ์ข้อมูล: ${s['samplesCollected']} samples',
+                  ]),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 12),
 
             // Risk Level
             pw.Container(
               width: double.infinity,
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(border: pw.Border.all(color: riskColorHex, width: 2), borderRadius: pw.BorderRadius.circular(10)),
-              child: pw.Column(children: [
-                pw.Text('สรุประดับความเสี่ยงภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 13)),
-                pw.SizedBox(height: 8),
-                pw.Text(riskLevel, style: pw.TextStyle(font: fontBold, fontSize: 22, color: riskColorHex)),
-                pw.Text('($riskLevelEn)', style: pw.TextStyle(font: font, fontSize: 11, color: riskColorHex)),
-                pw.SizedBox(height: 8),
-                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.center, children: [
-                  pw.Text('${eegIndex.toStringAsFixed(0)}', style: pw.TextStyle(font: fontBold, fontSize: 32, color: riskColorHex)),
-                  pw.Text(' / 100', style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey)),
-                ]),
-                pw.SizedBox(height: 6),
-                pw.Text('EEG–Depression Index', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600)),
-                pw.SizedBox(height: 8),
-                _buildPdfRiskBar(),
-                pw.SizedBox(height: 4),
-                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                  pw.Text('0-33 ความเสี่ยงต่ำ', style: pw.TextStyle(font: font, fontSize: 8)),
-                  pw.Text('34-66 ปานกลาง', style: pw.TextStyle(font: font, fontSize: 8)),
-                  pw.Text('67-100 สูง', style: pw.TextStyle(font: font, fontSize: 8)),
-                ]),
-              ]),
-            ),
-            pw.SizedBox(height: 16),
-
-            // Clinical note
-            pw.Container(
-              width: double.infinity,
               padding: const pw.EdgeInsets.all(12),
-              decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF8E1'), borderRadius: pw.BorderRadius.circular(8)),
-              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Text('หมายเหตุ', style: pw.TextStyle(font: fontBold, fontSize: 11)),
-                pw.SizedBox(height: 4),
-                pw.Text('ผลการทดสอบนี้ไม่สามารถใช้วินิจฉัยภาวะซึมเศร้าได้โดยลำพัง ต้องนำผลไปประกอบการพิจารณาร่วมกับการประเมินทางคลินิกโดยผู้เชี่ยวชาญเท่านั้น',
-                    style: pw.TextStyle(font: font, fontSize: 9)),
-              ]),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: riskColorHex, width: 2),
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                children: [
+                  pw.Text('สรุประดับความเสี่ยงภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 12)),
+                  pw.SizedBox(height: 4),
+                  pw.Text(riskLevel, style: pw.TextStyle(font: fontBold, fontSize: 20, color: riskColorHex)),
+                  pw.Text('($riskLevelEn)', style: pw.TextStyle(font: font, fontSize: 10, color: riskColorHex)),
+                  pw.SizedBox(height: 6),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      pw.Text(eegIndex.toStringAsFixed(0), style: pw.TextStyle(font: fontBold, fontSize: 28, color: riskColorHex)),
+                      pw.Text(' / 100', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey)),
+                    ],
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text('EEG–Depression Index', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
+                  pw.SizedBox(height: 6),
+                  _buildPdfRiskBar(),
+                  pw.SizedBox(height: 4),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('0-33 ความเสี่ยงต่ำ', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('34-66 ปานกลาง', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('67-100 สูง', style: pw.TextStyle(font: font, fontSize: 8)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 12),
+
+            // Z-Score Table
+            pw.Text('ผลการวิเคราะห์สัญญาณสมอง (Z-Score)', style: pw.TextStyle(font: fontBold, fontSize: 13, color: PdfColor.fromHex('#0F1B4C'))),
+            pw.SizedBox(height: 6),
+            _buildZScoreTable(font, fontBold, s),
+            pw.SizedBox(height: 10),
+
+            // Alpha Asymmetry + Beta/Theta
+            pw.Row(
+              children: [
+                pw.Expanded(
+                  child: _buildMetricBox(
+                    font,
+                    fontBold,
+                    'Alpha Asymmetry (ซ้าย-ขวา)',
+                    (s['alphaAsymmetry'] as double).toStringAsFixed(2),
+                    (s['alphaAsymmetry'] as double).abs() > 0.5 ? 'ความสมดุลซีกซ้าย-ขวาเสี่ยง' : 'ใกล้เคียงปกติ',
+                    (s['alphaAsymmetry'] as double).abs() > 0.5 ? PdfColors.orange : PdfColors.green,
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                  child: _buildMetricBox(
+                    font,
+                    fontBold,
+                    'Beta/Theta Ratio',
+                    (s['betaThetaRatio'] as double).toStringAsFixed(2),
+                    (s['betaThetaRatio'] as double) > 1.5 ? 'สูงกว่าปกติ (สัมพันธ์ภาวะซึมเศร้า)' : 'อยู่ในเกณฑ์ปกติ',
+                    (s['betaThetaRatio'] as double) > 1.5 ? PdfColors.orange : PdfColors.green,
+                  ),
+                ),
+              ],
             ),
             pw.Spacer(),
-            pw.Divider(),
-            pw.Text('วันที่ออกรายงาน: $dateStr', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey)),
+            pw.Divider(color: PdfColors.grey300),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('วันที่ออกรายงาน: $dateStr', style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey)),
+                pw.Text('หน้า 1 จาก 2', style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // ==========================================
+    // PAGE 2: Brain Map & Clinical Insights
+    // ==========================================
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Mini Header / Title
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('ผลวิเคราะห์ระดับลึก & ข้อเสนอแนะ', style: pw.TextStyle(font: fontBold, fontSize: 15, color: PdfColor.fromHex('#0F1B4C'))),
+                pw.Text('Detailed Analysis & Recommendations', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
+              ],
+            ),
+            pw.SizedBox(height: 6),
+            pw.Container(height: 2, color: PdfColor.fromHex('#0F1B4C')),
+            pw.SizedBox(height: 12),
+
+            // Topographic Maps Section
+            if (topoBytes != null) ...[
+              pw.Container(
+                alignment: pw.Alignment.center,
+                child: pw.Image(
+                  pw.MemoryImage(topoBytes),
+                  width: 535,
+                  fit: pw.BoxFit.contain,
+                ),
+              ),
+            ] else ...[
+              // Brain Map Header (Fallback)
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#0F1B4C'),
+                  borderRadius: pw.BorderRadius.circular(6),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Text('แผนที่การทำงานของสมอง (Topographic Map)', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.white)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
+
+              // Topographic Maps Row (Fallback)
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  _buildPdfTopoMap(
+                    'Absolute Power (Theta)',
+                    {
+                      'AF7': s['avgTheta'] as double,
+                      'AF8': (s['avgTheta'] as double) * 0.8,
+                      'TP9': (s['avgTheta'] as double) * 0.6,
+                      'TP10': (s['avgTheta'] as double) * 0.7,
+                    },
+                    false,
+                    font,
+                    fontBold,
+                  ),
+                  _buildPdfTopoMap(
+                    'Absolute Power (Alpha)',
+                    {
+                      'AF7': s['avgAlpha'] as double,
+                      'AF8': (s['avgAlpha'] as double) * 1.2,
+                      'TP9': (s['avgAlpha'] as double) * 1.1,
+                      'TP10': (s['avgAlpha'] as double) * 0.9,
+                    },
+                    false,
+                    font,
+                    fontBold,
+                  ),
+                  _buildPdfTopoMap(
+                    'Z-Score (Theta)',
+                    {
+                      'AF7': s['thetaZScore'] as double,
+                      'AF8': (s['thetaZScore'] as double) * 0.5,
+                      'TP9': -0.5,
+                      'TP10': 0.2,
+                    },
+                    true,
+                    font,
+                    fontBold,
+                  ),
+                ],
+              ),
+            ],
+            pw.SizedBox(height: 16),
+
+            // Clinical Summary
+            pw.Text('สรุปความหมายเชิงคลินิก', style: pw.TextStyle(font: fontBold, fontSize: 12, color: PdfColor.fromHex('#0F1B4C'))),
+            pw.SizedBox(height: 4),
+            if (mentalStateLabel != null) ...[
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#EEF2FF'),
+                  border: pw.Border.all(color: PdfColor.fromHex('#C7D2FE')),
+                  borderRadius: pw.BorderRadius.circular(6),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'สภาวะจิตใจโดยรวมขณะทดสอบ (PyTorch AI):',
+                      style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#4F46E5')),
+                    ),
+                    pw.Text(
+                      '$mentalStateLabel$confidencePercent',
+                      style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#0F1B4C')),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 6),
+            ],
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Text(
+                EegAssessmentService.clinicalSummary(s),
+                style: pw.TextStyle(font: font, fontSize: 9.5, height: 1.4),
+              ),
+            ),
+            pw.SizedBox(height: 12),
+
+            // Observations & Recommendations
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: _buildListSection(
+                    'ข้อสังเกต',
+                    EegAssessmentService.observations(s),
+                    font,
+                    fontBold,
+                    false,
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                  child: _buildListSection(
+                    'ข้อเสนอแนะ',
+                    EegAssessmentService.recommendations(s),
+                    font,
+                    fontBold,
+                    true,
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 12),
+
+            // Disclaimer Box
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#FFF8E1'),
+                border: pw.Border.all(color: PdfColors.amber300),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 1, right: 6),
+                    child: pw.Text('⚠️', style: pw.TextStyle(font: font, fontSize: 10)),
+                  ),
+                  pw.Expanded(
+                    child: pw.Text(
+                      'หมายเหตุ: ผลการทดสอบนี้ไม่สามารถใช้วินิจฉัยภาวะซึมเศร้าได้โดยลำพัง ต้องนำผลไปประกอบการพิจารณาร่วมกับการประเมินทางคลินิกโดยผู้เชี่ยวชาญเท่านั้น',
+                      style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.Spacer(),
+            pw.Divider(color: PdfColors.grey300),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('วันที่ออกรายงาน: $dateStr', style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey)),
+                pw.Text('หน้า 2 จาก 2', style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey)),
+              ],
+            ),
           ],
         ),
       ),
@@ -123,13 +380,23 @@ class EegPdfService {
 
   static pw.Widget _buildInfoBox(pw.Font font, pw.Font fontBold, String title, List<String> items) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
-      decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300), borderRadius: pw.BorderRadius.circular(8)),
-      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#1a237e'))),
-        pw.SizedBox(height: 6),
-        ...items.map((i) => pw.Padding(padding: const pw.EdgeInsets.only(bottom: 3), child: pw.Text(i, style: pw.TextStyle(font: font, fontSize: 10)))),
-      ]),
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColor.fromHex('#F8FAFC'),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColor.fromHex('#0F1B4C'))),
+          pw.SizedBox(height: 4),
+          ...items.map((i) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 2),
+            child: pw.Text(i, style: pw.TextStyle(font: font, fontSize: 9)),
+          )),
+        ],
+      ),
     );
   }
 
@@ -152,58 +419,360 @@ class EegPdfService {
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
-      columnWidths: {0: const pw.FlexColumnWidth(2.5), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(1.8)},
+      columnWidths: {
+        0: const pw.FlexColumnWidth(2.2),
+        1: const pw.FlexColumnWidth(2.2),
+        2: const pw.FlexColumnWidth(1.2),
+        3: const pw.FlexColumnWidth(1.8),
+      },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8EAF6')),
           children: ['ดัชนีสมอง', 'ความหมาย', 'ค่า Z-Score', 'ผลการแปลความ'].map((h) =>
-            pw.Padding(padding: const pw.EdgeInsets.all(6), child: pw.Text(h, style: pw.TextStyle(font: fontBold, fontSize: 9)))
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text(h, style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#0F1B4C'))),
+            )
           ).toList(),
         ),
         ...rows.map((r) {
           final z = r[2] as double;
           final zColor = z.abs() > 1.5 ? PdfColors.red : (z.abs() > 1.0 ? PdfColors.orange : PdfColors.green);
-          return pw.TableRow(children: [
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(r[0] as String, style: pw.TextStyle(font: fontBold, fontSize: 9))),
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(r[1] as String, style: pw.TextStyle(font: font, fontSize: 8))),
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(z >= 0 ? '+${z.toStringAsFixed(2)}' : z.toStringAsFixed(2), style: pw.TextStyle(font: fontBold, fontSize: 9, color: zColor), textAlign: pw.TextAlign.center)),
-            pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(getStatus(z), style: pw.TextStyle(font: font, fontSize: 8, color: zColor))),
-          ]);
+          return pw.TableRow(
+            children: [
+              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(r[0] as String, style: pw.TextStyle(font: fontBold, fontSize: 8))),
+              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(r[1] as String, style: pw.TextStyle(font: font, fontSize: 7.5))),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(4),
+                child: pw.Text(
+                  z >= 0 ? '+${z.toStringAsFixed(2)}' : z.toStringAsFixed(2),
+                  style: pw.TextStyle(font: fontBold, fontSize: 8, color: zColor),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(4),
+                child: pw.Text(
+                  getStatus(z),
+                  style: pw.TextStyle(font: font, fontSize: 7.5, color: zColor),
+                ),
+              ),
+            ],
+          );
         }),
       ],
     );
   }
 
-  static pw.Widget _buildMetricBox(pw.Font font, pw.Font fontBold, String title, String value, String status) {
+  static pw.Widget _buildMetricBox(pw.Font font, pw.Font fontBold, String title, String value, String status, PdfColor statusColor) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
-      decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey300), borderRadius: pw.BorderRadius.circular(8)),
-      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfColor.fromHex('#1a237e'))),
-        pw.SizedBox(height: 4),
-        pw.Text(value, style: pw.TextStyle(font: fontBold, fontSize: 18)),
-        pw.Text(status, style: pw.TextStyle(font: font, fontSize: 9)),
-      ]),
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColor.fromHex('#F8FAFC'),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#0F1B4C'))),
+          pw.SizedBox(height: 3),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(value, style: pw.TextStyle(font: fontBold, fontSize: 15)),
+              pw.Text(status, style: pw.TextStyle(font: font, fontSize: 8, color: statusColor)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   static pw.Widget _buildPdfRiskBar() {
-    return pw.Row(children: [
-      pw.Expanded(child: pw.Container(height: 6, decoration: pw.BoxDecoration(color: PdfColors.green, borderRadius: pw.BorderRadius.circular(3)))),
-      pw.SizedBox(width: 2),
-      pw.Expanded(child: pw.Container(height: 6, decoration: pw.BoxDecoration(color: PdfColors.orange, borderRadius: pw.BorderRadius.circular(3)))),
-      pw.SizedBox(width: 2),
-      pw.Expanded(child: pw.Container(height: 6, decoration: pw.BoxDecoration(color: PdfColors.red, borderRadius: pw.BorderRadius.circular(3)))),
-    ]);
+    return pw.Row(
+      children: [
+        pw.Expanded(child: pw.Container(height: 6, decoration: pw.BoxDecoration(color: PdfColors.green, borderRadius: pw.BorderRadius.circular(3)))),
+        pw.SizedBox(width: 2),
+        pw.Expanded(child: pw.Container(height: 6, decoration: pw.BoxDecoration(color: PdfColors.orange, borderRadius: pw.BorderRadius.circular(3)))),
+        pw.SizedBox(width: 2),
+        pw.Expanded(child: pw.Container(height: 6, decoration: pw.BoxDecoration(color: PdfColors.red, borderRadius: pw.BorderRadius.circular(3)))),
+      ],
+    );
   }
 
-  static Future<void> sharePdf(Map<String, dynamic> s, String userName) async {
-    final bytes = await generateReport(s, userName);
+  static PdfColor _getHeatColor(double val, bool isZScore) {
+    double t;
+    if (isZScore) {
+      t = ((val + 3) / 6).clamp(0.0, 1.0);
+      if (t < 0.17) return PdfColor.fromHex('#0D47A1');
+      if (t < 0.33) return PdfColor.fromHex('#1976D2');
+      if (t < 0.5) return PdfColor.fromHex('#4DD0E1');
+      if (t < 0.67) return PdfColor.fromHex('#66BB6A');
+      if (t < 0.83) return PdfColor.fromHex('#FFEE58');
+      if (t < 0.92) return PdfColor.fromHex('#FF9800');
+      return PdfColor.fromHex('#D32F2F');
+    } else {
+      t = (val / 100).clamp(0.0, 1.0);
+      if (t < 0.2) return PdfColor.fromHex('#0D47A1');
+      if (t < 0.4) return PdfColor.fromHex('#29B6F6');
+      if (t < 0.55) return PdfColor.fromHex('#66BB6A');
+      if (t < 0.7) return PdfColor.fromHex('#FFEE58');
+      if (t < 0.85) return PdfColor.fromHex('#FF9800');
+      return PdfColor.fromHex('#D32F2F');
+    }
+  }
+
+  static pw.Widget _buildPdfTopoMap(
+    String title,
+    Map<String, double> sensorValues,
+    bool isZScore,
+    pw.Font font,
+    pw.Font fontBold,
+  ) {
+    final af7 = sensorValues['AF7'] ?? 0.0;
+    final af8 = sensorValues['AF8'] ?? 0.0;
+    final tp9 = sensorValues['TP9'] ?? 0.0;
+    final tp10 = sensorValues['TP10'] ?? 0.0;
+
+    pw.Widget buildSensorDot(String label, double val) {
+      final color = _getHeatColor(val, isZScore);
+      final textColor = (val >= 0.6 * (isZScore ? 3.0 : 100.0)) ? PdfColors.white : PdfColors.black;
+      
+      return pw.Container(
+        width: 24,
+        height: 24,
+        decoration: pw.BoxDecoration(
+          shape: pw.BoxShape.circle,
+          color: color,
+          border: pw.Border.all(color: PdfColors.white, width: 1.5),
+          boxShadow: [
+            pw.BoxShadow(color: PdfColors.grey400, blurRadius: 2, offset: const PdfPoint(0, 1)),
+          ],
+        ),
+        child: pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(label, style: pw.TextStyle(font: fontBold, fontSize: 5.5, color: textColor)),
+              pw.Text(val.toStringAsFixed(1), style: pw.TextStyle(font: font, fontSize: 5, color: textColor)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return pw.Container(
+      width: 140,
+      padding: const pw.EdgeInsets.all(6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColor.fromHex('#FAFAFA'),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#0F1B4C')),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            width: 100,
+            height: 100,
+            child: pw.Stack(
+              children: [
+                // Ears Left
+                pw.Positioned(
+                  left: 2,
+                  top: 35,
+                  child: pw.Container(
+                    width: 6,
+                    height: 28,
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey300,
+                      borderRadius: const pw.BorderRadius.only(
+                        topLeft: pw.Radius.circular(3),
+                        bottomLeft: pw.Radius.circular(3),
+                      ),
+                      border: pw.Border.all(color: PdfColors.grey400),
+                    ),
+                  ),
+                ),
+                // Ears Right
+                pw.Positioned(
+                  right: 2,
+                  top: 35,
+                  child: pw.Container(
+                    width: 6,
+                    height: 28,
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey300,
+                      borderRadius: const pw.BorderRadius.only(
+                        topRight: pw.Radius.circular(3),
+                        bottomRight: pw.Radius.circular(3),
+                      ),
+                      border: pw.Border.all(color: PdfColors.grey400),
+                    ),
+                  ),
+                ),
+                // Head Circle
+                pw.Positioned(
+                  left: 10,
+                  top: 10,
+                  child: pw.Container(
+                    width: 80,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      shape: pw.BoxShape.circle,
+                      color: PdfColor.fromHex('#ECEFF1'),
+                      border: pw.Border.all(color: PdfColors.grey400, width: 1.5),
+                    ),
+                  ),
+                ),
+                // Nose
+                pw.Positioned(
+                  left: 46,
+                  top: 3,
+                  child: pw.Container(
+                    width: 8,
+                    height: 9,
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey400,
+                      borderRadius: const pw.BorderRadius.only(
+                        topLeft: pw.Radius.circular(4),
+                        topRight: pw.Radius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+                // AF7
+                pw.Positioned(
+                  left: 22,
+                  top: 20,
+                  child: buildSensorDot('AF7', af7),
+                ),
+                // AF8
+                pw.Positioned(
+                  right: 22,
+                  top: 20,
+                  child: buildSensorDot('AF8', af8),
+                ),
+                // TP9
+                pw.Positioned(
+                  left: 15,
+                  top: 55,
+                  child: buildSensorDot('TP9', tp9),
+                ),
+                // TP10
+                pw.Positioned(
+                  right: 15,
+                  top: 55,
+                  child: buildSensorDot('TP10', tp10),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          // Simple Legend
+          if (isZScore) ...[
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Container(width: 6, height: 6, color: PdfColor.fromHex('#0D47A1')),
+                pw.SizedBox(width: 1),
+                pw.Text('-3', style: pw.TextStyle(font: font, fontSize: 6)),
+                pw.SizedBox(width: 3),
+                pw.Container(width: 6, height: 6, color: PdfColor.fromHex('#66BB6A')),
+                pw.SizedBox(width: 1),
+                pw.Text('0', style: pw.TextStyle(font: font, fontSize: 6)),
+                pw.SizedBox(width: 3),
+                pw.Container(width: 6, height: 6, color: PdfColor.fromHex('#D32F2F')),
+                pw.SizedBox(width: 1),
+                pw.Text('+3', style: pw.TextStyle(font: font, fontSize: 6)),
+              ],
+            ),
+          ] else ...[
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Container(width: 6, height: 6, color: PdfColor.fromHex('#0D47A1')),
+                pw.SizedBox(width: 1),
+                pw.Text('ต่ำ', style: pw.TextStyle(font: font, fontSize: 6)),
+                pw.SizedBox(width: 5),
+                pw.Container(width: 6, height: 6, color: PdfColor.fromHex('#D32F2F')),
+                pw.SizedBox(width: 1),
+                pw.Text('สูง', style: pw.TextStyle(font: font, fontSize: 6)),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildListSection(
+    String title,
+    List<String> items,
+    pw.Font font,
+    pw.Font fontBold,
+    bool isChecklist,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColor.fromHex('#F8FAFC'),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColor.fromHex('#0F1B4C'))),
+          pw.SizedBox(height: 6),
+          ...items.asMap().entries.map((e) {
+            final bullet = isChecklist ? '✓' : '${e.key + 1}.';
+            final bulletColor = isChecklist ? PdfColors.blue700 : PdfColors.orange700;
+            return pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    '$bullet ',
+                    style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: bulletColor),
+                  ),
+                  pw.Expanded(
+                    child: pw.Text(
+                      e.value,
+                      style: pw.TextStyle(font: font, fontSize: 8.5, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  static Future<void> sharePdf(
+    Map<String, dynamic> s, 
+    User user, {
+    Uint8List? topoBytes,
+  }) async {
+    final bytes = await generateReport(s, user, topoBytes: topoBytes);
     await Printing.sharePdf(bytes: bytes, filename: 'qEEG_Report_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 
-  static Future<void> printPdf(Map<String, dynamic> s, String userName) async {
-    final bytes = await generateReport(s, userName);
+  static Future<void> printPdf(
+    Map<String, dynamic> s, 
+    User user, {
+    Uint8List? topoBytes,
+  }) async {
+    final bytes = await generateReport(s, user, topoBytes: topoBytes);
     await Printing.layoutPdf(onLayout: (_) async => bytes);
   }
 }

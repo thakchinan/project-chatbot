@@ -49,12 +49,16 @@ class EmotionDetectionService {
       final data = json.decode(jsonStr);
       _emotionLabels = List<String>.from(data['classes']);
     } catch (e) {
-      _emotionLabels = ['Angry/Fear', 'Happy', 'Relaxed', 'Sad'];
+      _emotionLabels = ['Positive', 'Neutral', 'Negative'];
     }
   }
 
-  Future<EmotionResult> detectFromEEG(Map<String, double> eegData) async {
-    return _fallbackDetection(eegData);
+  Future<Map<String, EmotionResult>> detectFromEEG(Map<String, double> eegData) async {
+    final fallback = _fallbackDetection(eegData);
+    return {
+      'pytorch': fallback,
+      'tflite': fallback,
+    };
   }
 
   EmotionResult _fallbackDetection(Map<String, double> eegData) {
@@ -70,14 +74,18 @@ class EmotionDetectionService {
     double aPct = alpha / total;
     double bPct = beta / total;
     double tPct = theta / total;
-    double dPct = delta / total;
+    double gPct = gamma / total;
 
     Map<String, double> scores = {};
-    scores['calm'] = (aPct * 1.5 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
-    scores['stressed'] = (bPct * 1.2 + (gamma / total) * 0.8).clamp(0.0, 1.0);
-    scores['happy'] =
-        (aPct * 1.2 + tPct * 0.5 + (1 - bPct) * 0.3).clamp(0.0, 1.0);
-    scores['sad'] = (tPct * 1.0 + dPct * 0.8 + (1 - aPct) * 0.2).clamp(0.0, 1.0);
+    // Positive: Alpha สูง + Beta ต่ำ → ผ่อนคลาย/คิดบวก
+    scores['positive'] = (aPct * 1.5 + tPct * 0.3 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
+
+    // Neutral: สมดุลทุก band → สภาวะปกติ
+    double balance = 1.0 - ((aPct - 0.2).abs() + (bPct - 0.2).abs() + (tPct - 0.2).abs());
+    scores['neutral'] = balance.clamp(0.0, 1.0);
+
+    // Negative: Beta/Gamma สูง (ความเครียด) หรือ Delta/Theta สูง (ซึมเศร้า/ล้า)
+    scores['negative'] = (bPct * 1.0 + tPct * 0.8 + gPct * 0.5).clamp(0.0, 1.0);
 
     double maxScore = scores.values.reduce((a, b) => a > b ? a : b);
     if (maxScore > 0) {

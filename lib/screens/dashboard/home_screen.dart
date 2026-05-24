@@ -29,7 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late final WebViewController _webViewController;
   late final WebViewController _popupWebViewController;
   bool _is3DModelLoaded = false;
-  EmotionResult? _currentEmotion;
+  EmotionResult? _pytorchEmotion;
+  EmotionResult? _tfliteEmotion;
   bool _isDetectingEmotion = false;
   Timer? _emotionDetectionTimer;
   bool _isLoading = false;
@@ -235,19 +236,21 @@ class _HomeScreenState extends State<HomeScreen> {
         'meditation': data.meditation,
       };
 
-      final result = await _emotionService.detectFromEEG(eegData);
+      final results = await _emotionService.detectFromEEG(eegData);
 
       if (mounted) {
         setState(() {
-          _currentEmotion = result;
+          _pytorchEmotion = results['pytorch'];
+          _tfliteEmotion = results['tflite'];
         });
 
-        if (result.confidence >= EmotionConstants.confidenceThreshold) {
+        final mainResult = results['pytorch'];
+        if (mainResult != null && mainResult.confidence >= EmotionConstants.confidenceThreshold) {
           ApiService.saveEmotionLog(
             userId: widget.user.id,
-            emotionType: result.emotionType,
+            emotionType: mainResult.emotionType,
             triggerEvent: 'eeg_brainwave',
-            intensity: (result.confidence * 10).round(),
+            intensity: (mainResult.confidence * 10).round(),
           );
         }
       }
@@ -343,6 +346,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _finishEegCountdown() async {
     final summary = EegAssessmentService.computeFromSamples(_eegSamples);
+
+    // Predict overall mental state using PyTorch Mobile model on averaged values
+    try {
+      final sessionEegData = {
+        'alpha': summary['avgAlpha'] as double? ?? 0.0,
+        'beta': summary['avgBeta'] as double? ?? 0.0,
+        'theta': summary['avgTheta'] as double? ?? 0.0,
+        'delta': summary['avgDelta'] as double? ?? 0.0,
+        'gamma': summary['avgGamma'] as double? ?? 0.0,
+      };
+      final results = await _emotionService.detectFromEEG(sessionEegData);
+      final pytorchResult = results['pytorch'];
+      if (pytorchResult != null) {
+        summary['predictedMentalState'] = pytorchResult.emotionType;
+        summary['predictedMentalStateLabel'] = EmotionType.fromString(pytorchResult.emotionType).label;
+        summary['predictedMentalStateConfidence'] = pytorchResult.confidence;
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to run session mental state prediction: $e');
+    }
 
     setState(() {
       _isEegCountdownRunning = false;
@@ -1756,10 +1779,114 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEmotionDetectionCard() {
-    final emotion = _currentEmotion;
-    final emotionType = emotion != null ? EmotionType.fromString(emotion.emotionType) : null;
+  Widget _buildResponsive(Widget Function(bool narrow) builder) {
+    return LayoutBuilder(builder: (_, c) => builder(c.maxWidth < 560));
+  }
 
+  Widget _buildModelPredictionSubcard({
+    required String title,
+    required EmotionResult? emotion,
+    required bool isPyTorch,
+  }) {
+    final emotionType = emotion != null ? EmotionType.fromString(emotion.emotionType) : null;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isPyTorch ? const Color(0xFF4F46E5) : const Color(0xFF0F1B4C),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (emotion != null && emotionType != null) ...[
+            Row(
+              children: [
+                Text(
+                  emotionType.emoji,
+                  style: const TextStyle(fontSize: 22),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        emotionType.label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: emotion.confidence.clamp(0.0, 1.0),
+                                minHeight: 5,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  emotion.confidence >= 0.7
+                                      ? Colors.green
+                                      : emotion.confidence >= 0.4
+                                          ? Colors.orange
+                                          : Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${(emotion.confidence * 100).toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: emotion.confidence >= 0.7
+                                  ? Colors.green
+                                  : emotion.confidence >= 0.4
+                                      ? Colors.orange
+                                      : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            const Text(
+              'รอข้อมูล EEG...',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmotionDetectionCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1801,83 +1928,41 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-
-          if (emotion != null && emotionType != null) ...[
-
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        emotionType.label,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: emotion.confidence.clamp(0.0, 1.0),
-                                minHeight: 8,
-                                backgroundColor: Colors.grey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  emotion.confidence >= 0.7
-                                      ? Colors.green
-                                      : emotion.confidence >= 0.4
-                                          ? Colors.orange
-                                          : Colors.red,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${(emotion.confidence * 100).toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: emotion.confidence >= 0.7
-                                  ? Colors.green
-                                  : emotion.confidence >= 0.4
-                                      ? Colors.orange
-                                      : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            if (emotion.allScores.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              ..._buildEmotionScoreBars(emotion.allScores),
-            ],
-          ] else ...[
-
-            Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          _buildResponsive((narrow) => narrow
+              ? Column(
                   children: [
-                    const Text('กำลังวิเคราะห์อารมณ์...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                    Text(
-                      'เชื่อมต่อ Muse S แล้ว — รอข้อมูล EEG',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    _buildModelPredictionSubcard(
+                      title: 'โมเดล PyTorch (หลัก)',
+                      emotion: _pytorchEmotion,
+                      isPyTorch: true,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildModelPredictionSubcard(
+                      title: 'โมเดล TFLite (สำรอง)',
+                      emotion: _tfliteEmotion,
+                      isPyTorch: false,
                     ),
                   ],
-                ),
-              ],
-            ),
-          ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _buildModelPredictionSubcard(
+                        title: 'โมเดล PyTorch (หลัก)',
+                        emotion: _pytorchEmotion,
+                        isPyTorch: true,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildModelPredictionSubcard(
+                        title: 'โมเดล TFLite (สำรอง)',
+                        emotion: _tfliteEmotion,
+                        isPyTorch: false,
+                      ),
+                    ),
+                  ],
+                )),
         ],
       ),
     );

@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import '../services/eeg_assessment_service.dart';
@@ -7,7 +10,7 @@ import 'eeg_risk_gauge.dart';
 import 'eeg_topographic_map.dart';
 
 /// ใบสรุปประเมินภาวะซึมเศร้า (qEEG) — Premium Design
-class EegAssessmentReportView extends StatelessWidget {
+class EegAssessmentReportView extends StatefulWidget {
   final Map<String, dynamic> summary;
   final User user;
   final String? recordedAtOverride;
@@ -21,6 +24,13 @@ class EegAssessmentReportView extends StatelessWidget {
     this.showActions = true,
   });
 
+  @override
+  State<EegAssessmentReportView> createState() => _EegAssessmentReportViewState();
+}
+
+class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
+  final GlobalKey _topoKey = GlobalKey();
+
   // === Design Tokens ===
   static const _navy = Color(0xFF0F1B4C);
   static const _accent = Color(0xFF3B82F6);
@@ -33,14 +43,93 @@ class EegAssessmentReportView extends StatelessWidget {
   TextStyle get _caption => GoogleFonts.notoSansThai(fontSize: 10, color: const Color(0xFF94A3B8), height: 1.4);
   TextStyle get _mono => GoogleFonts.jetBrainsMono(fontSize: 18, fontWeight: FontWeight.w700);
 
-  Color get _riskColor => EegAssessmentService.riskColor(summary);
-  double get _eegIndex => (summary['eegIndex'] as num).toDouble();
+  Color get _riskColor => EegAssessmentService.riskColor(widget.summary);
+  double get _eegIndex => (widget.summary['eegIndex'] as num).toDouble();
+
+  Future<Uint8List?> _capturePng(GlobalKey key) async {
+    try {
+      // Small delay to ensure widget is fully rendered and rasterized
+      await Future.delayed(const Duration(milliseconds: 100));
+      final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint("Error capturing topographic map: $e");
+      return null;
+    }
+  }
+
+  Future<void> _handlePdfExport(bool isShare) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: _navy),
+              const SizedBox(height: 16),
+              Text(
+                'กำลังบันทึกรายงาน PDF...',
+                style: GoogleFonts.notoSansThai(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _navy,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final topoBytes = await _capturePng(_topoKey);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      final display = EegAssessmentService.forDisplay(widget.summary);
+      if (isShare) {
+        await EegPdfService.sharePdf(display, widget.user, topoBytes: topoBytes);
+      } else {
+        await EegPdfService.printPdf(display, widget.user, topoBytes: topoBytes);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      debugPrint("Error exporting PDF: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'เกิดข้อผิดพลาดในการบันทึก PDF: $e',
+              style: GoogleFonts.notoSansThai(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final userName = user.fullName ?? user.username;
-    final age = EegAssessmentService.ageFromBirthDate(user.birthDate);
-    final dateStr = EegAssessmentService.formatDate(recordedAtOverride ?? summary['recordedAt'] as String?);
+    final userName = widget.user.fullName ?? widget.user.username;
+    final age = EegAssessmentService.ageFromBirthDate(widget.user.birthDate);
+    final dateStr = EegAssessmentService.formatDate(widget.recordedAtOverride ?? widget.summary['recordedAt'] as String?);
 
     return DefaultTextStyle(
       style: _body,
@@ -84,7 +173,7 @@ class EegAssessmentReportView extends StatelessWidget {
                     ])),
               const SizedBox(height: 16),
               _footerDisclaimer(),
-              if (showActions) ...[const SizedBox(height: 20), _actionButtons(userName)],
+              if (widget.showActions) ...[const SizedBox(height: 20), _actionButtons()],
             ],
           ),
         ),
@@ -152,7 +241,7 @@ class EegAssessmentReportView extends StatelessWidget {
         _infoRow('ชื่อ-นามสกุล', name),
         if (age != null) _infoRow('อายุ', '$age ปี'),
         _infoRow('วันที่ประเมิน', dateStr),
-        _infoRow('รหัสผู้ใช้', '${user.id}'),
+        _infoRow('รหัสผู้ใช้', '${widget.user.id}'),
       ]),
     );
   }
@@ -196,11 +285,11 @@ class EegAssessmentReportView extends StatelessWidget {
   // === Analysis Section ===
   Widget _analysisSection() {
     final bands = [
-      ('Delta', '0.5–4 Hz', 'ความง่วง / สมองล้า', summary['deltaZScore'] as double, Icons.bedtime_rounded),
-      ('Theta', '4–8 Hz', 'ครุ่นคิด / อารมณ์', summary['thetaZScore'] as double, Icons.waves_rounded),
-      ('Alpha', '8–13 Hz', 'ผ่อนคลาย / สมดุล', summary['alphaZScore'] as double, Icons.spa_rounded),
-      ('Beta', '13–30 Hz', 'คิดวิเคราะห์', summary['betaZScore'] as double, Icons.bolt_rounded),
-      ('High Beta', '30+ Hz', 'เครียด / วิตกกังวล', summary['highBetaZScore'] as double, Icons.electric_bolt_rounded),
+      ('Delta', '0.5–4 Hz', 'ความง่วง / สมองล้า', widget.summary['deltaZScore'] as double, Icons.bedtime_rounded),
+      ('Theta', '4–8 Hz', 'ครุ่นคิด / อารมณ์', widget.summary['thetaZScore'] as double, Icons.waves_rounded),
+      ('Alpha', '8–13 Hz', 'ผ่อนคลาย / สมดุล', widget.summary['alphaZScore'] as double, Icons.spa_rounded),
+      ('Beta', '13–30 Hz', 'คิดวิเคราะห์', widget.summary['betaZScore'] as double, Icons.bolt_rounded),
+      ('High Beta', '30+ Hz', 'เครียด / วิตกกังวล', widget.summary['highBetaZScore'] as double, Icons.electric_bolt_rounded),
     ];
 
     return _card(
@@ -220,8 +309,8 @@ class EegAssessmentReportView extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ...bands.map((b) => _bandCard(b.$1, b.$2, b.$3, b.$4, b.$5)),
-        _ratioCard('Alpha Asymmetry', 'ความสมดุลอารมณ์ซีกซ้าย-ขวา', summary['alphaAsymmetry'] as double, true),
-        _ratioCard('Beta/Theta', 'สมาธิและภาวะซึมเศร้า', summary['betaThetaRatio'] as double, false),
+        _ratioCard('Alpha Asymmetry', 'ความสมดุลอารมณ์ซีกซ้าย-ขวา', widget.summary['alphaAsymmetry'] as double, true),
+        _ratioCard('Beta/Theta', 'สมาธิและภาวะซึมเศร้า', widget.summary['betaThetaRatio'] as double, false),
       ]),
     );
   }
@@ -311,10 +400,10 @@ class EegAssessmentReportView extends StatelessWidget {
         const SizedBox(height: 4),
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(summary['riskLevel'] as String,
+          child: Text(widget.summary['riskLevel'] as String,
               style: GoogleFonts.notoSansThai(fontSize: 22, fontWeight: FontWeight.w800, color: _riskColor)),
         ),
-        Text(summary['riskLevelEn'] as String, style: _caption.copyWith(color: _riskColor, fontWeight: FontWeight.w500)),
+        Text(widget.summary['riskLevelEn'] as String, style: _caption.copyWith(color: _riskColor, fontWeight: FontWeight.w500)),
         const SizedBox(height: 14),
         Container(
           width: double.infinity,
@@ -360,70 +449,103 @@ class EegAssessmentReportView extends StatelessWidget {
 
   // === Topo Section ===
   Widget _topoSection() {
-    return _card(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF0F1B4C), Color(0xFF1E3A8A)]),
-            borderRadius: BorderRadius.circular(10),
+    return RepaintBoundary(
+      key: _topoKey,
+      child: _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF0F1B4C), Color(0xFF1E3A8A)]),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.map_rounded, color: Colors.white70, size: 16),
+              const SizedBox(width: 6),
+              Text('แผนที่การทำงานของสมอง (Topographic Map)',
+                  style: _h2.copyWith(color: Colors.white, fontSize: 12)),
+            ]),
           ),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.map_rounded, color: Colors.white70, size: 16),
-            const SizedBox(width: 6),
-            Text('แผนที่การทำงานของสมอง (Topographic Map)',
-                style: _h2.copyWith(color: Colors.white, fontSize: 12)),
-          ]),
-        ),
-        const SizedBox(height: 14),
-        IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            EegTopographicMap(
-              title: 'Absolute Power (Theta)', 
-              overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
-              sensorValues: {
-                'AF7': summary['avgTheta'] as double,
-                'AF8': (summary['avgTheta'] as double) * 0.8,
-                'TP9': (summary['avgTheta'] as double) * 0.6,
-                'TP10': (summary['avgTheta'] as double) * 0.7,
-              },
-            ),
-            const SizedBox(width: 8),
-            EegTopographicMap(
-              title: 'Absolute Power (Alpha)', 
-              overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
-              sensorValues: {
-                'AF7': summary['avgAlpha'] as double,
-                'AF8': (summary['avgAlpha'] as double) * 1.2,
-                'TP9': (summary['avgAlpha'] as double) * 1.1,
-                'TP10': (summary['avgAlpha'] as double) * 0.9,
-              },
-            ),
-            const SizedBox(width: 8),
-            EegTopographicMap(
-              title: 'Z-Score (Theta)', 
-              isZScore: true,
-              overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
-              sensorValues: {
-                'AF7': summary['thetaZScore'] as double,
-                'AF8': (summary['thetaZScore'] as double) * 0.5,
-                'TP9': -0.5,
-                'TP10': 0.2,
-              },
-            ),
-          ]),
-        ),
-      ]),
+          const SizedBox(height: 14),
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              EegTopographicMap(
+                title: 'Absolute Power (Theta)', 
+                overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
+                sensorValues: {
+                  'AF7': widget.summary['avgTheta'] as double,
+                  'AF8': (widget.summary['avgTheta'] as double) * 0.8,
+                  'TP9': (widget.summary['avgTheta'] as double) * 0.6,
+                  'TP10': (widget.summary['avgTheta'] as double) * 0.7,
+                },
+              ),
+              const SizedBox(width: 8),
+              EegTopographicMap(
+                title: 'Absolute Power (Alpha)', 
+                overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
+                sensorValues: {
+                  'AF7': widget.summary['avgAlpha'] as double,
+                  'AF8': (widget.summary['avgAlpha'] as double) * 1.2,
+                  'TP9': (widget.summary['avgAlpha'] as double) * 1.1,
+                  'TP10': (widget.summary['avgAlpha'] as double) * 0.9,
+                },
+              ),
+              const SizedBox(width: 8),
+              EegTopographicMap(
+                title: 'Z-Score (Theta)', 
+                isZScore: true,
+                overlayImagePath: 'assets/images/International_10-20_system_for_EEG-MCN.svg.png',
+                sensorValues: {
+                  'AF7': widget.summary['thetaZScore'] as double,
+                  'AF8': (widget.summary['thetaZScore'] as double) * 0.5,
+                  'TP9': -0.5,
+                  'TP10': 0.2,
+                },
+              ),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 
   // === Clinical / Observations / Recommendations ===
   Widget _clinicalSection() {
+    final mentalStateLabel = widget.summary['predictedMentalStateLabel'] as String?;
+    final confidence = widget.summary['predictedMentalStateConfidence'] as double?;
+    final confidencePercent = confidence != null ? ' (${(confidence * 100).toStringAsFixed(0)}%)' : '';
+
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionTitle(Icons.medical_information_rounded, 'สรุปความหมายเชิงคลินิก'),
-        const SizedBox(height: 10),
-        Text(EegAssessmentService.clinicalSummary(summary), style: _body),
+        const SizedBox(height: 12),
+        if (mentalStateLabel != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF667eea).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF667eea).withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.emoji_emotions_rounded, color: Color(0xFF667eea), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'สภาวะจิตใจโดยรวมขณะทดสอบ (PyTorch AI):',
+                  style: _body.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF667eea), fontSize: 11),
+                ),
+                const Spacer(),
+                Text(
+                  '$mentalStateLabel$confidencePercent',
+                  style: _body.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF0F1B4C), fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        Text(EegAssessmentService.clinicalSummary(widget.summary), style: _body),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(10),
@@ -447,8 +569,8 @@ class EegAssessmentReportView extends StatelessWidget {
     );
   }
 
-  Widget _observationsSection() => _listSection('ข้อสังเกต', Icons.visibility_rounded, EegAssessmentService.observations(summary));
-  Widget _recommendationsSection() => _listSection('ข้อเสนอแนะ', Icons.task_alt_rounded, EegAssessmentService.recommendations(summary), checklist: true);
+  Widget _observationsSection() => _listSection('ข้อสังเกต', Icons.visibility_rounded, EegAssessmentService.observations(widget.summary));
+  Widget _recommendationsSection() => _listSection('ข้อเสนอแนะ', Icons.task_alt_rounded, EegAssessmentService.recommendations(widget.summary), checklist: true);
 
   Widget _listSection(String title, IconData icon, List<String> items, {bool checklist = false}) {
     return _card(
@@ -507,12 +629,11 @@ class EegAssessmentReportView extends StatelessWidget {
   }
 
   // === Action Buttons ===
-  Widget _actionButtons(String userName) {
-    final display = EegAssessmentService.forDisplay(summary);
+  Widget _actionButtons() {
     return Row(children: [
       Expanded(
         child: ElevatedButton.icon(
-          onPressed: () => EegPdfService.sharePdf(display, userName),
+          onPressed: () => _handlePdfExport(true),
           icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 18),
           label: Text('ดาวน์โหลด PDF', style: _body.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
           style: ElevatedButton.styleFrom(
@@ -526,7 +647,7 @@ class EegAssessmentReportView extends StatelessWidget {
       const SizedBox(width: 12),
       Expanded(
         child: ElevatedButton.icon(
-          onPressed: () => EegPdfService.printPdf(display, userName),
+          onPressed: () => _handlePdfExport(false),
           icon: const Icon(Icons.print_rounded, color: Colors.white, size: 18),
           label: Text('พิมพ์รายงาน', style: _body.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
           style: ElevatedButton.styleFrom(

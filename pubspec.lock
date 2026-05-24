@@ -808,6 +808,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+  pytorch_mobile:
+    dependency: "direct main"
+    description:
+      name: pytorch_mobile
+      sha256: "43733398db3f2b7c97d6d02a6333a94eedcc1cfdfddb5b5c1aa62ee5b665fd9c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.2"
   qr:
     dependency: transitive
     description:

@@ -9,7 +9,9 @@ enum EmotionType {
   calm,
   stressed,
   anxious,
-  focused;
+  focused,
+  positive,
+  negative;
 
   String get label {
     switch (this) {
@@ -35,6 +37,10 @@ enum EmotionType {
         return 'วิตกกังวล';
       case EmotionType.focused:
         return 'มีสมาธิ';
+      case EmotionType.positive:
+        return 'สภาวะเป็นบวก';
+      case EmotionType.negative:
+        return 'สภาวะเป็นลบ';
     }
   }
 
@@ -62,6 +68,10 @@ enum EmotionType {
         return '😟';
       case EmotionType.focused:
         return '🧠';
+      case EmotionType.positive:
+        return '🙂';
+      case EmotionType.negative:
+        return '🙁';
     }
   }
 

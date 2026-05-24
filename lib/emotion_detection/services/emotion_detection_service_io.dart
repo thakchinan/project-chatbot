@@ -1,18 +1,29 @@
 import 'dart:convert';
-import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:pytorch_mobile/pytorch_mobile.dart';
+import 'package:pytorch_mobile/model.dart';
+import 'package:pytorch_mobile/enums/dtype.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import '../models/emotion_result.dart';
 import '../models/emotion_type.dart';
-import '../utils/emotion_constants.dart';
+
 
 class EmotionDetectionService {
-  Interpreter? _interpreter;
+  Model? _pytorchModel;
+  Interpreter? _tfliteInterpreter;
   List<double>? _scalerMean;
   List<double>? _scalerScale;
-  List<String>? _emotionLabels;
-  Map<String, String>? _indexToLabel;
+
+  // --- PyTorch labels (Positive / Neutral / Negative) ---
+  List<String>? _pytorchLabels;
+  Map<String, String>? _pytorchIndexToLabel;
+
+  // --- TFLite labels (Relaxed / Neutral / Concentrating) ---
+  List<String>? _tfliteLabels;
+  Map<String, String>? _tfliteIndexToLabel;
+
   bool _isModelLoaded = false;
   String? _lastError;
 
@@ -20,26 +31,27 @@ class EmotionDetectionService {
   String? get lastError => _lastError;
 
   static const int _numFeatures = 988;
-  static const int _numClasses = 3;
 
   Future<void> loadModel() async {
     try {
+      _pytorchModel = await PyTorchMobile.loadModel('assets/models/eeg_mobile_model_3classes.ptl');
+      debugPrint('   PyTorch model loaded');
 
-      _interpreter = await Interpreter.fromAsset('models/emotion_model.tflite');
-      debugPrint('✅ TFLite model loaded');
-
-      final inputShape = _interpreter!.getInputTensor(0).shape;
-      final outputShape = _interpreter!.getOutputTensor(0).shape;
-      debugPrint('   Input shape: $inputShape');
-      debugPrint('   Output shape: $outputShape');
+      try {
+        _tfliteInterpreter = await Interpreter.fromAsset('assets/models/emotion_model.tflite');
+        debugPrint('   TFLite model loaded');
+      } catch (e) {
+        debugPrint('⚠️ TFLite model load failed: $e');
+      }
 
       await _loadScalerParams();
 
-      await _loadEmotionLabels();
+      await _loadPytorchLabels();
+      await _loadTfliteLabels();
 
       _isModelLoaded = true;
       _lastError = null;
-      debugPrint('✅ Emotion Detection Service ready (on-device)');
+      debugPrint('✅ Emotion Detection Service ready (on-device PyTorch & TFLite)');
     } catch (e) {
       _lastError = 'โหลด model ไม่สำเร็จ: $e';
       debugPrint('❌ $_lastError');
@@ -61,18 +73,29 @@ class EmotionDetectionService {
     }
   }
 
-  Future<void> _loadEmotionLabels() async {
+  Future<void> _loadPytorchLabels() async {
+    try {
+      final jsonStr = await rootBundle.loadString('assets/models/pytorch_labels.json');
+      final data = json.decode(jsonStr);
+      _pytorchLabels = List<String>.from(data['classes']);
+      _pytorchIndexToLabel = Map<String, String>.from(data['index_to_label']);
+      debugPrint('✅ PyTorch labels loaded: $_pytorchLabels');
+    } catch (e) {
+      debugPrint('⚠️ PyTorch labels load failed: $e');
+      _pytorchLabels = ['Positive', 'Neutral', 'Negative'];
+    }
+  }
+
+  Future<void> _loadTfliteLabels() async {
     try {
       final jsonStr = await rootBundle.loadString('assets/models/emotion_labels.json');
       final data = json.decode(jsonStr);
-
-      _emotionLabels = List<String>.from(data['classes']);
-      _indexToLabel = Map<String, String>.from(data['index_to_label']);
-
-      debugPrint('✅ Labels loaded: $_emotionLabels');
+      _tfliteLabels = List<String>.from(data['classes']);
+      _tfliteIndexToLabel = Map<String, String>.from(data['index_to_label']);
+      debugPrint('✅ TFLite labels loaded: $_tfliteLabels');
     } catch (e) {
-      debugPrint('⚠️ Labels load failed: $e');
-      _emotionLabels = ['Relaxed', 'Neutral', 'Concentrating'];
+      debugPrint('⚠️ TFLite labels load failed: $e');
+      _tfliteLabels = ['Relaxed', 'Neutral', 'Concentrating'];
     }
   }
 
@@ -147,39 +170,53 @@ class EmotionDetectionService {
     return scaled;
   }
 
-  Future<EmotionResult> detectFromEEG(Map<String, double> eegData) async {
+  Future<Map<String, EmotionResult>> detectFromEEG(Map<String, double> eegData) async {
+    EmotionResult pytorchResult;
+    EmotionResult tfliteResult;
+
     try {
-      if (_interpreter != null) {
-        return _predictWithTFLite(eegData);
+      if (_pytorchModel != null) {
+        pytorchResult = await _predictWithPyTorch(eegData);
       } else {
-        return _fallbackDetection(eegData);
+        pytorchResult = _fallbackDetection(eegData);
       }
     } catch (e) {
-      _lastError = 'Detection error: $e';
-      debugPrint('❌ $_lastError');
-      return _fallbackDetection(eegData);
+      debugPrint('❌ PyTorch prediction error: $e');
+      pytorchResult = _fallbackDetection(eegData);
     }
+
+    try {
+      if (_tfliteInterpreter != null) {
+        tfliteResult = _predictWithTFLite(eegData);
+      } else {
+        tfliteResult = _fallbackDetection(eegData);
+      }
+    } catch (e) {
+      debugPrint('❌ TFLite prediction error: $e');
+      tfliteResult = _fallbackDetection(eegData);
+    }
+
+    return {
+      'pytorch': pytorchResult,
+      'tflite': tfliteResult,
+    };
   }
 
-  EmotionResult _predictWithTFLite(Map<String, double> eegData) {
-
+  Future<EmotionResult> _predictWithPyTorch(Map<String, double> eegData) async {
     List<double> features = _generateFeatures(eegData);
-
     List<double> scaledFeatures = _scaleFeatures(features);
 
-    var input = List.generate(
-      1,
-      (_) => List.generate(
-        _numFeatures,
-        (i) => [scaledFeatures[i].isNaN ? 0.0 : scaledFeatures[i]],
-      ),
+    List? prediction = await _pytorchModel!.getPrediction(
+      scaledFeatures.map((e) => e.isNaN ? 0.0 : e).toList(),
+      [1, _numFeatures],
+      DType.float32,
     );
 
-    var output = List.generate(1, (_) => List.filled(_numClasses, 0.0));
+    if (prediction == null || prediction.isEmpty) {
+      throw Exception('PyTorch Mobile inference returned null or empty result');
+    }
 
-    _interpreter!.run(input, output);
-
-    List<double> scores = output[0];
+    List<double> scores = prediction.map((e) => (e as num).toDouble()).toList();
 
     double sumExp = 0;
     List<double> expScores = [];
@@ -201,18 +238,81 @@ class EmotionDetectionService {
       }
     }
 
-    String emotionLabel = _indexToLabel?[bestIdx.toString()] ??
-        (_emotionLabels != null && bestIdx < _emotionLabels!.length
-            ? _emotionLabels![bestIdx]
+    String emotionLabel = _pytorchIndexToLabel?[bestIdx.toString()] ??
+        (_pytorchLabels != null && bestIdx < _pytorchLabels!.length
+            ? _pytorchLabels![bestIdx]
             : 'neutral');
 
     String mappedEmotion = _mapModelLabel(emotionLabel);
 
     Map<String, double> allScores = {};
     for (int i = 0; i < scores.length; i++) {
-      String label = _indexToLabel?[i.toString()] ??
-          (_emotionLabels != null && i < _emotionLabels!.length
-              ? _emotionLabels![i]
+      String label = _pytorchIndexToLabel?[i.toString()] ??
+          (_pytorchLabels != null && i < _pytorchLabels!.length
+              ? _pytorchLabels![i]
+              : 'class_$i');
+      String mapped = _mapModelLabel(label);
+      allScores[mapped] = double.parse(scores[i].toStringAsFixed(4));
+    }
+
+    return EmotionResult(
+      emotionType: mappedEmotion,
+      confidence: bestScore,
+      timestamp: DateTime.now(),
+      allScores: allScores,
+    );
+  }
+
+  EmotionResult _predictWithTFLite(Map<String, double> eegData) {
+    List<double> features = _generateFeatures(eegData);
+    List<double> scaledFeatures = _scaleFeatures(features);
+
+    var input = List.generate(
+      1,
+      (_) => List.generate(
+        _numFeatures,
+        (i) => [scaledFeatures[i].isNaN ? 0.0 : scaledFeatures[i]],
+      ),
+    );
+
+    var output = List.generate(1, (_) => List.filled(3, 0.0));
+
+    _tfliteInterpreter!.run(input, output);
+
+    List<double> scores = output[0].map((e) => (e as num).toDouble()).toList();
+
+    double sumExp = 0;
+    List<double> expScores = [];
+    for (var s in scores) {
+      double e = _exp(s);
+      expScores.add(e);
+      sumExp += e;
+    }
+    if (sumExp > 0) {
+      scores = expScores.map((e) => e / sumExp).toList();
+    }
+
+    int bestIdx = 0;
+    double bestScore = scores[0];
+    for (int i = 1; i < scores.length; i++) {
+      if (scores[i] > bestScore) {
+        bestScore = scores[i];
+        bestIdx = i;
+      }
+    }
+
+    String emotionLabel = _tfliteIndexToLabel?[bestIdx.toString()] ??
+        (_tfliteLabels != null && bestIdx < _tfliteLabels!.length
+            ? _tfliteLabels![bestIdx]
+            : 'neutral');
+
+    String mappedEmotion = _mapModelLabel(emotionLabel);
+
+    Map<String, double> allScores = {};
+    for (int i = 0; i < scores.length; i++) {
+      String label = _tfliteIndexToLabel?[i.toString()] ??
+          (_tfliteLabels != null && i < _tfliteLabels!.length
+              ? _tfliteLabels![i]
               : 'class_$i');
       String mapped = _mapModelLabel(label);
       allScores[mapped] = double.parse(scores[i].toStringAsFixed(4));
@@ -228,7 +328,7 @@ class EmotionDetectionService {
 
   String _mapModelLabel(String label) {
     switch (label.toLowerCase()) {
-      // === New 3-class model (Bird et al., 2018) ===
+      // === New 3-class model (Bird et al., 2018 & Positive/Neutral/Negative) ===
       case 'relaxed':
       case 'calm':
         return 'calm';
@@ -238,6 +338,10 @@ class EmotionDetectionService {
       case 'focused':
       case 'focus':
         return 'focused';
+      case 'positive':
+        return 'positive';
+      case 'negative':
+        return 'negative';
       // === Legacy 4-class model (backward compatible) ===
       case 'angry/fear':
       case 'angry':
@@ -278,20 +382,19 @@ class EmotionDetectionService {
     double aPct = alpha / total;
     double bPct = beta / total;
     double tPct = theta / total;
-    double dPct = delta / total;
     double gPct = gamma / total;
 
     Map<String, double> scores = {};
 
-    // Relaxed: Alpha สูง + Beta ต่ำ → สงบผ่อนคลาย
-    scores['calm'] = (aPct * 1.5 + tPct * 0.3 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
+    // Positive: Alpha สูง + Beta ต่ำ → ผ่อนคลาย/คิดบวก
+    scores['positive'] = (aPct * 1.5 + tPct * 0.3 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
 
     // Neutral: สมดุลทุก band → สภาวะปกติ
     double balance = 1.0 - ((aPct - 0.2).abs() + (bPct - 0.2).abs() + (tPct - 0.2).abs());
     scores['neutral'] = balance.clamp(0.0, 1.0);
 
-    // Concentrating: Beta + Gamma สูง → มีสมาธิ/ตื่นตัว
-    scores['focused'] = (bPct * 1.3 + gPct * 0.8 + (1 - dPct) * 0.3).clamp(0.0, 1.0);
+    // Negative: Beta/Gamma สูง (ความเครียด) หรือ Delta/Theta สูง (ซึมเศร้า/ล้า)
+    scores['negative'] = (bPct * 1.0 + tPct * 0.8 + gPct * 0.5).clamp(0.0, 1.0);
 
     double maxScore = scores.values.reduce((a, b) => a > b ? a : b);
     if (maxScore > 0) {
@@ -327,8 +430,9 @@ class EmotionDetectionService {
   }
 
   void dispose() {
-    _interpreter?.close();
-    _interpreter = null;
+    _pytorchModel = null;
+    _tfliteInterpreter?.close();
+    _tfliteInterpreter = null;
     _isModelLoaded = false;
   }
 }
