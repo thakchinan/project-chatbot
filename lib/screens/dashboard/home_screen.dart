@@ -28,7 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final EmotionDetectionService _emotionService = EmotionDetectionService();
   late final WebViewController _webViewController;
   late final WebViewController _popupWebViewController;
+  late final WebViewController _videoWebViewController;
   bool _is3DModelLoaded = false;
+  bool _isVideoLoaded = false;
   EmotionResult? _pytorchEmotion;
   EmotionResult? _tfliteEmotion;
   bool _isDetectingEmotion = false;
@@ -100,6 +102,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (url) {
           _popupWebViewController.runJavaScript(splineJS);
+        },
+      ))
+      ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
+
+    _videoWebViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
+      _videoWebViewController.setBackgroundColor(const Color(0xFF0F1629));
+    }
+    _videoWebViewController
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (url) {
+          _videoWebViewController.runJavaScript(splineJS);
+          if (mounted) setState(() => _isVideoLoaded = true);
         },
       ))
       ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
@@ -1280,6 +1296,84 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Video Embedded View
+              Container(
+                width: double.infinity,
+                height: 250,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFF4A7FC1).withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4A7FC1).withOpacity(0.15),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: WebViewWidget(
+                          controller: _videoWebViewController,
+                          gestureRecognizers: {
+                            Factory<OneSequenceGestureRecognizer>(
+                              () => EagerGestureRecognizer(),
+                            ),
+                          },
+                        ),
+                      ),
+                      if (!_isVideoLoaded)
+                        Positioned.fill(
+                          child: Container(
+                            color: const Color(0xFF0F1629),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: const Color(0xFF4A7FC1).withOpacity(0.8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'กำลังโหลดวิดีโอ...',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.5),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
