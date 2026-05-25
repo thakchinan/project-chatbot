@@ -71,7 +71,6 @@ dependencies:
   
   # TFLite (Emotion Detection on-device)
   tflite_flutter: ^0.11.0
-  pytorch_mobile: ^0.2.2
   pdf: ^3.12.0
   printing: ^5.14.3
   model_viewer_plus: ^1.10.0
