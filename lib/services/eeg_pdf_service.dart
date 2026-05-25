@@ -101,7 +101,7 @@ class EegPdfService {
               ),
               child: pw.Column(
                 children: [
-                  pw.Text('สรุประดับความเสี่ยงภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 12)),
+                  pw.Text('สรุปผลการวิเคราะห์เชิงลึก', style: pw.TextStyle(font: fontBold, fontSize: 12)),
                   pw.SizedBox(height: 4),
                   pw.Text(riskLevel, style: pw.TextStyle(font: fontBold, fontSize: 20, color: riskColorHex)),
                   pw.Text('($riskLevelEn)', style: pw.TextStyle(font: font, fontSize: 10, color: riskColorHex)),
@@ -114,16 +114,16 @@ class EegPdfService {
                     ],
                   ),
                   pw.SizedBox(height: 4),
-                  pw.Text('EEG–Depression Index', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('EEG Deep Analysis Index', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
                   pw.SizedBox(height: 6),
                   _buildPdfRiskBar(),
                   pw.SizedBox(height: 4),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('0-33 ความเสี่ยงต่ำ', style: pw.TextStyle(font: font, fontSize: 8)),
-                      pw.Text('34-66 ปานกลาง', style: pw.TextStyle(font: font, fontSize: 8)),
-                      pw.Text('67-100 สูง', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('0-28 ความเสี่ยงต่ำ', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('29-48 ปานกลาง', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('49-100 สูง', style: pw.TextStyle(font: font, fontSize: 8)),
                     ],
                   ),
                 ],

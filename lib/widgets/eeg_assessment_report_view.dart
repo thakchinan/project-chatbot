@@ -465,7 +465,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
   Widget _riskSection() {
     return _card(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _sectionTitle(Icons.monitor_heart_rounded, 'สรุประดับความเสี่ยง'),
+        _sectionTitle(Icons.analytics_rounded, 'วิเคราะห์เชิงลึก'),
         const SizedBox(height: 12),
         SizedBox(
           height: 130,
@@ -492,8 +492,8 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
             border: Border.all(color: _riskColor.withValues(alpha: 0.2)),
           ),
           child: Column(children: [
-            Text('คะแนนดัชนีภาวะซึมเศร้า', style: _caption.copyWith(fontWeight: FontWeight.w500)),
-            Text('EEG-Depression Index', style: _caption.copyWith(fontSize: 9)),
+            Text('คะแนนดัชนีวิเคราะห์เชิงลึก', style: _caption.copyWith(fontWeight: FontWeight.w500)),
+            Text('EEG Deep Analysis Index', style: _caption.copyWith(fontSize: 9)),
             const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -503,11 +503,11 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         ),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _riskChip('0–33 ต่ำ', const Color(0xFF43A047)),
+          _riskChip('0–28 ต่ำ', const Color(0xFF43A047)),
           const SizedBox(width: 6),
-          _riskChip('34–66 กลาง', const Color(0xFFF57C00)),
+          _riskChip('29–48 กลาง', const Color(0xFFF57C00)),
           const SizedBox(width: 6),
-          _riskChip('67–100 สูง', const Color(0xFFE53935)),
+          _riskChip('49–100 สูง', const Color(0xFFE53935)),
         ]),
       ]),
     );
