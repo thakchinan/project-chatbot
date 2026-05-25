@@ -169,25 +169,55 @@ class EegAssessmentService {
 
   static String clinicalSummary(Map<String, dynamic> s) {
     final buf = StringBuffer();
-    final tZ = s['thetaZScore'] as double;
-    final dZ = s['deltaZScore'] as double;
-    final aZ = s['alphaZScore'] as double;
-    final bZ = s['betaZScore'] as double;
-    buf.write('พบความผิดปกติของคลื่นสมองในช่วง ');
+    final mentalStateLabel = s['predictedMentalStateLabel'] as String?;
+    final confidence = s['predictedMentalStateConfidence'] as double?;
+
+    final tfliteLabel = s['tfliteMentalStateLabel'] as String?;
+    final tfliteConf = s['tfliteMentalStateConfidence'] as double?;
+
+    if (mentalStateLabel != null || tfliteLabel != null) {
+      buf.write('การวิเคราะห์ด้วย AI บ่งชี้สภาวะอารมณ์: ');
+      if (mentalStateLabel != null) {
+        buf.write('ผลประเมินสภาวะจิตใจบ่งชี้ "$mentalStateLabel"');
+        if (confidence != null) {
+          buf.write(' (มั่นใจ ${(confidence * 100).toStringAsFixed(0)}%)');
+        }
+      }
+      if (tfliteLabel != null) {
+        if (mentalStateLabel != null) buf.write(' และ ');
+        buf.write('ผลประเมินสภาวะอารมณ์บ่งชี้ "$tfliteLabel"');
+        if (tfliteConf != null) {
+          buf.write(' (มั่นใจ ${(tfliteConf * 100).toStringAsFixed(0)}%)');
+        }
+      }
+      buf.write(' โดยจากการตรวจวิเคราะห์ค่าสถิติ ');
+    } else {
+      buf.write('พบความผิดปกติของคลื่นสมองในช่วง ');
+    }
+
+    final tZ = (s['thetaZScore'] as num? ?? 0.0).toDouble();
+    final dZ = (s['deltaZScore'] as num? ?? 0.0).toDouble();
+    final aZ = (s['alphaZScore'] as num? ?? 0.0).toDouble();
+    final bZ = (s['betaZScore'] as num? ?? 0.0).toDouble();
+
     final abnormal = <String>[];
     if (tZ.abs() > 1.0) abnormal.add('Theta');
     if (dZ.abs() > 1.0) abnormal.add('Delta');
     if (aZ.abs() > 1.0) abnormal.add('Alpha');
     if (bZ.abs() > 1.0) abnormal.add('Beta');
+
+    if (mentalStateLabel != null || tfliteLabel != null) {
+      buf.write('พบสัญญาณสมองเบี่ยงเบนในช่วง ');
+    }
     buf.write(abnormal.isEmpty ? 'ไม่มี (ปกติ)' : abnormal.join(' และ '));
     buf.write(' ');
     if (tZ > 1.0 || dZ > 1.0) buf.write('สูงกว่าค่าปกติ ร่วมกับ ');
     if (aZ < -1.0) buf.write('คลื่น Alpha ต่ำกว่าปกติ ');
-    final asym = s['alphaAsymmetry'] as double;
+    final asym = (s['alphaAsymmetry'] as num? ?? 0.0).toDouble();
     if (asym.abs() > 0.5) {
       buf.write('ความไม่สมดุลของสมองซีกซ้าย-ขวา (Alpha Asymmetry) เข้าข่ายเสี่ยง ');
     }
-    final ratio = s['betaThetaRatio'] as double;
+    final ratio = (s['betaThetaRatio'] as num? ?? 0.0).toDouble();
     if (ratio > 1.5) {
       buf.write('และอัตราส่วน Beta/Theta ที่สูงขึ้น ซึ่งสัมพันธ์กับภาวะซึมเศร้า');
     } else {
@@ -198,19 +228,33 @@ class EegAssessmentService {
 
   static List<String> observations(Map<String, dynamic> s) {
     final obs = <String>[];
-    if ((s['thetaZScore'] as double) > 1.0) {
+    final mentalStateLabel = s['predictedMentalStateLabel'] as String?;
+    final confidence = s['predictedMentalStateConfidence'] as double?;
+    if (mentalStateLabel != null) {
+      final confStr = confidence != null ? ' (ความมั่นใจ ${(confidence * 100).toStringAsFixed(0)}%)' : '';
+      obs.add('ผลประเมินสภาวะจิตใจ: $mentalStateLabel$confStr');
+    }
+
+    final tfliteLabel = s['tfliteMentalStateLabel'] as String?;
+    final tfliteConf = s['tfliteMentalStateConfidence'] as double?;
+    if (tfliteLabel != null) {
+      final confStr = tfliteConf != null ? ' (ความมั่นใจ ${(tfliteConf * 100).toStringAsFixed(0)}%)' : '';
+      obs.add('ผลประเมินสภาวะอารมณ์: $tfliteLabel$confStr');
+    }
+
+    if (((s['thetaZScore'] as num? ?? 0.0).toDouble()) > 1.0) {
       obs.add('คลื่น Theta สูงกว่าปกติ สัมพันธ์กับความคิดซ้ำซาก เหนื่อยล้า');
     }
-    if ((s['deltaZScore'] as double) > 1.0) {
+    if (((s['deltaZScore'] as num? ?? 0.0).toDouble()) > 1.0) {
       obs.add('คลื่น Delta สูงกว่าปกติ บ่งบอกสมองล้า');
     }
-    if ((s['alphaZScore'] as double) < -1.0) {
+    if (((s['alphaZScore'] as num? ?? 0.0).toDouble()) < -1.0) {
       obs.add('คลื่น Alpha ต่ำกว่าปกติ บ่งบอกการผ่อนคลายลดลง');
     }
-    if ((s['alphaAsymmetry'] as double).abs() > 0.5) {
+    if (((s['alphaAsymmetry'] as num? ?? 0.0).toDouble()).abs() > 0.5) {
       obs.add('ความไม่สมดุลสมองซีกซ้าย-ขวา เข้าข่ายเสี่ยง');
     }
-    if ((s['betaThetaRatio'] as double) > 1.5) {
+    if (((s['betaThetaRatio'] as num? ?? 0.0).toDouble()) > 1.5) {
       obs.add('Beta/Theta Ratio สูงกว่าค่าปกติ');
     }
     if (obs.isEmpty) obs.add('ไม่พบความผิดปกติที่ชัดเจน');
@@ -219,7 +263,22 @@ class EegAssessmentService {
 
   static List<String> recommendations(Map<String, dynamic> s) {
     final recs = <String>[];
-    final idx = s['eegIndex'] as double;
+    final idx = (s['eegIndex'] as num? ?? 50.0).toDouble();
+    final mentalState = s['predictedMentalState'] as String?;
+    final tfliteState = s['tfliteMentalState'] as String?;
+
+    final isNegative = (mentalState != null && (mentalState.toLowerCase() == 'negative' || mentalState.toLowerCase() == 'stressed' || mentalState.toLowerCase() == 'sad' || mentalState.toLowerCase() == 'angry')) ||
+                       (tfliteState != null && (tfliteState.toLowerCase() == 'negative' || tfliteState.toLowerCase() == 'stressed' || tfliteState.toLowerCase() == 'sad' || tfliteState.toLowerCase() == 'angry'));
+
+    final isPositive = (mentalState != null && (mentalState.toLowerCase() == 'positive' || mentalState.toLowerCase() == 'happy' || mentalState.toLowerCase() == 'calm')) ||
+                       (tfliteState != null && (tfliteState.toLowerCase() == 'positive' || tfliteState.toLowerCase() == 'happy' || tfliteState.toLowerCase() == 'calm' || tfliteState.toLowerCase() == 'relaxed' || tfliteState.toLowerCase() == 'focused'));
+
+    if (isNegative) {
+      recs.add('แนะนำกิจกรรมผ่อนคลายความเครียด เช่น ฝึกกำหนดลมหายใจช้าๆ หรือนั่งสมาธิ เพื่อปรับสมดุลสภาวะอารมณ์');
+    } else if (isPositive) {
+      recs.add('ส่งเสริมกิจกรรมที่ช่วยจรรโลงใจและสร้างความสงบสุขเพื่อรักษาจิตใจที่ดี');
+    }
+
     recs.add('พบแพทย์/นักจิตวิทยาเพื่อประเมินอาการอย่างละเอียด');
     if (idx > 50) recs.add('ฝึกสมาธิ ผ่อนคลายความเครียด นอนหลับให้เพียงพอ');
     recs.add('ออกกำลังกายสม่ำเสมอ และดูแลโภชนาการ');

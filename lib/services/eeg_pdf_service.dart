@@ -31,6 +31,10 @@ class EegPdfService {
     final confidence = s['predictedMentalStateConfidence'] as double?;
     final confidencePercent = confidence != null ? ' (${(confidence * 100).toStringAsFixed(0)}%)' : '';
 
+    final tfliteLabel = s['tfliteMentalStateLabel'] as String?;
+    final tfliteConf = s['tfliteMentalStateConfidence'] as double?;
+    final tfliteConfPercent = tfliteConf != null ? ' (${(tfliteConf * 100).toStringAsFixed(0)}%)' : '';
+
     // ==========================================
     // PAGE 1: Executive Summary & Z-Score Table
     // ==========================================
@@ -132,28 +136,54 @@ class EegPdfService {
             _buildZScoreTable(font, fontBold, s),
             pw.SizedBox(height: 10),
 
-            // Alpha Asymmetry + Beta/Theta
+            // Alpha Asymmetry + Beta/Theta + PyTorch AI + TFLite AI
             pw.Row(
               children: [
                 pw.Expanded(
                   child: _buildMetricBox(
                     font,
                     fontBold,
-                    'Alpha Asymmetry (ซ้าย-ขวา)',
-                    (s['alphaAsymmetry'] as double).toStringAsFixed(2),
-                    (s['alphaAsymmetry'] as double).abs() > 0.5 ? 'ความสมดุลซีกซ้าย-ขวาเสี่ยง' : 'ใกล้เคียงปกติ',
-                    (s['alphaAsymmetry'] as double).abs() > 0.5 ? PdfColors.orange : PdfColors.green,
+                    'Alpha Asymmetry (L-R)',
+                    (s['alphaAsymmetry'] as num? ?? 0.0).toDouble().toStringAsFixed(2),
+                    (s['alphaAsymmetry'] as num? ?? 0.0).toDouble().abs() > 0.5 ? 'ไม่สมดุล' : 'ปกติ',
+                    (s['alphaAsymmetry'] as num? ?? 0.0).toDouble().abs() > 0.5 ? PdfColors.orange : PdfColors.green,
                   ),
                 ),
-                pw.SizedBox(width: 12),
+                pw.SizedBox(width: 6),
                 pw.Expanded(
                   child: _buildMetricBox(
                     font,
                     fontBold,
                     'Beta/Theta Ratio',
-                    (s['betaThetaRatio'] as double).toStringAsFixed(2),
-                    (s['betaThetaRatio'] as double) > 1.5 ? 'สูงกว่าปกติ (สัมพันธ์ภาวะซึมเศร้า)' : 'อยู่ในเกณฑ์ปกติ',
-                    (s['betaThetaRatio'] as double) > 1.5 ? PdfColors.orange : PdfColors.green,
+                    (s['betaThetaRatio'] as num? ?? 0.0).toDouble().toStringAsFixed(2),
+                    (s['betaThetaRatio'] as num? ?? 0.0).toDouble() > 1.5 ? 'สูงกว่าปกติ' : 'ปกติ',
+                    (s['betaThetaRatio'] as num? ?? 0.0).toDouble() > 1.5 ? PdfColors.orange : PdfColors.green,
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Expanded(
+                  child: _buildMetricBox(
+                    font,
+                    fontBold,
+                    'การประเมินสภาวะจิตใจ',
+                    mentalStateLabel ?? 'ไม่มีข้อมูล',
+                    confidencePercent.isNotEmpty ? 'มั่นใจ$confidencePercent' : 'สภาวะอารมณ์',
+                    mentalStateLabel == 'สภาวะเป็นลบ'
+                        ? PdfColors.red
+                        : (mentalStateLabel == 'สภาวะเป็นบวก' ? PdfColors.green : PdfColors.blue),
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Expanded(
+                  child: _buildMetricBox(
+                    font,
+                    fontBold,
+                    'การประเมินสภาวะอารมณ์',
+                    tfliteLabel ?? 'ไม่มีข้อมูล',
+                    tfliteConfPercent.isNotEmpty ? 'มั่นใจ$tfliteConfPercent' : 'สภาวะอารมณ์',
+                    tfliteLabel == 'สภาวะเป็นลบ' || tfliteLabel == 'Negative' || tfliteLabel == 'Stressed'
+                        ? PdfColors.red
+                        : (tfliteLabel == 'ปกติ' || tfliteLabel == 'Neutral' || tfliteLabel == 'Relaxed' || tfliteLabel == 'สภาวะเป็นบวก' ? PdfColors.green : PdfColors.orange),
                   ),
                 ),
               ],
@@ -272,7 +302,7 @@ class EegPdfService {
             if (mentalStateLabel != null) ...[
               pw.Container(
                 width: double.infinity,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: pw.BoxDecoration(
                   color: PdfColor.fromHex('#EEF2FF'),
                   border: pw.Border.all(color: PdfColor.fromHex('#C7D2FE')),
@@ -282,12 +312,37 @@ class EegPdfService {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(
-                      'สภาวะจิตใจโดยรวมขณะทดสอบ (PyTorch AI):',
-                      style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#4F46E5')),
+                      'การวิเคราะห์สภาวะจิตใจ (Mental State):',
+                      style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromHex('#4F46E5')),
                     ),
                     pw.Text(
                       '$mentalStateLabel$confidencePercent',
-                      style: pw.TextStyle(font: fontBold, fontSize: 9.5, color: PdfColor.fromHex('#0F1B4C')),
+                      style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromHex('#0F1B4C')),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 4),
+            ],
+            if (tfliteLabel != null) ...[
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromHex('#E0F2FE'),
+                  border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD')),
+                  borderRadius: pw.BorderRadius.circular(6),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'การวิเคราะห์สภาวะอารมณ์ (Emotion State):',
+                      style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromHex('#0284C7')),
+                    ),
+                    pw.Text(
+                      '$tfliteLabel$tfliteConfPercent',
+                      style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromHex('#0F1B4C')),
                     ),
                   ],
                 ),
@@ -465,8 +520,9 @@ class EegPdfService {
   }
 
   static pw.Widget _buildMetricBox(pw.Font font, pw.Font fontBold, String title, String value, String status, PdfColor statusColor) {
+    final valFontSize = value.length > 8 ? 10.5 : 13.0;
     return pw.Container(
-      padding: const pw.EdgeInsets.all(8),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300),
         borderRadius: pw.BorderRadius.circular(8),
@@ -475,13 +531,14 @@ class EegPdfService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#0F1B4C'))),
+          pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 7.5, color: PdfColor.fromHex('#0F1B4C'))),
           pw.SizedBox(height: 3),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.Text(value, style: pw.TextStyle(font: fontBold, fontSize: 15)),
-              pw.Text(status, style: pw.TextStyle(font: font, fontSize: 8, color: statusColor)),
+              pw.Text(value, style: pw.TextStyle(font: fontBold, fontSize: valFontSize)),
+              pw.Text(status, style: pw.TextStyle(font: font, fontSize: 7.0, color: statusColor)),
             ],
           ),
         ],

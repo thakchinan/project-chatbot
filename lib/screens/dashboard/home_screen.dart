@@ -363,6 +363,12 @@ class _HomeScreenState extends State<HomeScreen> {
         summary['predictedMentalStateLabel'] = EmotionType.fromString(pytorchResult.emotionType).label;
         summary['predictedMentalStateConfidence'] = pytorchResult.confidence;
       }
+      final tfliteResult = results['tflite'];
+      if (tfliteResult != null) {
+        summary['tfliteMentalState'] = tfliteResult.emotionType;
+        summary['tfliteMentalStateLabel'] = EmotionType.fromString(tfliteResult.emotionType).label;
+        summary['tfliteMentalStateConfidence'] = tfliteResult.confidence;
+      }
     } catch (e) {
       debugPrint('❌ Failed to run session mental state prediction: $e');
     }
@@ -1932,13 +1938,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ? Column(
                   children: [
                     _buildModelPredictionSubcard(
-                      title: 'โมเดล PyTorch (หลัก)',
+                      title: 'วิเคราะห์สภาวะจิตใจ',
                       emotion: _pytorchEmotion,
                       isPyTorch: true,
                     ),
                     const SizedBox(height: 12),
                     _buildModelPredictionSubcard(
-                      title: 'โมเดล TFLite (สำรอง)',
+                      title: 'วิเคราะห์สภาวะอารมณ์',
                       emotion: _tfliteEmotion,
                       isPyTorch: false,
                     ),
@@ -1948,7 +1954,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: _buildModelPredictionSubcard(
-                        title: 'โมเดล PyTorch (หลัก)',
+                        title: 'วิเคราะห์สภาวะจิตใจ',
                         emotion: _pytorchEmotion,
                         isPyTorch: true,
                       ),
@@ -1956,7 +1962,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildModelPredictionSubcard(
-                        title: 'โมเดล TFLite (สำรอง)',
+                        title: 'วิเคราะห์สภาวะอารมณ์',
                         emotion: _tfliteEmotion,
                         isPyTorch: false,
                       ),
