@@ -84,7 +84,7 @@ class EegPdfService {
                     'สภาวะ: หลับตา (Eyes Closed)',
                     'ระยะเวลา: 1.5 นาที (90 วินาที)',
                     'ความสมบูรณ์ข้อมูล: ${s['samplesCollected']} samples',
-                    'เกณฑ์อ้างอิง: Krigolson et al. (2017)',
+                    'เกณฑ์อ้างอิง: ${s['normRef'] ?? 'Krigolson et al. (2017), DEAP Dataset (Calibrated for Frontal Muse EEG)'}',
                   ]),
                 ),
               ],
