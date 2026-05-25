@@ -111,7 +111,7 @@ class EegAssessmentService {
       'riskColorValue': riskColorValue,
       'samplesCollected': n,
       'durationSeconds': 90,
-      'normRef': 'Krigolson et al. (2017), DEAP Dataset, Elderly 60+ Norms',
+      'normRef': 'Krigolson et al. (2017), DEAP Dataset (Calibrated for Frontal Muse EEG)',
       'recordedAt': DateTime.now().toIso8601String(),
     };
   }
