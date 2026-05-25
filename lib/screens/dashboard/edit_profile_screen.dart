@@ -177,6 +177,55 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Future<void> _selectBirthDate() async {
+    DateTime initialDate = DateTime(2000);
+    if (_birthDateController.text.isNotEmpty) {
+      try {
+        final parts = _birthDateController.text.split('-');
+        if (parts.length == 3) {
+          initialDate = DateTime(
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+            int.parse(parts[2]),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error parsing initial date: $e');
+      }
+    }
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primaryBlue,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _birthDateController.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
   Future<String?> _uploadImage() async {
     if (_selectedImage == null) return _currentAvatarUrl;
 
@@ -421,7 +470,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _buildLabel('วัน/เดือน/ปีเกิด'),
             _buildTextField(
               controller: _birthDateController,
-              hintText: 'DD / MM / YYYY',
+              hintText: 'เลือกวัน/เดือน/ปีเกิด',
+              readOnly: true,
+              onTap: _selectBirthDate,
+              suffixIcon: Icon(
+                Icons.calendar_today,
+                color: AppColors.primaryBlue,
+              ),
             ),
 
             const SizedBox(height: 30),
@@ -511,11 +566,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required String hintText,
     TextInputType? keyboardType,
     int? maxLength,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    Widget? suffixIcon,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLength: maxLength,
+      readOnly: readOnly,
+      onTap: onTap,
       decoration: InputDecoration(
         counterText: '',
         hintText: hintText,
@@ -526,8 +586,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+        ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        suffixIcon: suffixIcon,
       ),
     );
   }

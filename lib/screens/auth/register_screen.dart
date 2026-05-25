@@ -37,6 +37,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       initialDate: DateTime(1970),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primaryBlue,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
@@ -196,13 +213,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(height: 16),
 
             _buildLabel('วัน/เดือน/ปีเกิด'),
-            GestureDetector(
+            _buildTextField(
+              controller: _birthDateController,
+              hintText: 'เลือกวัน/เดือน/ปีเกิด',
+              readOnly: true,
               onTap: _selectDate,
-              child: AbsorbPointer(
-                child: _buildTextField(
-                  controller: _birthDateController,
-                  hintText: 'เลือกวัน/เดือน/ปีเกิด',
-                ),
+              suffixIcon: Icon(
+                Icons.calendar_today,
+                color: AppColors.primaryBlue,
               ),
             ),
 
@@ -305,12 +323,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Widget? suffixIcon,
     TextInputType? keyboardType,
     int? maxLength,
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       maxLength: maxLength,
+      readOnly: readOnly,
+      onTap: onTap,
       decoration: InputDecoration(
         counterText: '',
         hintText: hintText,
