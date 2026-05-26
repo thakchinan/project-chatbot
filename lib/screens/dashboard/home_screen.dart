@@ -26,9 +26,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final MuseService _museService = MuseService();
   final EmotionDetectionService _emotionService = EmotionDetectionService();
-  late final WebViewController _webViewController;
-  late final WebViewController _popupWebViewController;
-  bool _is3DModelLoaded = false;
+  late final WebViewController _videoWebViewController;
+  bool _isVideoLoaded = false;
   EmotionResult? _pytorchEmotion;
   EmotionResult? _tfliteEmotion;
   bool _isDetectingEmotion = false;
@@ -77,29 +76,16 @@ class _HomeScreenState extends State<HomeScreen> {
       })();
     ''';
 
-    _webViewController = WebViewController()
+    _videoWebViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
     if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
-      _webViewController.setBackgroundColor(const Color(0xFF0F1629));
+      _videoWebViewController.setBackgroundColor(const Color(0xFF0F1629));
     }
-    _webViewController
+    _videoWebViewController
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (url) {
-          _webViewController.runJavaScript(splineJS);
-          if (mounted) setState(() => _is3DModelLoaded = true);
-        },
-      ))
-      ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
-
-    _popupWebViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted);
-    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
-      _popupWebViewController.setBackgroundColor(const Color(0xFF0F1629));
-    }
-    _popupWebViewController
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (url) {
-          _popupWebViewController.runJavaScript(splineJS);
+          _videoWebViewController.runJavaScript(splineJS);
+          if (mounted) setState(() => _isVideoLoaded = true);
         },
       ))
       ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
@@ -710,230 +696,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _reset3DModel({bool popupOnly = false}) {
-    const splineUrl = 'https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/';
-    if (popupOnly) {
-      _popupWebViewController.loadRequest(Uri.parse(splineUrl));
-    } else {
-      _webViewController.loadRequest(Uri.parse(splineUrl));
-    }
-  }
-
-  void _show3DModelPopup() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Close 3D Model',
-      barrierColor: Colors.black.withOpacity(0.85),
-      transitionDuration: const Duration(milliseconds: 400),
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-          child: FadeTransition(opacity: animation, child: child),
-        );
-      },
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.of(context).size.width - 32,
-              height: MediaQuery.of(context).size.height * 0.72,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: const Color(0xFF4A7FC1).withOpacity(0.4),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4A7FC1).withOpacity(0.25),
-                    blurRadius: 40,
-                    spreadRadius: 2,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
-                    blurRadius: 60,
-                    offset: const Offset(0, 20),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: Stack(
-                  children: [
-                    // 3D Model WebView (uses separate controller)
-                    Positioned.fill(
-                      child: WebViewWidget(
-                        controller: _popupWebViewController,
-                        gestureRecognizers: {
-                          Factory<OneSequenceGestureRecognizer>(
-                            () => EagerGestureRecognizer(),
-                          ),
-                        },
-                      ),
-                    ),
-
-                    // Top gradient overlay for header
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 80,
-                      child: IgnorePointer(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF0F1629).withOpacity(0.95),
-                                const Color(0xFF0F1629).withOpacity(0.0),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Header with title and close button
-                    Positioned(
-                      top: 16,
-                      left: 20,
-                      right: 16,
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.view_in_ar_rounded, color: Colors.white, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Muse EEG Headband',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'Interactive 3D Model',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.6),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => _reset3DModel(popupOnly: true),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withOpacity(0.15)),
-                              ),
-                              child: Icon(Icons.replay_rounded, color: Colors.white.withOpacity(0.7), size: 20),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withOpacity(0.15)),
-                              ),
-                              child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Bottom gradient overlay
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: 90,
-                      child: IgnorePointer(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF0F1629).withOpacity(0.0),
-                                const Color(0xFF0F1629).withOpacity(0.95),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Bottom hint
-                    Positioned(
-                      bottom: 20,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white.withOpacity(0.12)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.touch_app_rounded, size: 16, color: Colors.white.withOpacity(0.7)),
-                              const SizedBox(width: 8),
-                              Text(
-                                'ลากเพื่อหมุน • บีบเพื่อซูม',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1043,243 +805,79 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-              // 3D Model Embedded View — Premium Dark Card
-              GestureDetector(
-                onDoubleTap: _show3DModelPopup,
-                child: Container(
-                  width: double.infinity,
-                  height: 380,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF4A7FC1).withOpacity(0.15),
-                        blurRadius: 24,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 4),
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+              // Video Embedded View
+              Container(
+                width: double.infinity,
+                height: 380,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Stack(
-                      children: [
-                        // WebView with 3D model
-                        Positioned.fill(
-                          child: WebViewWidget(
-                            controller: _webViewController,
-                            gestureRecognizers: {
-                              Factory<OneSequenceGestureRecognizer>(
-                                () => EagerGestureRecognizer(),
-                              ),
-                            },
-                          ),
-                        ),
-
-                        // Loading overlay
-                        if (!_is3DModelLoaded)
-                          Positioned.fill(
-                            child: Container(
-                              color: const Color(0xFF0F1629),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      width: 40,
-                                      height: 40,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        color: const Color(0xFF4A7FC1).withOpacity(0.8),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'กำลังโหลด 3D Model...',
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.5),
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        // Top label badge
-                        Positioned(
-                          top: 14,
-                          left: 14,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white.withOpacity(0.1)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF6BA3E8),
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF6BA3E8).withOpacity(0.6),
-                                        blurRadius: 6,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '3D Model',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        // Top-right action buttons (reset + expand)
-                        Positioned(
-                          top: 14,
-                          right: 14,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Reset button
-                              GestureDetector(
-                                onTap: () => _reset3DModel(),
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                                  ),
-                                  child: Icon(
-                                    Icons.replay_rounded,
-                                    color: Colors.white.withOpacity(0.7),
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Expand button
-                              GestureDetector(
-                                onTap: _show3DModelPopup,
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                                  ),
-                                  child: Icon(
-                                    Icons.fullscreen_rounded,
-                                    color: Colors.white.withOpacity(0.7),
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Bottom gradient overlay
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          height: 80,
-                          child: IgnorePointer(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFF0F1629).withOpacity(0.0),
-                                    const Color(0xFF0F1629).withOpacity(0.9),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Bottom info row
-                        Positioned(
-                          bottom: 14,
-                          left: 16,
-                          right: 16,
-                          child: Row(
-                            children: [
-                              // Touch hint
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.06),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.white.withOpacity(0.08)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.touch_app_rounded, size: 14, color: Colors.white.withOpacity(0.5)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'หมุนหรือซูมเพื่อดู',
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.5),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Spacer(),
-                              // Muse label
-                              Text(
-                                'Muse Headband',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.4),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: const Color(0xFF4A7FC1).withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4A7FC1).withOpacity(0.15),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 4),
                     ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: WebViewWidget(
+                          controller: _videoWebViewController,
+                          gestureRecognizers: {
+                            Factory<OneSequenceGestureRecognizer>(
+                              () => EagerGestureRecognizer(),
+                            ),
+                          },
+                        ),
+                      ),
+                      if (!_isVideoLoaded)
+                        Positioned.fill(
+                          child: Container(
+                            color: const Color(0xFF0F1629),
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: const Color(0xFF4A7FC1).withOpacity(0.8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'กำลังโหลดวิดีโอ...',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.5),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),

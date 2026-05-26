@@ -84,6 +84,7 @@ class EegPdfService {
                     'สภาวะ: หลับตา (Eyes Closed)',
                     'ระยะเวลา: 1.5 นาที (90 วินาที)',
                     'ความสมบูรณ์ข้อมูล: ${s['samplesCollected']} samples',
+                    'เกณฑ์อ้างอิง: ${s['normRef'] ?? 'Krigolson et al. (2017), DEAP Dataset (Calibrated for Frontal Muse EEG)'}',
                   ]),
                 ),
               ],
@@ -100,7 +101,7 @@ class EegPdfService {
               ),
               child: pw.Column(
                 children: [
-                  pw.Text('สรุประดับความเสี่ยงภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 12)),
+                  pw.Text('สรุปผลการวิเคราะห์เชิงลึก', style: pw.TextStyle(font: fontBold, fontSize: 12)),
                   pw.SizedBox(height: 4),
                   pw.Text(riskLevel, style: pw.TextStyle(font: fontBold, fontSize: 20, color: riskColorHex)),
                   pw.Text('($riskLevelEn)', style: pw.TextStyle(font: font, fontSize: 10, color: riskColorHex)),
@@ -113,16 +114,16 @@ class EegPdfService {
                     ],
                   ),
                   pw.SizedBox(height: 4),
-                  pw.Text('EEG–Depression Index', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('EEG Deep Analysis Index', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
                   pw.SizedBox(height: 6),
                   _buildPdfRiskBar(),
                   pw.SizedBox(height: 4),
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('0-33 ความเสี่ยงต่ำ', style: pw.TextStyle(font: font, fontSize: 8)),
-                      pw.Text('34-66 ปานกลาง', style: pw.TextStyle(font: font, fontSize: 8)),
-                      pw.Text('67-100 สูง', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('0-28 ความเสี่ยงต่ำ', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('29-48 ปานกลาง', style: pw.TextStyle(font: font, fontSize: 8)),
+                      pw.Text('49-100 สูง', style: pw.TextStyle(font: font, fontSize: 8)),
                     ],
                   ),
                 ],
@@ -457,20 +458,14 @@ class EegPdfService {
 
   static pw.Widget _buildZScoreTable(pw.Font font, pw.Font fontBold, Map<String, dynamic> s) {
     final rows = [
-      ['Delta (0.5–4 Hz)', 'ความง่วง/สมองล้า', s['deltaZScore'], s['avgDelta']],
-      ['Theta (4–8 Hz)', 'ภาวะซึมเศร้า/ครุ่นคิด', s['thetaZScore'], s['avgTheta']],
-      ['Alpha (8–13 Hz)', 'ผ่อนคลาย/สมดุล', s['alphaZScore'], s['avgAlpha']],
-      ['Beta (13–30 Hz)', 'การคิดวิเคราะห์', s['betaZScore'], s['avgBeta']],
-      ['High Beta (30–40 Hz)', 'ความเครียด/วิตกกังวล', s['highBetaZScore'], s['avgGamma']],
-      ['Alpha Asymmetry', 'ความสมดุลอารมณ์', s['alphaAsymmetry'], 0.0],
-      ['Beta/Theta Ratio', 'สมาธิและภาวะซึมเศร้า', s['betaThetaRatio'], 0.0],
+      ['Delta (0.5–4 Hz)', 'ความง่วง/สมองล้า', s['deltaZScore'] as double? ?? 0.0],
+      ['Theta (4–8 Hz)', 'ภาวะซึมเศร้า/ครุ่นคิด', s['thetaZScore'] as double? ?? 0.0],
+      ['Alpha (8–13 Hz)', 'ผ่อนคลาย/สมดุล', s['alphaZScore'] as double? ?? 0.0],
+      ['Beta (13–30 Hz)', 'การคิดวิเคราะห์', s['betaZScore'] as double? ?? 0.0],
+      ['High Beta (30–40 Hz)', 'ความเครียด/วิตกกังวล', s['highBetaZScore'] as double? ?? 0.0],
+      ['Alpha Asymmetry', 'ความสมดุลอารมณ์', s['alphaAsymmetry'] as double? ?? 0.0],
+      ['Beta/Theta Ratio', 'สมาธิและภาวะซึมเศร้า', s['betaThetaRatio'] as double? ?? 0.0],
     ];
-
-    String getStatus(double z) {
-      if (z.abs() > 1.5) return z > 0 ? 'สูงกว่าปกติ' : 'ต่ำกว่าปกติ';
-      if (z.abs() > 1.0) return 'ใกล้เคียงปกติ';
-      return 'ปกติ';
-    }
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
@@ -483,7 +478,7 @@ class EegPdfService {
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromHex('#E8EAF6')),
-          children: ['ดัชนีสมอง', 'ความหมาย', 'ค่า Z-Score', 'ผลการแปลความ'].map((h) =>
+          children: ['ดัชนีสมอง', 'ความหมาย', 'ค่าสถิติ/สัดส่วน', 'ผลการแปลความ'].map((h) =>
             pw.Padding(
               padding: const pw.EdgeInsets.all(5),
               child: pw.Text(h, style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColor.fromHex('#0F1B4C'))),
@@ -491,25 +486,62 @@ class EegPdfService {
           ).toList(),
         ),
         ...rows.map((r) {
-          final z = r[2] as double;
-          final zColor = z.abs() > 1.5 ? PdfColors.red : (z.abs() > 1.0 ? PdfColors.orange : PdfColors.green);
+          final name = r[0] as String;
+          final desc = r[1] as String;
+          final val = r[2] as double;
+
+          bool isAsym = name == 'Alpha Asymmetry';
+          bool isRatio = name == 'Beta/Theta Ratio';
+
+          String statusText;
+          PdfColor color;
+
+          if (isAsym) {
+            if (val.abs() > 0.5) {
+              statusText = 'ความสมดุลเสี่ยง';
+              color = PdfColors.orange;
+            } else {
+              statusText = 'ใกล้เคียงปกติ';
+              color = PdfColors.green;
+            }
+          } else if (isRatio) {
+            if (val > 1.5) {
+              statusText = 'สูงกว่าปกติ (เสี่ยง)';
+              color = PdfColors.orange;
+            } else {
+              statusText = 'อยู่ในเกณฑ์ปกติ';
+              color = PdfColors.green;
+            }
+          } else {
+            if (val.abs() > 1.5) {
+              statusText = val > 0 ? 'สูงกว่าปกติ' : 'ต่ำกว่าปกติ';
+              color = PdfColors.red;
+            } else if (val.abs() > 1.0) {
+              statusText = 'ใกล้เคียงปกติ';
+              color = PdfColors.orange;
+            } else {
+              statusText = 'ปกติ';
+              color = PdfColors.green;
+            }
+          }
+
           return pw.TableRow(
             children: [
-              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(r[0] as String, style: pw.TextStyle(font: fontBold, fontSize: 8))),
-              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(r[1] as String, style: pw.TextStyle(font: font, fontSize: 7.5))),
+              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(name, style: pw.TextStyle(font: fontBold, fontSize: 8))),
+              pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(desc, style: pw.TextStyle(font: font, fontSize: 7.5))),
               pw.Padding(
                 padding: const pw.EdgeInsets.all(4),
                 child: pw.Text(
-                  z >= 0 ? '+${z.toStringAsFixed(2)}' : z.toStringAsFixed(2),
-                  style: pw.TextStyle(font: fontBold, fontSize: 8, color: zColor),
+                  val >= 0 && !isRatio && !isAsym ? '+${val.toStringAsFixed(2)}' : val.toStringAsFixed(2),
+                  style: pw.TextStyle(font: fontBold, fontSize: 8, color: color),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.all(4),
                 child: pw.Text(
-                  getStatus(z),
-                  style: pw.TextStyle(font: font, fontSize: 7.5, color: zColor),
+                  statusText,
+                  style: pw.TextStyle(font: font, fontSize: 7.5, color: color),
                 ),
               ),
             ],

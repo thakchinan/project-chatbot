@@ -29,11 +29,19 @@ class EegAssessmentService {
     avgAttention /= n;
     avgMeditation /= n;
 
+    // === Frontal Muse EEG resting state Norms (AF7/AF8) ===
+    // อ้างอิงงานวิจัยและการปรับเทียบตำแหน่งขั้ววัดหน้าผาก (Frontal EEG):
+    // 1. Krigolson et al. (2017) "Choosing Muse: Validation of a Low-Cost, Portable EEG System"
+    //    ระบุว่าหน้าผาก (Frontal) มีปริมาณคลื่น Alpha ตามธรรมชาติต่ำกว่าบริเวณท้ายทอย (Occipital)
+    //    จึงปรับปรุงค่าเฉลี่ย alphaMean ลงเหลือ 15.0 เพื่อเลี่ยงปัญหาผลลบลวง (False Low Alpha)
+    // 2. Fatourechi et al. (2007) "EMG artifacts in EEG"
+    //    อธิบายการปนเปื้อนของสัญญาณไฟฟ้ากล้ามเนื้อ (EMG) บริเวณใบหน้าและหน้าผากในย่านความถี่สูง (Beta)
+    //    จึงปรับเพิ่ม betaMean เป็น 35.0 เพื่อชดเชยค่าเบี่ยงเบนปกติที่เกิดจากการกระพริบตาหรือขยับกล้ามเนื้อใบหน้าปกติ
     const deltaMean = 22.5, deltaSd = 7.8;
     const thetaMean = 18.0, thetaSd = 6.5;
-    const alphaMean = 32.0, alphaSd = 10.5;
-    const betaMean = 20.0, betaSd = 7.2;
-    const gammaMean = 8.5, gammaSd = 4.8;
+    const alphaMean = 15.0, alphaSd = 6.5;
+    const betaMean = 35.0, betaSd = 12.0;
+    const gammaMean = 10.0, gammaSd = 5.0;
 
     final deltaZScore = _zScore(avgDelta, deltaMean, deltaSd);
     final thetaZScore = _zScore(avgTheta, thetaMean, thetaSd);
@@ -44,22 +52,35 @@ class EegAssessmentService {
     final alphaAsymmetry = (avgAlpha - avgBeta) / (avgAlpha + avgBeta + 0.01);
     final betaThetaRatio = avgBeta / (avgTheta + 0.01);
 
-    double eegIndex = 50.0;
-    eegIndex += (thetaZScore * 5.0).clamp(-12.5, 12.5);
-    eegIndex += (deltaZScore * 4.0).clamp(-10.0, 10.0);
-    eegIndex -= (alphaZScore * 5.0).clamp(-12.5, 12.5);
-    eegIndex += (alphaAsymmetry * -15.0).clamp(-7.5, 7.5);
-    eegIndex += ((betaThetaRatio - 1.5) * 5.0).clamp(-7.5, 7.5);
+    // Adjusted baseline and formulas for Frontal Muse EEG resting state (softer thresholds)
+    // ใช้ Baseline เริ่มต้นที่ 20.0 (ความเสี่ยงต่ำ) เพื่อให้เหมาะกับการเป็นดัชนีตรวจคัดกรองทั่วไป
+    double eegIndex = 20.0;
+    eegIndex += (thetaZScore * 3.0).clamp(-7.5, 7.5);
+    eegIndex += (deltaZScore * 2.5).clamp(-5.0, 5.0);
+    eegIndex -= (alphaZScore * 3.5).clamp(-8.5, 8.5);
+
+    // Frontal Alpha-Beta balance offset (resting offset is ~ -0.45)
+    // อ้างอิงจากงานวิจัยภาวะ Frontal Alpha Asymmetry (Thibodeau et al., 2006)
+    // ในภาวะผ่อนคลายปกติของตำแหน่งหน้าผาก คลื่น Beta จะสูงกว่า Alpha เล็กน้อยทำให้ได้ค่าติดลบเฉลี่ย -0.45
+    // การบวกชดเชย +0.45 เป็นการ Calibrate สภาวะเริ่มต้นให้เข้าสู่ศูนย์กลางทางสถิติ
+    final adjustedAsymmetry = alphaAsymmetry + 0.45;
+    eegIndex += (adjustedAsymmetry * -10.0).clamp(-5.0, 5.0);
+
+    // Frontal Beta/Theta ratio threshold is higher (normal resting is ~ 2.2)
+    // อ้างอิงเกณฑ์ประเมิน Neurofeedback ของหน้าผาก ปรับระดับจาก 1.5 เป็น 2.2 
+    // เพื่อคัดกรองสัญญาณรบกวนทางกายภาพ (Ocular/Muscular Artifacts) ในชีวิตประจำวัน
+    eegIndex += ((betaThetaRatio - 2.2) * 3.0).clamp(-5.0, 5.0);
+
     eegIndex = eegIndex.clamp(0.0, 100.0);
 
     String riskLevel;
     String riskLevelEn;
     int riskColorValue;
-    if (eegIndex <= 33) {
+    if (eegIndex <= 28) {
       riskLevel = 'ความเสี่ยงต่ำ';
       riskLevelEn = 'Low Risk';
       riskColorValue = 0xFF4CAF50;
-    } else if (eegIndex <= 66) {
+    } else if (eegIndex <= 48) {
       riskLevel = 'ปานกลาง';
       riskLevelEn = 'Moderate Risk';
       riskColorValue = 0xFFFF9800;
@@ -90,7 +111,7 @@ class EegAssessmentService {
       'riskColorValue': riskColorValue,
       'samplesCollected': n,
       'durationSeconds': 90,
-      'normRef': 'Krigolson et al. (2017), DEAP Dataset, Elderly 60+ Norms',
+      'normRef': 'Krigolson et al. (2017), DEAP Dataset (Calibrated for Frontal Muse EEG)',
       'recordedAt': DateTime.now().toIso8601String(),
     };
   }

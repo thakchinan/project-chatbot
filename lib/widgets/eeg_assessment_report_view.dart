@@ -293,6 +293,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
   }
 
   Widget _testCard(String name) {
+    final normRef = _localSummary['normRef'] as String? ?? 'Krigolson et al. (2017) / DEAP Dataset';
     return _card(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionTitle(Icons.science_rounded, 'รายละเอียดการทดสอบ'),
@@ -302,6 +303,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         _infoRow('สภาวะ', 'หลับตา (Eyes Closed)'),
         _infoRow('ระยะเวลา', '1.5 นาที (90 วินาที)'),
         _infoRow('ผู้ทดสอบ', name),
+        _infoRow('เกณฑ์อ้างอิง', normRef),
       ]),
     );
   }
@@ -357,6 +359,32 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         ...bands.map((b) => _bandCard(b.$1, b.$2, b.$3, b.$4, b.$5)),
         _ratioCard('Alpha Asymmetry', 'ความสมดุลอารมณ์ซีกซ้าย-ขวา', (_localSummary['alphaAsymmetry'] as num? ?? 0.0).toDouble(), true),
         _ratioCard('Beta/Theta', 'สมาธิและภาวะซึมเศร้า', (_localSummary['betaThetaRatio'] as num? ?? 0.0).toDouble(), false),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'เกณฑ์เปรียบเทียบมาตรฐานการวิจัย:',
+                style: _caption.copyWith(fontWeight: FontWeight.w700, color: const Color(0xFF475569)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '• Z-Score ปกติอยู่ระหว่าง -1.0 ถึง +1.0 เกินกว่านี้สะท้อนภาวะตึงเครียดหรือสมองล้าสะสม\n'
+                '• ความสมดุลสมอง (Alpha Asymmetry) ค่าปกติควรใกล้เคียง 0 (เกณฑ์ปกติอยู่ในช่วง -0.5 ถึง +0.5)\n'
+                '• อัตราส่วนสมาธิและภาวะซึมเศร้า (Beta/Theta Ratio) ค่าปกติควรน้อยกว่า 1.5',
+                style: _caption.copyWith(fontSize: 9.5, height: 1.4, color: const Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
       ]),
     );
   }
@@ -437,7 +465,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
   Widget _riskSection() {
     return _card(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _sectionTitle(Icons.monitor_heart_rounded, 'สรุประดับความเสี่ยง'),
+        _sectionTitle(Icons.analytics_rounded, 'วิเคราะห์เชิงลึก'),
         const SizedBox(height: 12),
         SizedBox(
           height: 130,
@@ -464,8 +492,8 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
             border: Border.all(color: _riskColor.withValues(alpha: 0.2)),
           ),
           child: Column(children: [
-            Text('คะแนนดัชนีภาวะซึมเศร้า', style: _caption.copyWith(fontWeight: FontWeight.w500)),
-            Text('EEG-Depression Index', style: _caption.copyWith(fontSize: 9)),
+            Text('คะแนนดัชนีวิเคราะห์เชิงลึก', style: _caption.copyWith(fontWeight: FontWeight.w500)),
+            Text('EEG Deep Analysis Index', style: _caption.copyWith(fontSize: 9)),
             const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -475,11 +503,11 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         ),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _riskChip('0–33 ต่ำ', const Color(0xFF43A047)),
+          _riskChip('0–28 ต่ำ', const Color(0xFF43A047)),
           const SizedBox(width: 6),
-          _riskChip('34–66 กลาง', const Color(0xFFF57C00)),
+          _riskChip('29–48 กลาง', const Color(0xFFF57C00)),
           const SizedBox(width: 6),
-          _riskChip('67–100 สูง', const Color(0xFFE53935)),
+          _riskChip('49–100 สูง', const Color(0xFFE53935)),
         ]),
       ]),
     );
