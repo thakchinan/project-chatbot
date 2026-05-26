@@ -5,11 +5,13 @@ import 'dashboard/phq9_tab_screen.dart';
 import 'dashboard/recommendation_screen.dart';
 import 'dashboard/profile_screen.dart';
 import 'dashboard/activities_dashboard_screen.dart';
+import 'dashboard/caretaker_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   final User user;
+  final bool isCaregiverDevice;
 
-  const MainNavigation({super.key, required this.user});
+  const MainNavigation({super.key, required this.user, this.isCaregiverDevice = false});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -39,6 +41,10 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isCaregiverDevice) {
+      return CaretakerScreen(user: _currentUser, isRoot: true);
+    }
+    
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,

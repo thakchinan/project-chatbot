@@ -265,6 +265,38 @@ supabase secrets set OPENAI_API_KEY=sk-xxxxx
 
 ---
 
+## 🔔 การตั้งค่า Edge Function สำหรับ Caregiver Mode (FCM Push Notification)
+
+เพื่อให้แอปส่งการแจ้งเตือนไปยังผู้ดูแล (Caregiver) ได้จริง ต้องตั้งค่าการส่งผ่าน Edge Function ด้วย Firebase Service Account:
+
+### 1. รับไฟล์ Service Account JSON จาก Firebase
+1. ไปที่ [Firebase Console](https://console.firebase.google.com/) ของโปรเจกต์คุณ (`smart-brain-care`)
+2. ไปที่ **Project settings** (รูปเฟือง) > **Service accounts**
+3. เลือก **Generate new private key** เพื่อดาวน์โหลดไฟล์ `.json`
+
+### 2. นำข้อมูลจากไฟล์ JSON ไปใส่ในระบบ Environment (Vault) ของ Supabase
+เนื่องจากการเรียกใช้งาน FCM v1 ต้องใช้การทำ OAuth2 Auth จาก Service Account เราขอแนะนำให้นำค่าจากไฟล์ JSON ไปตั้งเป็น Secret Variables (หรือใน Supabase Vault):
+
+```bash
+# ตั้งค่า FIREBASE_PROJECT_ID
+supabase secrets set FIREBASE_PROJECT_ID="smart-brain-care"
+
+# (สำคัญ) ต้องมีการประยุกต์ใช้ Library (เช่น google-auth-library) เพื่อแปลง 
+# Service Account เป็น OAuth Token ก่อนยิง FCM API ใน index.ts หรือ 
+# ถ้าต้องการทดสอบ สามารถเจน Access Token ชั่วคราวมาใส่ตัวแปร FIREBASE_OAUTH_TOKEN ได้:
+supabase secrets set FIREBASE_OAUTH_TOKEN="ya29.c.c0AY_VpZ..."
+```
+
+### 3. Deploy Edge Function ตัวใหม่
+ระบบมี Edge Function `send_fcm_notification` ให้แล้ว สั่ง Deploy โดยใช้คำสั่ง:
+```bash
+supabase functions deploy send_fcm_notification
+```
+
+เมื่อเพื่อนของคุณรับช่วงต่อ ให้ศึกษาเรื่อง "FCM HTTP v1 API using Deno Edge Functions" ซึ่งสามารถอ่านไฟล์ JSON จาก Secret แล้วใช้สร้าง Bearer Token ได้โดยตรงใน `index.ts`
+
+---
+
 ## 🎉 เสร็จสิ้น!
 
 เมื่อตั้งค่าครบแล้ว app จะ:

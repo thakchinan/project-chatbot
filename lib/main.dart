@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'firebase_options.dart';
 import 'providers/brain_provider.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'theme/app_theme.dart';
@@ -14,22 +17,29 @@ void main() async {
   // Load env early but don't block the UI startup on other platform plugins.
   await dotenv.load(fileName: ".env");
 
-  // Start the app first to make the UI available while we initialize
-  // heavyweight or platform-specific services asynchronously. This helps
-  // isolate platform-specific initialization errors (like macOS plugin
-  // implementations) from preventing the app from launching.
+  // Initialize Firebase and Supabase BEFORE the app starts so they are ready
+  // when WelcomeScreen checks for a saved user (auto-login).
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await FirebaseMessaging.instance.requestPermission();
+    debugPrint('🔥 Firebase Initialized');
+  } catch (e) {
+    debugPrint('⚠️ Firebase init failed (needs google-services.json): $e');
+  }
+
+  try {
+    await SupabaseService.initialize();
+  } catch (e, st) {
+    debugPrint('⚠️ Supabase init failed: $e');
+    debugPrint('$st');
+  }
+
   runApp(const MyApp());
 
-  // Initialize Supabase and RAG embeddings after the app is up. Wrap with
-  // error handling so failures on unsupported platforms don't crash the app.
+  // Initialize RAG embeddings after the app is up (non-critical).
   Future.microtask(() async {
-    try {
-      await SupabaseService.initialize();
-    } catch (e, st) {
-      debugPrint('⚠️ Supabase init failed: $e');
-      debugPrint('$st');
-    }
-
     try {
       final result = await RAGService.updateEmbeddings();
       if (result is Map && result['success'] == true && (result['updated_count'] ?? 0) > 0) {

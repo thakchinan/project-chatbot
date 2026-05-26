@@ -7,6 +7,7 @@ import 'eeg_session_screen.dart';
 import 'mini_games_screen.dart';
 import 'nutrition_screen.dart';
 import 'settings_screen.dart';
+import 'weekly_report_screen.dart';
 
 class ActivitiesDashboardScreen extends StatefulWidget {
   final User user;
@@ -104,7 +105,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                                   onTap: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const CaretakerScreen()),
+                                      MaterialPageRoute(builder: (_) => CaretakerScreen(user: widget.user)),
                                     );
                                   },
                                 ),
@@ -112,11 +113,11 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                               const SizedBox(width: 14),
                               Expanded(
                                 child: _buildPremiumCard(
-                                  icon: Icons.sports_esports_rounded,
-                                  label: 'เกมคลายเครียด',
-                                  subtitle: 'บริหารสมองด้วยมินิเกม',
+                                  icon: Icons.auto_graph_rounded,
+                                  label: 'AI Report',
+                                  subtitle: 'สรุป EEG อารมณ์ และกิจกรรมรายสัปดาห์',
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+                                    colors: [Color(0xFF11998e), Color(0xFF4A7FC1)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -125,13 +126,17 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                                   onTap: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => MiniGamesScreen(user: widget.user)),
+                                      MaterialPageRoute(builder: (_) => WeeklyReportScreen(user: widget.user)),
                                     );
                                   },
                                 ),
                               ),
                             ],
                           ),
+
+                          const SizedBox(height: 14),
+
+                          _buildFeaturedMiniGamesCard(),
 
                           const SizedBox(height: 14),
 
@@ -392,6 +397,84 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
       ),
     );
   }
+  Widget _buildFeaturedMiniGamesCard() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 820),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+        );
+      },
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => MiniGamesScreen(user: widget.user)),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          height: 112,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6BBF7A), Color(0xFF38A3A5)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF38A3A5).withOpacity(0.25),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.sports_esports_rounded, color: Colors.white, size: 30),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'เกมฝึกสมอง',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Memory, reaction, puzzle และ color sequence สำหรับติดตามกิจกรรมรายสัปดาห์',
+                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85), height: 1.3),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeaturedEegSessionCard() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),

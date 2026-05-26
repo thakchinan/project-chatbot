@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "999507255560",
+    "project_id": "smart-brain-care",
+    "storage_bucket": "smart-brain-care.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:999507255560:android:091305f8797fae7a3bccbd",
+        "android_client_info": {
+          "package_name": "com.brainwave.brain_wave_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "999507255560-fg1t5p2mut82gumlv07400ppqia6rr3e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrvDbO6ukWt_3f5wF7aXgt0pM6WmKooAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "999507255560-fg1t5p2mut82gumlv07400ppqia6rr3e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:999507255560:android:15cf083d73acc95c3bccbd",
+        "android_client_info": {
+          "package_name": "com.example.smart_brain_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "999507255560-fg1t5p2mut82gumlv07400ppqia6rr3e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrvDbO6ukWt_3f5wF7aXgt0pM6WmKooAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "999507255560-fg1t5p2mut82gumlv07400ppqia6rr3e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

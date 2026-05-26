@@ -5,6 +5,11 @@ import '../../services/api_service.dart';
 import '../../services/tts_service.dart';
 import '../../services/stt_service.dart';
 import 'settings_screen.dart';
+import 'weekly_report_screen.dart';
+import 'caretaker_screen.dart';
+import 'eeg_session_screen.dart';
+import 'mini_games_screen.dart';
+import '../../services/muse_service.dart';
 
 class RecommendationScreen extends StatefulWidget {
   final User? user;
@@ -261,11 +266,17 @@ class _RecommendationScreenState extends State<RecommendationScreen>
       if (result['success'] == true && result['bot_response'] != null) {
         final botResponse = result['bot_response'];
 
+        List<String>? actionOptions;
+        if (botResponse.contains('เล่นเกม') || botResponse.contains('ทำสมาธิ')) {
+          actionOptions = ['ตกลง เล่นเกมเลย', 'ตกลง ทำสมาธิ', 'ไม่เป็นไร ขอบคุณครับ'];
+        }
+
         setState(() {
           _messages.add(ChatMessage(
             text: botResponse,
             isBot: true,
             time: TimeOfDay.now().format(context),
+            actionOptions: actionOptions,
           ));
           _isSending = false;
         });
@@ -275,6 +286,30 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           setState(() => _speakingMessageIndex = _messages.length - 1);
           await _ttsService.speak(botResponse);
           if (mounted) setState(() => _speakingMessageIndex = null);
+        }
+
+        final navigationTarget = result['navigation_target'];
+        if (navigationTarget != null) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (!mounted) return;
+            switch (navigationTarget) {
+              case 'weekly_report':
+                Navigator.push(context, MaterialPageRoute(builder: (_) => WeeklyReportScreen(user: widget.user!)));
+                break;
+              case 'caretaker':
+                Navigator.push(context, MaterialPageRoute(builder: (_) => CaretakerScreen(user: widget.user)));
+                break;
+              case 'eeg_session':
+                Navigator.push(context, MaterialPageRoute(builder: (_) => EegSessionScreen(
+                  user: widget.user!,
+                  museService: MuseService(),
+                )));
+                break;
+              case 'mini_games':
+                Navigator.push(context, MaterialPageRoute(builder: (_) => MiniGamesScreen(user: widget.user!)));
+                break;
+            }
+          });
         }
         return;
       }
@@ -715,6 +750,40 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                 ],
               ),
             ),
+            if (message.actionOptions != null && message.actionOptions!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.start,
+                children: message.actionOptions!.map((option) {
+                  final isAgree = option.contains('ตกลง');
+                  final color = isAgree ? Colors.green.shade600 : Colors.red.shade400;
+                  return GestureDetector(
+                    onTap: () {
+                      _messageController.text = option;
+                      _sendMessage();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: color.withValues(alpha: 0.5)),
+                      ),
+                      child: Text(
+                        option,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -780,10 +849,12 @@ class ChatMessage {
   final String text;
   final bool isBot;
   final String time;
+  final List<String>? actionOptions;
 
   ChatMessage({
     required this.text,
     required this.isBot,
     required this.time,
+    this.actionOptions,
   });
 }

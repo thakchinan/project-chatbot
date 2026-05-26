@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/user.dart';
+import '../main_navigation.dart';
 import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -17,6 +21,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    _checkSavedUser();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -32,6 +37,26 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkSavedUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userStr = prefs.getString('saved_user');
+      if (userStr != null) {
+        final userData = jsonDecode(userStr);
+        final user = User.fromJson(userData);
+        final isCaregiver = prefs.getBool('is_caregiver_device') ?? false;
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => MainNavigation(user: user, isCaregiverDevice: isCaregiver)),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading saved user: $e');
+    }
   }
 
   @override
@@ -168,6 +193,32 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                             'สมัครบัญชี',
                             style: AppTextStyles.buttonText.copyWith(color: AppColors.primaryBlue),
                           ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen(isCaregiverMode: true)),
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite_rounded, color: Colors.pink, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'เข้าสู่ระบบสำหรับญาติ / ผู้ดูแล',
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

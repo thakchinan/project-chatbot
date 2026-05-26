@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../models/user.dart';
@@ -6,7 +8,9 @@ import '../main_navigation.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool isCaregiverMode;
+  
+  const LoginScreen({super.key, this.isCaregiverMode = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -42,10 +46,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['success'] == true) {
       final user = User.fromJson(result['user']);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_user', jsonEncode(result['user']));
+      
+      if (widget.isCaregiverMode) {
+        await prefs.setBool('is_caregiver_device', true);
+      } else {
+        await prefs.remove('is_caregiver_device');
+      }
+
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => MainNavigation(user: user)),
+          MaterialPageRoute(builder: (_) => MainNavigation(user: user, isCaregiverDevice: widget.isCaregiverMode)),
           (route) => false,
         );
       }
@@ -75,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'เข้าสู่ระบบ',
+          widget.isCaregiverMode ? 'ระบบผู้ดูแล' : 'เข้าสู่ระบบ',
           style: TextStyle(
             color: AppColors.primaryBlue,
             fontWeight: FontWeight.w600,
@@ -90,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
 
             Text(
-              'ยินดีต้อนรับ',
+              widget.isCaregiverMode ? 'ยินดีต้อนรับ (ผู้ดูแล)' : 'ยินดีต้อนรับ',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -99,7 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'กรุณาเข้าสู่ระบบเพื่อใช้งานฟีเจอร์ต่างๆ ของแอปพลิเคชัน\nและเริ่มดูแลสุขภาพจิตของคุณ',
+              widget.isCaregiverMode 
+                  ? 'เข้าสู่ระบบด้วยบัญชีของผู้สูงอายุ เพื่อรับการแจ้งเตือน\nและติดตามสุขภาพของท่านได้แบบเรียลไทม์'
+                  : 'กรุณาเข้าสู่ระบบเพื่อใช้งานฟีเจอร์ต่างๆ ของแอปพลิเคชัน\nและเริ่มดูแลสุขภาพจิตของคุณ',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
