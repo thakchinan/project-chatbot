@@ -51,8 +51,13 @@
 brain_wave_flutter/
 ├── lib/
 │   ├── main.dart                          # 🚀 Entry point + Supabase init
-│   ├── models/                            # 📋 Data Models (17 files)
-│   │   ├── user.dart                      #   - User model
+│   ├── emotion_detection/                 # 🎭 Emotion Detection features
+│   │   ├── models/                        #   - Emotion models (emotion_result.dart, emotion_type.dart)
+│   │   ├── services/                      #   - Services (analyzer, io/web adapters)
+│   │   ├── utils/                         #   - Constants
+│   │   └── widgets/                       #   - UI components for emotion
+│   ├── models/                            # 📋 Data Models
+│   │   ├── activity_log.dart              #   - Activity log model
 │   │   ├── brain_data.dart                #   - Brainwave data model
 │   │   ├── chat_message.dart              #   - Chat message model
 │   │   ├── conversation.dart              #   - Conversation model
@@ -62,60 +67,58 @@ brain_wave_flutter/
 │   │   ├── elderly_profile.dart           #   - Elderly profile model
 │   │   ├── emotion_log.dart               #   - Emotion log model
 │   │   ├── medical_knowledge.dart         #   - Medical knowledge model
+│   │   ├── models.dart                    #   - Export barrel file
+│   │   ├── retrieval_log.dart             #   - RAG retrieval log model
 │   │   ├── schedule.dart                  #   - Schedule model
 │   │   ├── stress_test_result.dart        #   - Stress test result model
 │   │   ├── user_settings.dart             #   - User settings model
-│   │   ├── voice_metadata.dart            #   - Voice metadata model
-│   │   ├── activity_log.dart              #   - Activity log model
-│   │   ├── retrieval_log.dart             #   - RAG retrieval log model
-│   │   └── models.dart                    #   - Export barrel file
-│   ├── providers/
-│   │   └── brain_provider.dart            # 🔄 State management (Provider)
-│   ├── screens/
-│   │   ├── main_navigation.dart           # 🧭 Bottom navigation bar
-│   │   ├── auth/                          # 🔐 Authentication screens
-│   │   │   ├── welcome_screen.dart        #   - Welcome/landing page
-│   │   │   ├── login_screen.dart          #   - Login form
-│   │   │   └── register_screen.dart       #   - Registration form
-│   │   └── dashboard/                     # 📱 Main app screens (17 files)
-│   │       ├── home_screen.dart           #   - Home: EEG monitoring
-│   │       ├── chart_screen.dart          #   - Brainwave chart
-│   │       ├── history_screen.dart        #   - History records
-│   │       ├── test_screen.dart           #   - Stress test
-│   │       ├── recommendation_screen.dart #   - AI Chatbot
-│   │       ├── profile_screen.dart        #   - User profile
-│   │       ├── edit_profile_screen.dart   #   - Edit profile
-│   │       ├── settings_screen.dart       #   - App settings
-│   │       ├── change_password_screen.dart#   - Change password
-│   │       ├── notification_settings_screen.dart # - Notification settings
-│   │       ├── activities_dashboard_screen.dart   # - Activities hub
-│   │       ├── mini_games_screen.dart     #   - Brain games list
-│   │       ├── memory_game_screen.dart    #   - Memory card game
-│   │       ├── number_puzzle_screen.dart  #   - Number puzzle game
-│   │       ├── reaction_game_screen.dart  #   - Reaction speed game
-│   │       ├── color_sequence_screen.dart #   - Color sequence game
-│   │       └── checkers_game_screen.dart  #   - Checkers board game
-│   ├── services/                          # ⚙️ Business logic (8 files)
-│   │   ├── supabase_service.dart          #   - Supabase CRUD (45+ methods)
-│   │   ├── muse_service.dart              #   - Muse EEG Bluetooth
-│   │   ├── chatgpt_service.dart           #   - ChatGPT API integration
-│   │   ├── rag_service.dart               #   - RAG pipeline
-│   │   ├── tts_service.dart               #   - Text-to-Speech
-│   │   ├── stt_service.dart               #   - Speech-to-Text
+│   │   ├── user.dart                      #   - User model
+│   │   └── voice_metadata.dart            #   - Voice metadata model
+│   ├── providers/                         # 🔄 State management (Provider)
+│   │   ├── brain_provider.dart            #   - Brainwave data state
+│   │   └── user_provider.dart             #   - User state management
+│   ├── screens/                           # 📱 App Screens
+│   │   ├── main_navigation.dart           #   - 🧭 Bottom navigation bar
+│   │   ├── auth/                          #   - 🔐 Authentication screens (login, register, welcome)
+│   │   └── dashboard/                     #   - 📱 Main app screens (home, chart, history, settings, games, etc.)
+│   ├── services/                          # ⚙️ Business logic
 │   │   ├── api_service.dart               #   - HTTP API helper
-│   │   └── fft_calculator.dart            #   - FFT math computation
-│   └── theme/
-│       └── app_theme.dart                 # 🎨 App theme & colors
+│   │   ├── chatgpt_service.dart           #   - ChatGPT API integration
+│   │   ├── eeg_assessment_service.dart    #   - EEG assessment
+│   │   ├── eeg_pdf_service.dart           #   - PDF generation for EEG
+│   │   ├── fft_calculator.dart            #   - FFT math computation
+│   │   ├── muse_service.dart              #   - Muse EEG Bluetooth wrapper
+│   │   ├── muse_service_io.dart           #   - Muse service (Mobile/Desktop)
+│   │   ├── muse_service_web.dart          #   - Muse service (Web)
+│   │   ├── rag_service.dart               #   - RAG pipeline
+│   │   ├── stt_service.dart               #   - Speech-to-Text wrapper
+│   │   ├── supabase_service.dart          #   - Supabase CRUD
+│   │   └── tts_service.dart               #   - Text-to-Speech
+│   ├── theme/                             # 🎨 App theme & colors
+│   │   └── app_theme.dart                 
+│   └── widgets/                           # 🧩 Reusable widgets
+│       ├── eeg_assessment_report_view.dart
+│       ├── eeg_risk_gauge.dart
+│       └── eeg_topographic_map.dart
+├── emotion_api/                           # 🧠 Python Backend for Emotion Analysis
+│   ├── convert_model.py
+│   ├── main.py
+│   ├── README.md
+│   └── requirements.txt
 ├── supabase/
-│   └── migrations/                        # 🗄️ Database migrations (7 files)
+│   └── migrations/                        # 🗄️ Database migrations
 │       ├── 001_initial_schema.sql         #   - Core tables
 │       ├── 002_rag_schema.sql             #   - RAG + pgvector
 │       ├── 003_emergency_knowledge.sql    #   - Emergency data
 │       ├── 004_update_samaritans_phone.sql#   - Phone update
 │       ├── 005_voice_emergency_schema.sql #   - Voice & emergency schema
 │       ├── 006_class_diagram_update.sql   #   - Class diagram update
-│       └── 007_enable_realtime.sql        #   - Realtime subscription
+│       ├── 007_enable_realtime.sql        #   - Realtime subscription
+│       ├── 008_avatar_storage.sql         #   - Avatar storage setup
+│       ├── 009_emotion_session_schema.sql #   - Emotion logs and sessions
+│       └── 010_eeg_assessment_reports.sql #   - Assessment reports
 ├── assets/images/                         # 🖼️ App images & icons
+├── assets/models/                         # 🤖 AI Models (TFLite/Keras/PyTorch)
 ├── pubspec.yaml                           # 📦 Dependencies
 ├── README.md                              # 📖 Project overview (this file)
 ├── PROJECT_SUMMARY.md                     # 📋 Detailed project summary
@@ -165,14 +168,29 @@ flutter pub get
    - `supabase/migrations/005_voice_emergency_schema.sql`
    - `supabase/migrations/006_class_diagram_update.sql`
    - `supabase/migrations/007_enable_realtime.sql`
-3. ใส่ **Supabase URL** และ **Anon Key** ในไฟล์ `lib/services/supabase_service.dart`
+   - `supabase/migrations/008_avatar_storage.sql`
+   - `supabase/migrations/009_emotion_session_schema.sql`
+   - `supabase/migrations/010_eeg_assessment_reports.sql`
 
-#### 4. ตั้งค่า OpenAI API Key
-ใส่ API Key ในไฟล์:
-- `lib/services/chatgpt_service.dart`
-- `lib/services/rag_service.dart`
+#### 4. ตั้งค่าตัวแปรสภาพแวดล้อม (Environment Variables)
+สร้างไฟล์ `.env` ที่ root ของโปรเจกต์ (ระดับเดียวกับ `pubspec.yaml`) และกำหนดค่าต่างๆ ดังนี้:
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+OPENAI_API_KEY=your_openai_api_key
+```
+*(หมายเหตุ: ไฟล์ `.env` ถูกตั้งค่าใน `.gitignore` เพื่อป้องกันการเผลอ Commit ข้อมูลสำคัญขึ้น Git แล้ว)*
 
-#### 5. รันแอป
+#### 5. รัน Python Backend สำหรับ Emotion API (สำหรับฟีเจอร์ตรวจจับอารมณ์)
+เปิด Terminal ใหม่แล้วรันคำสั่ง:
+```bash
+cd emotion_api
+pip install -r requirements.txt
+python main.py
+```
+*(API จะทำงานอยู่ที่พอร์ต 8000)*
+
+#### 6. รันแอป (Flutter)
 ```bash
 # Android
 flutter run -d android
@@ -187,6 +205,19 @@ flutter run -d macos
 flutter run -d chrome
 ```
 
+### 📦 การ Build สำหรับ Production
+
+```bash
+# Build APK สำหรับ Android (สำหรับทดสอบในเครื่องจริง)
+flutter build apk --release
+
+# Build AppBundle สำหรับ Android (สำหรับอัปโหลดขึ้น Play Store)
+flutter build appbundle --release
+
+# Build สำหรับ iOS (ต้องทำบนเครื่อง macOS และติดตั้ง Xcode)
+flutter build ios --release
+```
+
 ---
 
 ## 📊 สรุปฟีเจอร์ทั้งหมด
@@ -198,7 +229,7 @@ flutter run -d chrome
 | 3 | 🤖 **AI Chatbot (RAG)** | ChatGPT + RAG ให้คำแนะนำเฉพาะบุคคล | ✅ |
 | 4 | 🔊 **Text-to-Speech** | อ่านคำตอบ AI เป็นเสียงภาษาไทย | ✅ |
 | 5 | 🎤 **Speech-to-Text** | รับคำสั่งเสียงจากผู้ใช้ | ✅ |
-| 6 | 📝 **Stress Test** | แบบทดสอบความเครียด + ประเมินผล | ✅ |
+| 6 | 📝 **Stress Test** | แบบทดสอบความเครียด (PHQ-9) + ประเมินผล | ✅ |
 | 7 | 🎮 **Memory Game** | เกมจำตำแหน่ง ฝึกความจำ | ✅ |
 | 8 | 🔢 **Number Puzzle** | เกมตัวเลข ฝึกตรรกะ | ✅ |
 | 9 | ⚡ **Reaction Game** | เกมทดสอบความเร็วปฏิกิริยา | ✅ |
@@ -211,7 +242,9 @@ flutter run -d chrome
 | 16 | 🆘 **Emergency Contacts** | ผู้ติดต่อฉุกเฉิน + สายด่วนสุขภาพจิต | ✅ |
 | 17 | 📈 **History & Analytics** | ประวัติการวัด + ผลทดสอบ | ✅ |
 | 18 | 😊 **Emotion Logging** | บันทึกและติดตามอารมณ์ | ✅ |
-| 19 | 🗑️ **Account Deletion** | ลบบัญชีผู้ใช้ | ✅ |
+| 19 | 🎭 **Emotion Detection** | ตรวจจับอารมณ์แบบ Real-time | ✅ |
+| 20 | 📄 **EEG Assessment Reports** | สร้าง PDF รายงานผลประเมินคลื่นสมอง | ✅ |
+| 21 | 🗑️ **Account Deletion** | ลบบัญชีผู้ใช้ | ✅ |
 
 ---
 

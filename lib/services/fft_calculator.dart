@@ -130,7 +130,7 @@ class FFTCalculator {
 
   /// Bandpass Filter (Butterworth-approximation IIR)
   static List<double> bandpassFilter(List<double> input, int samplingRate,
-      {double lowCut = 0.5, double highCut = 45.0}) {
+      {double lowCut = 0.5, double highCut = 50.0}) {
     if (input.length < 6) return List.from(input);
     
     // IMPORTANT: Remove DC offset (Mean) before filtering!

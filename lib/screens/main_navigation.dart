@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import 'dashboard/home_screen.dart';
@@ -5,6 +6,7 @@ import 'dashboard/phq9_tab_screen.dart';
 import 'dashboard/recommendation_screen.dart';
 import 'dashboard/profile_screen.dart';
 import 'dashboard/activities_dashboard_screen.dart';
+import '../theme/app_theme.dart';
 
 class MainNavigation extends StatefulWidget {
   final User user;
@@ -40,42 +42,59 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Allows body to scroll behind the floating nav bar
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
-          ),
+          borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A7FC1).withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
+              color: AppColors.primaryBlue.withOpacity(0.3),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.home_rounded, 'หน้าแรก'),
-                _buildNavItem(1, Icons.quiz_rounded, 'PHQ-9'),
-                _buildNavItem(2, Icons.chat_bubble_rounded, 'คำแนะนำ'),
-                _buildNavItem(3, Icons.grid_view_rounded, 'กิจกรรม'),
-                _buildNavItem(4, Icons.person_rounded, 'โปรไฟล์'),
-              ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryBlue.withOpacity(0.85),
+                    AppColors.accentBlue.withOpacity(0.85),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildNavItem(0, Icons.home_rounded, 'หน้าแรก'),
+                      _buildNavItem(1, Icons.quiz_rounded, 'PHQ-9'),
+                      _buildNavItem(2, Icons.chat_bubble_rounded, 'คำแนะนำ'),
+                      _buildNavItem(3, Icons.grid_view_rounded, 'กิจกรรม'),
+                      _buildNavItem(4, Icons.person_rounded, 'โปรไฟล์'),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -86,37 +105,47 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isActive = _currentIndex == index;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         setState(() => _currentIndex = index);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutBack,
         padding: EdgeInsets.symmetric(
-          horizontal: isActive ? 10 : 8,
+          horizontal: isActive ? 16 : 8,
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          color: isActive ? Colors.white.withOpacity(0.25) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: Colors.white,
-              size: isActive ? 26 : 24,
-            ),
-            const SizedBox(height: 2),
-            AnimatedDefaultTextStyle(
+            AnimatedScale(
+              scale: isActive ? 1.1 : 1.0,
               duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                fontSize: isActive ? 10 : 9,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.6),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
               ),
-              child: Text(label),
+            ),
+            const SizedBox(height: 4),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              child: isActive
+                ? Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  )
+                : const SizedBox.shrink(), // Hide label when inactive for cleaner look
             ),
           ],
         ),

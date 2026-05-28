@@ -57,10 +57,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // JavaScript to hide Spline watermark and set dark bg
+    // JavaScript to hide Spline watermark and set transparent bg
     const splineJS = '''
       (function() {
-        document.body.style.backgroundColor = '#0F1629';
+        document.body.style.backgroundColor = 'transparent';
         function hideWatermark() {
           var els = document.querySelectorAll('a[href*="spline"], div[class*="watermark"], div[class*="logo"]');
           els.forEach(function(el) { el.style.display = 'none'; });
@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _videoWebViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
     if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
-      _videoWebViewController.setBackgroundColor(const Color(0xFF0F1629));
+      _videoWebViewController.setBackgroundColor(Colors.transparent);
     }
     _videoWebViewController
       ..setNavigationDelegate(NavigationDelegate(
@@ -804,33 +804,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+              // 1. Health Summary
+              _buildHealthSummaryCard(),
+              const SizedBox(height: 24),
 
-              // Video Embedded View
+              // 2. Interactive Brain Section Title
+              const Text(
+                'สมองจำลอง 3 มิติ',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 3. Clean 3D Brain View
               Container(
                 width: double.infinity,
-                height: 380,
+                height: 240,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                    width: 1.5,
-                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF4A7FC1).withOpacity(0.15),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
@@ -838,6 +838,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(24),
                   child: Stack(
                     children: [
+                      // The 3D WebView
                       Positioned.fill(
                         child: WebViewWidget(
                           controller: _videoWebViewController,
@@ -848,28 +849,73 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
+
+                      // Modern Status Badge
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _museService.isConnected ? Colors.green : Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _museService.isConnected ? 'เชื่อมต่อแล้ว' : 'สแตนด์บาย',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                       if (!_isVideoLoaded)
                         Positioned.fill(
                           child: Container(
-                            color: const Color(0xFF0F1629),
+                            color: Colors.white,
                             child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SizedBox(
-                                    width: 40,
-                                    height: 40,
+                                    width: 32,
+                                    height: 32,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      color: const Color(0xFF4A7FC1).withOpacity(0.8),
+                                      strokeWidth: 2,
+                                      color: AppColors.primaryBlue,
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 12),
                                   Text(
-                                    'กำลังโหลดวิดีโอ...',
+                                    'กำลังโหลดโมเดล 3 มิติ...',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -881,8 +927,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
+              // 4. Quick Actions
+              const Text(
+                'เมนูด่วน',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickAction(
+                      context,
+                      icon: Icons.quiz_rounded,
+                      label: 'ทำแบบทดสอบ',
+                      gradient: AppGradients.primaryBlue.colors,
+                      onTap: () {
+                        // Will implement navigation or switch tab later
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildQuickAction(
+                      context,
+                      icon: Icons.gamepad_rounded,
+                      label: 'มินิเกมฝึกสมอง',
+                      gradient: AppGradients.green.colors,
+                      onTap: () {
+                         // Will implement navigation to activities
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // 5. Muse Connection Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -1198,11 +1284,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildWaveRow('Delta (0.5-4 Hz)', _museService.latestData!.delta, Colors.purple, 'การนอนหลับลึก'),
-                      _buildWaveRow('Theta (4-8 Hz)', _museService.latestData!.theta, Colors.green, 'ผ่อนคลาย/สมาธิ'),
-                      _buildWaveRow('Alpha (8-12 Hz)', _museService.latestData!.alpha, Colors.blue, 'ตื่นตัว ผ่อนคลาย'),
-                      _buildWaveRow('Beta (12-30 Hz)', _museService.latestData!.beta, Colors.orange, 'คิดวิเคราะห์'),
-                      _buildWaveRow('Gamma (30+ Hz)', _museService.latestData!.gamma, Colors.red, 'สมาธิสูง'),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _buildCircularWaveIndicator('Delta', _museService.latestData!.delta, const Color(0xFF8B5CF6), 'หลับลึก'),
+                          _buildCircularWaveIndicator('Theta', _museService.latestData!.theta, const Color(0xFF10B981), 'ผ่อนคลาย'),
+                          _buildCircularWaveIndicator('Alpha', _museService.latestData!.alpha, const Color(0xFF3B82F6), 'ตื่นตัว'),
+                          _buildCircularWaveIndicator('Beta', _museService.latestData!.beta, const Color(0xFFF59E0B), 'คิดวิเคราะห์'),
+                          _buildCircularWaveIndicator('Gamma', _museService.latestData!.gamma, const Color(0xFFEF4444), 'สมาธิสูง'),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1230,39 +1323,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildWaveRow(String name, double value, Color color, String desc) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildCircularWaveIndicator(String name, double value, Color color, String desc) {
+    return Container(
+      width: 100,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+          const SizedBox(height: 12),
+          Stack(
+            alignment: Alignment.center,
             children: [
               SizedBox(
-                width: 120,
-                child: Text(name, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: value / 100,
-                    backgroundColor: color.withOpacity(0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                    minHeight: 8,
-                  ),
+                width: 60,
+                height: 60,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: value / 100),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, val, _) {
+                    return CircularProgressIndicator(
+                      value: val,
+                      strokeWidth: 6,
+                      backgroundColor: color.withOpacity(0.15),
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                      strokeCap: StrokeCap.round,
+                    );
+                  },
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 40,
-                child: Text('${value.round()}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color), textAlign: TextAlign.right),
+              Text(
+                '${value.round()}%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 120),
-            child: Text(desc, style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+          const SizedBox(height: 12),
+          Text(
+            desc,
+            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1850,7 +1966,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: riskColor.withValues(alpha: 0.4)),
+            border: Border.all(color: riskColor.withOpacity(0.4)),
           ),
           child: Row(
             children: [
@@ -1868,7 +1984,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       s['riskLevel'] as String? ?? '',
                       style: TextStyle(color: riskColor, fontWeight: FontWeight.w600),
                     ),
-                    Text(
+                    const Text(
                       'แตะเพื่อเปิดใบสรุปฉบับเต็ม',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                     ),
@@ -1882,5 +1998,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
-
+} // End of _HomeScreenState

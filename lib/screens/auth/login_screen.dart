@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../models/user.dart';
@@ -17,6 +18,42 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUsername = prefs.getString('saved_username');
+    final savedPassword = prefs.getString('saved_password');
+    final rememberMe = prefs.getBool('remember_me') ?? false;
+
+    if (rememberMe && savedUsername != null && savedPassword != null) {
+      setState(() {
+        _usernameController.text = savedUsername;
+        _passwordController.text = savedPassword;
+        _rememberMe = rememberMe;
+      });
+      // Optionally auto-login here if desired. For now, we just fill the fields.
+    }
+  }
+
+  Future<void> _saveCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('saved_username', _usernameController.text);
+      await prefs.setString('saved_password', _passwordController.text);
+      await prefs.setBool('remember_me', true);
+    } else {
+      await prefs.remove('saved_username');
+      await prefs.remove('saved_password');
+      await prefs.setBool('remember_me', false);
+    }
+  }
 
   @override
   void dispose() {
@@ -41,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
+      await _saveCredentials(); // Save or clear credentials upon successful login
       final user = User.fromJson(result['user']);
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -133,23 +171,51 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
+            const SizedBox(height: 12),
 
-                },
-                child: Text(
-                  'ลืมรหัสผ่าน?',
-                  style: TextStyle(
-                    color: AppColors.primaryBlue,
-                    fontWeight: FontWeight.w500,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _rememberMe,
+                      onChanged: (value) {
+                        setState(() {
+                          _rememberMe = value ?? false;
+                        });
+                      },
+                      activeColor: AppColors.primaryBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    Text(
+                      'จดจำรหัสผ่าน',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () {
+
+                  },
+                  child: Text(
+                    'ลืมรหัสผ่าน?',
+                    style: TextStyle(
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
 
             SizedBox(
               width: double.infinity,
