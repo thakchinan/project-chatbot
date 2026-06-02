@@ -10,6 +10,7 @@ import '../../services/api_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/eeg_assessment_service.dart';
 import '../../emotion_detection/emotion_detection.dart';
+import '../../eeg_research/eeg_research_screen.dart';
 import 'eeg_assessment_report_screen.dart';
 import 'eeg_report_history_screen.dart';
 import 'settings_screen.dart';
@@ -1215,6 +1216,78 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildEegCountdownCard(),
                 const SizedBox(height: 16),
               ],
+
+              // 🔬 Research Mode button
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EegResearchScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF6C63FF).withOpacity(0.3),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6C63FF), Color(0xFF00D4AA)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.science, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🔬 Research Mode',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'EEG Research-Grade Pipeline • Oscilloscope • PSD • Quality',
+                              style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
               if (_isEegCountdownDone && _eegSummaryResult != null) ...[
                 _buildLatestReportBanner(),
