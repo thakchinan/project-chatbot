@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartBrain Care - Business Model Canvas (BMC)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #070a13;
+      --bg-secondary: #0f1423;
+      --panel-bg: rgba(18, 24, 43, 0.85);
+      --border-color: rgba(99, 102, 241, 0.15);
+      --border-hover: rgba(99, 102, 241, 0.4);
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      
+      /* Glowing Accents */
+      --accent-blue: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #ec4899;
+      --accent-green: #10b981;
+      --accent-orange: #f59e0b;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Sarabun', 'Inter', sans-serif;
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 40%),
+        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.15) 0px, transparent 40%),
+        radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.1) 0px, transparent 40%),
+        radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 40%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 30px;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 20px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brain-logo {
+      width: 48px;
+      height: 48px;
+      filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.6));
+      animation: pulse 3s infinite ease-in-out;
+    }
+
+    .brand-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-title p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 300;
+      letter-spacing: 0.5px;
+    }
+
+    .badge {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.1);
+    }
+
+    /* Category Labels (HOW, WHAT, WHO, MONEY) */
+    .section-cat {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      width: fit-content;
+    }
+    
+    .cat-how { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+    .cat-what { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+    .cat-who { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+    .cat-money { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+    /* Canvas Grid */
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-auto-rows: minmax(320px, auto);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* BMC Blocks */
+    .bmc-block {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .bmc-block:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(99, 102, 241, 0.15);
+    }
+
+    .bmc-block::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: transparent;
+    }
+
+    .bmc-block.how::before { background: linear-gradient(90deg, var(--accent-purple), #6366f1); }
+    .bmc-block.what::before { background: linear-gradient(90deg, var(--accent-blue), #3b82f6); }
+    .bmc-block.who::before { background: linear-gradient(90deg, var(--accent-pink), #f43f5e); }
+    .bmc-block.money::before { background: linear-gradient(90deg, var(--accent-green), #14b8a6); }
+
+    /* Specific Grid Placements */
+    .block-partners { grid-column: span 2; grid-row: span 2; }
+    .block-activities { grid-column: span 2; }
+    .block-resources { grid-column: span 2; }
+    .block-value { grid-column: span 2; grid-row: span 2; }
+    .block-relationships { grid-column: span 2; }
+    .block-channels { grid-column: span 2; }
+    .block-segments { grid-column: span 2; grid-row: span 2; }
+    
+    .block-costs { grid-column: span 5; }
+    .block-revenues { grid-column: span 5; }
+
+    /* Block Header */
+    .block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .title-group h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .title-group span {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .icon-wrapper {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .bmc-block.how .icon-wrapper { color: var(--accent-purple); background: rgba(139, 92, 246, 0.1); }
+    .bmc-block.what .icon-wrapper { color: var(--accent-blue); background: rgba(6, 182, 212, 0.1); }
+    .bmc-block.who .icon-wrapper { color: var(--accent-pink); background: rgba(236, 72, 153, 0.1); }
+    .bmc-block.money .icon-wrapper { color: var(--accent-green); background: rgba(16, 185, 129, 0.1); }
+
+    .icon-wrapper svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* List Content */
+    .block-content {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .block-content li {
+      position: relative;
+      padding-left: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #e5e7eb;
+    }
+
+    .block-content li::before {
+      content: "•";
+      position: absolute;
+      left: 4px;
+      font-size: 18px;
+      top: -2px;
+    }
+
+    .bmc-block.how .block-content li::before { color: var(--accent-purple); }
+    .bmc-block.what .block-content li::before { color: var(--accent-blue); }
+    .bmc-block.who .block-content li::before { color: var(--accent-pink); }
+    .bmc-block.money .block-content li::before { color: var(--accent-green); }
+
+    .block-content li strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .block-content li p {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Print / Responsive adjustments */
+    @media (max-width: 1200px) {
+      .canvas-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: auto;
+      }
+      .block-partners, .block-activities, .block-resources, 
+      .block-value, .block-relationships, .block-channels, 
+      .block-segments, .block-costs, .block-revenues {
+        grid-column: span 2;
+        grid-row: auto;
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.8)); }
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="brand-section">
+      <svg class="brain-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 19H11V17H13V19ZM15.07 11.25L14.17 12.17C13.45 12.9 13 13.5 13 15H11V14.5C11 13.4 11.45 12.4 12.17 11.67L13.41 10.41C13.78 10.05 14 9.55 14 9C14 7.9 13.1 7 12 7C10.9 7 10 7.9 10 9H8C8 6.79 9.79 5 12 5C14.21 5 16 6.79 16 9C16 9.88 15.64 10.68 15.07 11.25Z" fill="url(#paint0_linear)"/>
+        <defs>
+          <linearGradient id="paint0_linear" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#06B6D4"/>
+            <stop offset="1" stop-color="#8B5CF6"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="brand-title">
+        <h1>SmartBrain Care</h1>
+        <p>Business Model Canvas (แผนภาพโมเดลธุรกิจคลื่นสมอง)</p>
+      </div>
+    </div>
+    <div class="badge">
+      EEG & AI Mental Wellness Platform
+    </div>
+  </header>
+
+  <!-- BMC Grid -->
+  <div class="canvas-grid">
+    
+    <!-- 8. Key Partners -->
+    <div class="bmc-block how block-partners">
+      <div class="section-cat cat-how">How - ทำอย่างไร</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>8. พันธมิตรหลัก</h2>
+          <span>Key Partners</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.48 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>ผู้ผลิตอุปกรณ์ Muse EEG (Interaxon):</strong>
+          <p>พันธมิตรผู้จัดหา SDK/API เพื่อรองรับการเชื่อมต่อสัญญาณ Bluetooth ของอุปกรณ์ Muse S / Muse 2</p>
+        </li>
+        <li>
+          <strong>จิตแพทย์และนักจิตวิทยาคลินิก:</strong>
+          <p>ตรวจสอบความถูกต้องของเกณฑ์ความเสี่ยง (Z-Scores, Alpha Asymmetry) และทบทวนข้อมูลความรู้ที่ส่งให้ AI</p>
+        </li>
+        <li>
+          <strong>ผู้ให้บริการคลาวด์และโมเดล AI:</strong>
+          <p>Supabase (การเก็บฐานข้อมูลความปลอดภัยสูง) และ OpenAI (รันคำตอบ GPT-4o และสร้าง Vector Embeddings)</p>
+        </li>
+        <li>
+          <strong>สถาบันฝึกสมาธิ โยคะ และนักบำบัดทางเลือก:</strong>
+          <p>ร่วมจัดทําแนวทางการฝึกสติในแอปพลิเคชันและแนะนำกลุ่มลูกค้าที่มีความสนใจดูแลจิตใจเชิงลึก</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 7. Key Activities -->
+    <div class="bmc-block how block-activities">
+      <div class="section-cat cat-how">How - ทำอย่างไร</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>7. กิจกรรมหลัก</h2>
+          <span>Key Activities</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>พัฒนาซอฟต์แวร์และแอป:</strong>
+          <p>เขียนโค้ด ปรับแต่งระบบ และแก้ไขบั๊กบน Flutter เพื่อเสถียรภาพของการเชื่อมต่อ</p>
+        </li>
+        <li>
+          <strong>ปรับปรุงอัลกอริทึมวิเคราะห์ EEG:</strong>
+          <p>จูนเกณฑ์วัดและโมเดล AI ในการจำแนกคลื่นสมองให้ตรงมาตรฐานการแพทย์</p>
+        </li>
+        <li>
+          <strong>พัฒนา RAG Knowledge Base:</strong>
+          <p>คัดกรองเนื้อหาสุขภาพจิต นำเข้าระบบเวกเตอร์เพื่อให้ AI ตอบได้แม่นยำ</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 6. Key Resources -->
+    <div class="bmc-block how block-resources">
+      <div class="section-cat cat-how">How - ทำอย่างไร</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>6. ทรัพยากรหลัก</h2>
+          <span>Key Resources</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 11H5v-2h14v2zm0-4H5v-2h14v2z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>สถาปัตยกรรมเทคโนโลยี:</strong>
+          <p>โค้ด Flutter, โครงข่าย Supabase Database, ฟังก์ชันประมวลสัญญาณ FFT</p>
+        </li>
+        <li>
+          <strong>คลังข้อมูลความรู้และโมเดล:</strong>
+          <p>คลังความรู้สุขภาพจิตที่พร้อมใช้งาน RAG, โมเดล Local TFLite ตรวจจับอารมณ์</p>
+        </li>
+        <li>
+          <strong>บุคลากรผู้เชี่ยวชาญ:</strong>
+          <p>ทีมพัฒนาระบบ, ผู้เชี่ยวชาญด้านสัญญาณชีวภาพ (Bio-signals), นักจิตวิทยาที่ปรึกษา</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 2. Value Propositions -->
+    <div class="bmc-block what block-value">
+      <div class="section-cat cat-what">What - ส่งมอบอะไร</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>2. คุณค่าที่ส่งมอบ</h2>
+          <span>Value Propositions</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>ตรวจวัดคลื่นสมอง 90 วินาทีพกพาได้:</strong>
+          <p>เชื่อมต่ออุปกรณ์ Muse เพื่อคำนวณคลื่นสมองแบบพกพาเบา สวมใส่สบาย</p>
+        </li>
+        <li>
+          <strong>วิเคราะห์ความเสี่ยงที่แม่นยำทางวิชาการ:</strong>
+          <p>ชี้ชัดความเครียดด้วยดัชนี Z-Score, Alpha Asymmetry และอัตราส่วน Beta/Theta</p>
+        </li>
+        <li>
+          <strong>AI Chatbot สุขภาพจิตส่วนตัวระดับ RAG:</strong>
+          <p>บอทผู้ช่วยภาษาไทย แนะนำได้ปลอดภัย ไม่มโนข้อมูล มีระบบเสียงอ่าน (TTS) ช่วยผ่อนคลาย</p>
+        </li>
+        <li>
+          <strong>การบำบัดจิตใจแบบครบวงจร:</strong>
+          <p>รวมเกมกระตุ้นสมอง 5 ประเภท, โปรแกรมการทำสมาธิ และระบบตารางกิจกรรมจัดลำดับชีวิต</p>
+        </li>
+        <li>
+          <strong>ความปลอดภัยสูงและการป้องกันวิกฤต:</strong>
+          <p>ป้องกันข้อมูลด้วยสิทธิ์ระดับผู้ใช้ (RLS) และมีปุ่มติดต่อฉุกเฉินหากพบอาการเสี่ยงสูง</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 4. Customer Relationships -->
+    <div class="bmc-block who block-relationships">
+      <div class="section-cat cat-who">Who - ใครคือลูกค้า</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>4. ความสัมพันธ์ลูกค้า</h2>
+          <span>Customer Relationships</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>เพื่อนรับฟัง AI คอยดูแล 24 ชั่วโมง:</strong>
+          <p>แชทบอทอัจฉริยะ ให้คำปรึกษาสุขภาพจิตอย่างเป็นมิตร ไร้การตัดสิน</p>
+        </li>
+        <li>
+          <strong>การกระตุ้นและรายงานเชิงรุก:</strong>
+          <p>การส่ง Daily Reminders แจ้งเตือนฝึกปฏิบัติ และสรุปผลส่งรายงานรายสัปดาห์</p>
+        </li>
+        <li>
+          <strong>ระบบชวนทำกิจกรรมสะสมแต้ม:</strong>
+          <p>การใช้หลัก Gamification แจกเหรียญรางวัลเพื่อเพิ่มความต่อเนื่องในการนั่งสมาธิ</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 3. Channels -->
+    <div class="bmc-block who block-channels">
+      <div class="section-cat cat-who">Who - ใครคือลูกค้า</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>3. ช่องทางเข้าถึง</h2>
+          <span>Channels</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>ร้านค้าแอปพลิเคชันหลัก:</strong>
+          <p>App Store และ Google Play Store สำหรับดาวน์โหลดเวอร์ชันเสถียร</p>
+        </li>
+        <li>
+          <strong>สังคมออนไลน์สุขภาพสมอง:</strong>
+          <p>แนะนำผ่านคอมมูนิตี้ผู้สวมใส่เครื่อง Muse และกลุ่มแชร์เรื่องสุขภาพจิต</p>
+        </li>
+        <li>
+          <strong>เครือข่าย B2B2C คลินิกบำบัดจิต:</strong>
+          <p>ความร่วมมือกับคลินิกขนาดย่อมเพื่อแนะนำแอปพลิเคชันสำหรับคนไข้ไปฝึกเองที่บ้าน</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 1. Customer Segments -->
+    <div class="bmc-block who block-segments">
+      <div class="section-cat cat-who">Who - ใครคือลูกค้า</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>1. กลุ่มลูกค้า</h2>
+          <span>Customer Segments</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>นักศึกษาและวัยรุ่น:</strong>
+          <p>ผู้ประสบความตึงเครียด วิตกกังวล และความกดดันสะสมเรื่องการเรียนและการใช้ชีวิต</p>
+        </li>
+        <li>
+          <strong>วัยทำงานและพนักงานออฟฟิศ:</strong>
+          <p>กลุ่มคนทำงานที่มีความเสี่ยงภาวะหมดไฟ (Burnout) ต้องการดูแลตรวจเช็กอารมณ์ตนเอง</p>
+        </li>
+        <li>
+          <strong>ผู้ฝึกพัฒนาคลื่นสมอง (Biohackers):</strong>
+          <p>ผู้ต้องการใช้เทคโนโลยี EEG จับวัดระดับสติ โฟกัส และปรับปรุงความสงบเชิงลึก</p>
+        </li>
+        <li>
+          <strong>ผู้สูงอายุและครอบครัว:</strong>
+          <p>ผู้ต้องการเกมฝึกสมองเพื่อพัฒนาการรู้คิด ความทรงจำ และป้องกันโรคสมองเสื่อม</p>
+        </li>
+        <li>
+          <strong>ผู้ครอบครองเครื่อง Muse EEG อยู่แล้ว:</strong>
+          <p>ผู้มองหาแอปภาษาไทยวิเคราะห์ผลได้ละเอียดและคุยกับ AI วิเคราะห์เฉพาะบุคคลได้</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 9. Cost Structure -->
+    <div class="bmc-block money block-costs">
+      <div class="section-cat cat-money">Money - เงินทุนหมุนเวียน</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>9. โครงสร้างต้นทุน</h2>
+          <span>Cost Structure</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 1.21-1.04 2.01-2.9 2.01-1.96 0-2.72-1.09-2.8-2.5H6.25c.09 2.25 1.77 3.52 3.75 3.96V21h3v-2.21c2.08-.37 3.75-1.58 3.75-3.79 0-2.76-2.25-3.51-4.7-4.1z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>ต้นทุนการพัฒนาเทคโนโลยี:</strong>
+          <p>ค่าใช้จ่ายในการเขียนโปรแกรม Flutter, ออกแบบ UI/UX, โครงสร้างเซิร์ฟเวอร์ และบำรุงรักษาระบบ</p>
+        </li>
+        <li>
+          <strong>ค่าลิขสิทธิ์ระบบ Cloud และ API:</strong>
+          <p>ค่าโฮสติ้งบนฐานข้อมูล Supabase และค่าใช้จ่ายโทเค็นการเรียกใช้งาน OpenAI API (GPT-4o & Embeddings)</p>
+        </li>
+        <li>
+          <strong>ค่าการตลาดและการรับลูกค้าใหม่:</strong>
+          <p>การโฆษณาออนไลน์เจาะจงกลุ่มเป้าหมาย ค่าธรรมเนียมสำหรับผู้พัฒนาส่งแอปพลิเคชันขึ้นสโตร์หลัก</p>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 5. Revenue Streams -->
+    <div class="bmc-block money block-revenues">
+      <div class="section-cat cat-money">Money - เงินทุนหมุนเวียน</div>
+      <div class="block-header">
+        <div class="title-group">
+          <h2>5. กระแสรายรับ</h2>
+          <span>Revenue Streams</span>
+        </div>
+        <div class="icon-wrapper">
+          <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+        </div>
+      </div>
+      <ul class="block-content">
+        <li>
+          <strong>โมเดลบริการฟรีบางส่วน (Freemium Model):</strong>
+          <p>เปิดใช้ฟรีเบื้องต้นและต้องสมัครสมาชิกรายเดือน/รายปี เพื่อปลดล็อกการวิเคราะห์ผลลัพธ์ qEEG ขั้นสูง, สรุป PDF และสิทธิ์การเล่นเกมฝึกสมองระดับสูง</p>
+        </li>
+        <li>
+          <strong>ส่วนแบ่งการขายเครื่องฮาร์ดแวร์ (Affiliate Commission):</strong>
+          <p>รายได้เปอร์เซ็นต์ส่วนแบ่งจากการเชื่อมโยงหน้าร้านขายอุปกรณ์สวมใส่ Muse ในแอปพลิเคชัน</p>
+        </li>
+        <li>
+          <strong>หักค่าตารางคิวปรึกษาแพทย์ในระบบ (Platform Fee - อนาคต):</strong>
+          <p>หักค่าบริการบางส่วนเมื่อมีการนัดหมายจองเวลาโทรทางไกลกับจิตแพทย์ผู้เชี่ยวชาญตัวจริงผ่านแอปพลิเคชัน</p>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    SmartBrain Care Project • สร้างขึ้นเพื่อยกระดับสุขภาพจิตด้วยเทคโนโลยีวิทยาศาสตร์คลื่นสมองและ AI ประยุกต์
+  </footer>
+</div>
+
+</body>
+</html>
