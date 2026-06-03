@@ -27,9 +27,9 @@ class MuseService extends ChangeNotifier {
   BrainwaveData? _latestData;
   final List<BrainwaveData> _dataHistory = [];
 
-  // FFT window size: 512 = 0.5 Hz resolution @ 256 Hz sampling rate
-  // (เดิม 256 = 1 Hz resolution → ไม่ละเอียดพอสำหรับ Delta/Theta)
-  final int _windowSize = 512;
+  // FFT window size: 768 = 3 seconds @ 256 Hz sampling rate
+  // เพื่อการทำ Smoothing ที่ดีขึ้น (3-5 วินาที)
+  final int _windowSize = 768;
   final List<double> _tp9Window = [];
   final List<double> _af7Window = [];
   final List<double> _af8Window = [];
@@ -46,7 +46,7 @@ class MuseService extends ChangeNotifier {
 
   Timer? _fftDelayTimer;
   final int _fftDelayMs = 500;
-  final int _minBufferFill = 512;
+  final int _minBufferFill = 768;
   int _packetCount = 0;
   DateTime? _lastFFTTime;
 
@@ -56,6 +56,13 @@ class MuseService extends ChangeNotifier {
     'TP9': 0, 'AF7': 0, 'AF8': 0, 'TP10': 0,
   };
   Map<String, double> get channelSQI => Map.unmodifiable(_channelSQI);
+
+  // === Horseshoe (Telemetry) ===
+  // 1 = Good, 2 = Medium, 4 = Bad
+  Map<String, int> _horseshoe = {
+    'TP9': 4, 'AF7': 4, 'AF8': 4, 'TP10': 4,
+  };
+  Map<String, int> get horseshoe => Map.unmodifiable(_horseshoe);
 
   // === Frontal Alpha Asymmetry (FAA) ===
   // FAA = ln(Alpha_AF8) - ln(Alpha_AF7)
@@ -278,7 +285,8 @@ class MuseService extends ChangeNotifier {
               allNotifyChars.add(c);
 
               if (uuid.contains('273e0003') || uuid.contains('273e0004') ||
-                  uuid.contains('273e0005') || uuid.contains('273e0006')) {
+                  uuid.contains('273e0005') || uuid.contains('273e0006') ||
+                  uuid.contains('273e000b') || uuid.contains('273e0002')) {
                  eegChars.add(c);
               }
            }
@@ -419,6 +427,18 @@ class MuseService extends ChangeNotifier {
      }
 
      try {
+       String lowerUuid = uuid.toLowerCase();
+
+       if (lowerUuid.contains('273e000b') || lowerUuid.contains('273e0002')) {
+         if (rawData.length >= 10) {
+           _horseshoe['TP9'] = rawData[5];
+           _horseshoe['AF7'] = rawData[6];
+           _horseshoe['AF8'] = rawData[7];
+           _horseshoe['TP10'] = rawData[8];
+         }
+         return; // Do not parse as EEG
+       }
+
        List<double> samples = _parseMuseEEGPacket(rawData);
        _sampleCountThisSecond += samples.length;
        
@@ -429,8 +449,6 @@ class MuseService extends ChangeNotifier {
          _sampleCountThisSecond = 0;
          _lastThroughputCheck = now;
        }
-
-       String lowerUuid = uuid.toLowerCase();
 
        if (lowerUuid.contains('273e0003')) {
          _addToWindow(_tp9Window, samples);
@@ -565,11 +583,17 @@ class MuseService extends ChangeNotifier {
      // 7. Frontal Alpha Asymmetry (FAA) for Emotion Detection
      // 8. Relative Power (%) → normalize
      
-     Map<String, double> getPower(List<double> buf) {
+     Map<String, double> getPower(List<double> buf, String channelName) {
         if (buf.isEmpty) return {};
         
-        // Step 1: Bandpass filter (0.5-45 Hz, zero-phase Butterworth)
-        List<double> filtered = FFTCalculator.bandpassFilter(buf, 256, lowCut: 0.5, highCut: 45.0);
+        // Horseshoe Check: 4 = Bad contact, discard data
+        if (_horseshoe[channelName] == 4) {
+          debugPrint('⚠️ Discarding $channelName due to bad sensor contact (Horseshoe=4)');
+          return {};
+        }
+        
+        // Step 1: Bandpass filter (0.5-50 Hz, zero-phase Butterworth)
+        List<double> filtered = FFTCalculator.bandpassFilter(buf, 256, lowCut: 0.5, highCut: 50.0);
         
         // Step 2: Notch filter 50 Hz (power line noise Thailand)
         filtered = FFTCalculator.notchFilter50Hz(filtered, 256);
@@ -591,10 +615,10 @@ class MuseService extends ChangeNotifier {
      double sqi4 = _tp10Window.isNotEmpty ? FFTCalculator.calculateSQI(_tp10Window) : 0;
      _channelSQI = {'TP9': sqi1, 'AF7': sqi2, 'AF8': sqi3, 'TP10': sqi4};
 
-     var p1 = getPower(_tp9Window);
-     var p2 = getPower(_af7Window);
-     var p3 = getPower(_af8Window);
-     var p4 = getPower(_tp10Window);
+     var p1 = getPower(_tp9Window, 'TP9');
+     var p2 = getPower(_af7Window, 'AF7');
+     var p3 = getPower(_af8Window, 'AF8');
+     var p4 = getPower(_tp10Window, 'TP10');
 
      // === SQI-Weighted Channel Averaging ===
      // ช่องที่มี SQI สูง (Electrode แน่น) จะมีน้ำหนักมากกว่า
