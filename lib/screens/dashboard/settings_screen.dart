@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../auth/welcome_screen.dart';
 import 'notification_settings_screen.dart';
 import 'change_password_screen.dart';
+import 'emergency_contacts_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final User user;
@@ -59,6 +61,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => ChangePasswordScreen(user: widget.user)),
+                );
+              },
+            ),
+            _buildSettingItem(
+              icon: Icons.contact_phone_outlined,
+              label: 'จัดการผู้ติดต่อฉุกเฉิน',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => EmergencyContactsScreen(user: widget.user)),
                 );
               },
             ),

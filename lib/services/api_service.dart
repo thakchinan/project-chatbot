@@ -1,6 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'supabase_service.dart';
 import 'chatgpt_service.dart';
+import 'chatbot_action_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiService {
 
@@ -160,15 +164,44 @@ class ApiService {
       message: message,
       chatHistory: chatHistory,
       userId: userId,
+      tools: ChatbotActionService.getTools(),
     );
 
-    if (result['success'] == true && result['bot_response'] != null) {
+    if (result['success'] == true) {
+      String finalResponse = result['bot_response'] ?? '';
+      String? navigationTarget;
+
+      if (result['tool_calls'] != null && (result['tool_calls'] as List).isNotEmpty) {
+        try {
+          final toolCall = result['tool_calls'][0];
+          final functionName = toolCall['function']['name'];
+          final arguments = json.decode(toolCall['function']['arguments']);
+
+          final actionResult = await ChatbotActionService.executeToolCall(
+            userId: userId,
+            functionName: functionName,
+            arguments: arguments,
+            originalMessage: message,
+          );
+
+          finalResponse = actionResult.response;
+          navigationTarget = actionResult.navigationTarget;
+        } catch (e) {
+          print('Error executing tool call: $e');
+        }
+      }
 
       await SupabaseService.sendChatMessage(
         userId: userId,
-        message: result['bot_response'],
+        message: finalResponse,
         isBot: true,
       );
+
+      return {
+        'success': true,
+        'bot_response': finalResponse,
+        'navigation_target': navigationTarget,
+      };
     }
 
     return result;
@@ -348,6 +381,38 @@ class ApiService {
 
   static Future<Map<String, dynamic>> deleteEmergencyContact(int contactId) async {
     return SupabaseService.deleteEmergencyContact(contactId);
+  }
+
+  static Future<Map<String, dynamic>> getCaregiverAlerts(
+    int userId, {
+    int limit = 50,
+    bool unreadOnly = false,
+  }) async {
+    return SupabaseService.getCaregiverAlerts(
+      userId,
+      limit: limit,
+      unreadOnly: unreadOnly,
+    );
+  }
+
+  static Future<Map<String, dynamic>> markCaregiverAlertRead(int alertId) async {
+    return SupabaseService.markCaregiverAlertRead(alertId);
+  }
+
+  static Future<Map<String, dynamic>> registerCaregiverDeviceToken({
+    required int userId,
+    required String deviceToken,
+    String platform = 'unknown',
+    String pushProvider = 'fcm',
+    String? caregiverName,
+  }) async {
+    return SupabaseService.registerCaregiverDeviceToken(
+      userId: userId,
+      deviceToken: deviceToken,
+      platform: platform,
+      pushProvider: pushProvider,
+      caregiverName: caregiverName,
+    );
   }
 
   static Future<Map<String, dynamic>> getElderlyProfile(int userId) async {
@@ -567,5 +632,78 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getEegAssessmentReport(int reportId) async {
     return SupabaseService.getEegAssessmentReport(reportId);
+  }
+
+  static Future<Map<String, dynamic>> markAllAlertsRead(int userId) async {
+    return SupabaseService.markAllAlertsRead(userId);
+  }
+
+  static Future<int> getUnreadAlertCount(int userId) async {
+    return SupabaseService.getUnreadAlertCount(userId);
+  }
+
+  // ==========================================
+  // Dual-Layer Notifications (FCM & LINE Notify)
+  // ==========================================
+
+  /// Save FCM Device Token for Push Notifications
+  static Future<bool> saveFCMToken(int userId, String fcmToken, String platform) async {
+    try {
+      await SupabaseService.client.from('caregiver_device_tokens').upsert({
+        'user_id': userId,
+        'fcm_token': fcmToken,
+        'platform': platform,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'user_id, fcm_token');
+      return true;
+    } catch (e) {
+      print('Error saving FCM token: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> sendFCMPushNotification(int userId, String title, String body) async {
+    try {
+      final response = await SupabaseService.client.functions.invoke(
+        'send_fcm_notification',
+        body: {
+          'userId': userId,
+          'title': title,
+          'body': body,
+        },
+      );
+      
+      if (response.status == 200) {
+        print('✅ FCM Push Notification sent successfully');
+        return true;
+      } else {
+        print('❌ Failed to send FCM: ${response.status} ${response.data}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error calling FCM Edge Function: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
+  // Caregiver Alerts & Contacts
+  // ==========================================
+
+  static RealtimeChannel subscribeToCaregiverAlerts(
+      int userId, void Function(dynamic payload) onInsert) {
+    return SupabaseService.client
+        .channel('public:caregiver_alerts')
+        .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'caregiver_alerts',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: userId,
+            ),
+            callback: (payload) => onInsert(payload))
+        .subscribe();
   }
 }

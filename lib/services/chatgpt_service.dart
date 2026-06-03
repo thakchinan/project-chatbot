@@ -36,7 +36,10 @@ class ChatGPTService {
    - ตอบกระชับ ไม่เกิน 3-4 ประโยค
    - ใส่คำแนะนำที่นำไปใช้ได้จริง
 
-4. **สำคัญ (RAG):**
+4. **ข้อจำกัดเรื่องหัวข้อ (สำคัญมาก):**
+   - หากผู้ใช้ถามเรื่องที่ไม่เกี่ยวข้องกับการแพทย์ สุขภาพ สุขภาพจิต หรือสมอง (เช่น วิธีทำอาหาร เรื่องการเมือง กีฬา ฯลฯ) ให้ปฏิเสธอย่างสุภาพทันที เช่น "ผมเป็นผู้ช่วยด้านสุขภาพจิตครับ ไม่สามารถตอบคำถามเรื่องนี้ได้ครับ"
+
+5. **สำคัญ (RAG):**
    - ใช้ข้อมูลอ้างอิงที่ให้มาเป็นหลักในการตอบ
    - หากมีข้อมูลผู้ใช้ ให้ปรับคำตอบให้เหมาะสมกับสถานการณ์ของผู้ใช้
    - อ้างอิงข้อมูลจากฐานความรู้เพื่อเพิ่มความน่าเชื่อถือ
@@ -130,6 +133,7 @@ class ChatGPTService {
     required String message,
     List<Map<String, dynamic>>? chatHistory,
     int? userId,
+    List<Map<String, dynamic>>? tools,
   }) async {
 
     if (_apiKey == 'YOUR_OPENAI_API_KEY' || _apiKey.isEmpty) {
@@ -179,11 +183,14 @@ class ChatGPTService {
 
         enhancedSystemPrompt = '''$_baseSystemPrompt
 
-⚠️ สำคัญมาก: ใช้ข้อมูลจาก "ข้อมูลอ้างอิง" ด้านล่างนี้เท่านั้นในการตอบ
-ห้ามใช้ความรู้อื่นที่ไม่ได้ระบุไว้ในข้อมูลอ้างอิง
-หากไม่มีข้อมูลในอ้างอิง ให้ตอบว่าไม่มีข้อมูล
+ข้อมูลอ้างอิงและสถานะสุขภาพของผู้ใช้ (Context):
+$ragContext
 
-$ragContext''';
+คำแนะนำเพิ่มเติม:
+- ใช้ข้อมูลอ้างอิงด้านบนเพื่อให้คำปรึกษาที่ตรงกับสถานะของผู้ใช้
+- สามารถตอบคำถามทั่วไปและชวนคุยได้อย่างเป็นธรรมชาติ (แต่ต้องไม่หลุดกรอบเรื่องสุขภาพ)
+- หากผู้ใช้บ่นว่าเบื่อ หรือเครียด ให้แนะนำกิจกรรม (เช่น เล่นเกม ทำสมาธิ) ให้ผู้ใช้เลือกก่อน 
+- ห้ามเรียกใช้ Function `navigate_to_screen` ทันทีที่ผู้ใช้บ่นว่าเบื่อ ให้เรียกใช้ก็ต่อเมื่อผู้ใช้ "ตอบตกลง" หรือ "ร้องขอให้เปิดหน้าจอ" อย่างชัดเจนเท่านั้น เพื่อไม่ให้เป็นการบังคับผู้ใช้''';
         debugPrint('📚 RAG Context added to prompt');
       } else {
         debugPrint('⚠️ RAG: No context found, using base prompt only');
@@ -218,6 +225,8 @@ $ragContext''';
         body: json.encode({
           'model': _model,
           'messages': messages,
+          if (tools != null && tools.isNotEmpty) 'tools': tools,
+          if (tools != null && tools.isNotEmpty) 'tool_choice': 'auto',
           'max_tokens': 800,
           'temperature': 0.7,
         }),
@@ -225,11 +234,14 @@ $ragContext''';
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final botResponse = data['choices'][0]['message']['content'];
+        final messageObj = data['choices'][0]['message'];
+        final botResponse = messageObj['content'];
+        final toolCalls = messageObj['tool_calls'];
 
         return {
           'success': true,
           'bot_response': botResponse,
+          'tool_calls': toolCalls,
           'usage': data['usage'],
           'rag_used': _useRAG && ragContext.isNotEmpty,
           'retrieved_knowledge_ids': retrievedKnowledgeIds,

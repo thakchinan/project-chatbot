@@ -773,6 +773,120 @@ class SupabaseService {
     }
   }
 
+  static Future<Map<String, dynamic>> getCaregiverAlerts(
+    int userId, {
+    int limit = 50,
+    bool unreadOnly = false,
+  }) async {
+    try {
+      var query = client
+          .from('caregiver_alerts')
+          .select()
+          .eq('user_id', userId);
+
+      if (unreadOnly) {
+        query = query.eq('is_read', false);
+      }
+
+      final response = await query
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return {'success': true, 'alerts': response};
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถโหลดการแจ้งเตือนผู้ดูแลได้'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> markCaregiverAlertRead(int alertId) async {
+    try {
+      await client
+          .from('caregiver_alerts')
+          .update({'is_read': true})
+          .eq('alert_id', alertId);
+
+      return {'success': true, 'message': 'อ่านการแจ้งเตือนแล้ว'};
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถอัปเดตการแจ้งเตือนได้'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> markAllAlertsRead(int userId) async {
+    try {
+      await client
+          .from('caregiver_alerts')
+          .update({'is_read': true})
+          .eq('user_id', userId)
+          .eq('is_read', false);
+
+      return {'success': true, 'message': 'อ่านการแจ้งเตือนทั้งหมดแล้ว'};
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถอัปเดตการแจ้งเตือนได้'};
+    }
+  }
+
+  static Future<int> getUnreadAlertCount(int userId) async {
+    try {
+      final response = await client
+          .from('caregiver_alerts')
+          .select('alert_id')
+          .eq('user_id', userId)
+          .eq('is_read', false);
+      return (response as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  static RealtimeChannel subscribeToCaregiverAlerts(int userId, void Function(dynamic payload) onInsert) {
+    return client
+        .channel('public:caregiver_alerts')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'caregiver_alerts',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: onInsert,
+        )
+        .subscribe();
+  }
+
+  static Future<Map<String, dynamic>> registerCaregiverDeviceToken({
+    required int userId,
+    required String deviceToken,
+    String platform = 'unknown',
+    String pushProvider = 'fcm',
+    String? caregiverName,
+  }) async {
+    try {
+      final response = await client
+          .from('caregiver_device_tokens')
+          .upsert({
+            'user_id': userId,
+            'caregiver_name': caregiverName,
+            'platform': platform,
+            'push_provider': pushProvider,
+            'device_token': deviceToken,
+            'is_active': true,
+            'last_seen_at': DateTime.now().toIso8601String(),
+          }, onConflict: 'user_id,device_token')
+          .select()
+          .single();
+
+      return {
+        'success': true,
+        'token_id': response['token_id'],
+        'message': 'ลงทะเบียนอุปกรณ์ผู้ดูแลสำเร็จ',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'ไม่สามารถลงทะเบียนอุปกรณ์ผู้ดูแลได้: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getElderlyProfile(int userId) async {
     try {
       final response = await client
