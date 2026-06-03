@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../services/supabase_service.dart';
 import '../auth/welcome_screen.dart';
 import 'edit_profile_screen.dart';
 import 'help_screen.dart';
 import 'settings_screen.dart';
+import 'weekly_report_screen.dart';
+import 'caregiver_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final User user;
@@ -73,6 +76,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _toggleUserRole() async {
+    setState(() => _isLoading = true);
+    final newRole = _currentUser.role == 'caretaker' ? 'user' : 'caretaker';
+    try {
+      final result = await SupabaseService.updateProfile(
+        userId: _currentUser.id,
+        role: newRole,
+      );
+      if (result['success'] == true) {
+        final freshUser = _currentUser.copyWith(role: newRole);
+        setState(() {
+          _currentUser = freshUser;
+        });
+        widget.onUserUpdated?.call(freshUser);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เปลี่ยนบทบาทเป็น ${_currentUser.role == 'caretaker' ? "ผู้ดูแล" : "ผู้รับการดูแล"} สำเร็จ!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ไม่สามารถเปลี่ยนบทบาทได้: ${result['message']}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาด: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,12 +145,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryBlue.withOpacity(0.1),
+                              color: AppColors.primaryBlue.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withValues(alpha: 0.05),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
                                 ),
@@ -153,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
+                                    color: Colors.black.withValues(alpha: 0.04),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
@@ -185,12 +232,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               width: 90,
                               height: 90,
                               decoration: BoxDecoration(
-                                color: AppColors.primaryBlue.withOpacity(0.1),
+                                color: AppColors.primaryBlue.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.grey.shade100, width: 3),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
+                                    color: Colors.black.withValues(alpha: 0.05),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -266,12 +313,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildProfileField(Icons.person_outline_rounded, 'ชื่อจริง-นามสกุล', _currentUser.fullName ?? '-'),
                           _buildProfileField(Icons.phone_outlined, 'เบอร์โทรศัพท์', _currentUser.phone ?? '-'),
                           _buildProfileField(Icons.email_outlined, 'อีเมล', _currentUser.email ?? '-'),
-                          _buildProfileField(Icons.cake_outlined, 'วันเกิด', _currentUser.birthDate ?? '-', isLast: true),
+                          _buildProfileField(Icons.cake_outlined, 'วันเกิด', _currentUser.birthDate ?? '-'),
+                          _buildProfileField(
+                            Icons.badge_outlined,
+                            'บทบาทผู้ใช้งาน',
+                            _currentUser.role == 'caretaker' ? 'ผู้ดูแล (Caretaker)' : 'ผู้รับการดูแล (User)',
+                            isLast: true,
+                          ),
                         ],
                       ),
                     ),
 
                     const SizedBox(height: 24),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.assignment_outlined,
+                      label: 'รายงานประจำสัปดาห์ AI',
+                      color: AppColors.primaryBlue,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => WeeklyReportScreen(user: _currentUser)),
+                        );
+                      },
+                    ),
+                    if (_currentUser.role == 'caretaker')
+                      _buildMenuItem(
+                        context,
+                        icon: Icons.dashboard_outlined,
+                        label: 'แดชบอร์ดผู้ดูแล (Caretaker)',
+                        color: Colors.purple,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => CaregiverDashboardScreen(user: _currentUser)),
+                          );
+                        },
+                      ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.swap_horiz_rounded,
+                      label: _currentUser.role == 'caretaker'
+                          ? 'เปลี่ยนบทบาทเป็นผู้รับการดูแล (User)'
+                          : 'เปลี่ยนบทบาทเป็นผู้ดูแล (Caretaker)',
+                      color: Colors.teal,
+                      onTap: _toggleUserRole,
+                    ),
                     _buildMenuItem(
                       context,
                       icon: Icons.person_outline_rounded,
@@ -312,6 +399,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
+        ),
       ),
     );
   }

@@ -99,7 +99,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                                   label: 'ผู้ดูแล',
                                   subtitle: 'ติดต่อผู้ดูแลของคุณ',
                                   gradient: AppGradients.primaryBlue,
-                                  iconBgColor: Colors.white.withOpacity(0.2),
+                                  iconBgColor: Colors.white.withValues(alpha: 0.2),
                                   delay: 0,
                                   onTap: () {
                                     Navigator.push(
@@ -116,7 +116,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                                   label: 'เกมคลายเครียด',
                                   subtitle: 'บริหารสมองด้วยมินิเกม',
                                   gradient: AppGradients.green,
-                                  iconBgColor: Colors.white.withOpacity(0.2),
+                                  iconBgColor: Colors.white.withValues(alpha: 0.2),
                                   delay: 1,
                                   onTap: () {
                                     Navigator.push(
@@ -200,8 +200,9 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader() {
     return Padding(
@@ -211,12 +212,12 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withOpacity(0.1),
+              color: AppColors.primaryBlue.withValues(alpha: 0.1),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -606,7 +607,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: color, size: 24),

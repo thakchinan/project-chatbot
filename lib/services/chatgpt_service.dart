@@ -281,4 +281,68 @@ $ragContext''';
 
   static bool get isConfigured =>
       _apiKey != 'YOUR_OPENAI_API_KEY' && _apiKey.isNotEmpty;
+
+  static Future<Map<String, dynamic>> generateWeeklyReport({
+    required String promptContent,
+  }) async {
+    if (_apiKey == 'YOUR_OPENAI_API_KEY' || _apiKey.isEmpty) {
+      return {
+        'success': false,
+        'message': 'กรุณาตั้งค่า OpenAI API Key ใน chatgpt_service.dart',
+      };
+    }
+
+    try {
+      final messages = [
+        {
+          'role': 'system',
+          'content': 'คุณคือ "ผู้เชี่ยวชาญด้านสุขภาพจิตและคลื่นสมองระบบอัจฉริยะ"\n'
+              'ทำหน้าที่วิเคราะห์ข้อมูลสุขภาพจิตรายสัปดาห์ของผู้ใช้และสังเคราะห์เป็นรายงานในภาษาไทย\n'
+              'รูปแบบรายงานให้เขียนในรูปแบบข้อความที่จัดหมวดหมู่สวยงาม (ใช้สัญลักษณ์ข้อและหัวข้อตามสะดวกเพื่อให้แยกเนื้อหาได้ชัดเจน):\n'
+              '1. ภาพรวมสุขภาพจิตประจำสัปดาห์ (Weekly Mental Health Overview)\n'
+              '2. การวิเคราะห์อารมณ์และพฤติกรรม (Emotional & Behavioral Analysis)\n'
+              '3. การวิเคราะห์และตีความคลื่นสมอง (Brainwave EEG Insights)\n'
+              '4. คำแนะนำและการฟื้นฟูเฉพาะบุคคล (Personalized Recommendations & Recovery Plans) เช่น การฝึกสมาธิ กิจกรรมผ่อนคลาย อาหาร หรือเกมเสริมทักษะ\n\n'
+              'กรุณาเขียนให้อ่านเข้าใจง่ายสำหรับผู้สูงอายุและผู้ดูแล ให้ความรู้สึกอบอุ่น ปลอดภัย และนำข้อคิดไปปฏิบัติได้จริง'
+        },
+        {'role': 'user', 'content': promptContent}
+      ];
+
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        },
+        body: json.encode({
+          'model': _model,
+          'messages': messages,
+          'max_tokens': 1200,
+          'temperature': 0.7,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final botResponse = data['choices'][0]['message']['content'];
+
+        return {
+          'success': true,
+          'report': botResponse,
+        };
+      } else {
+        final errorData = json.decode(response.body);
+        return {
+          'success': false,
+          'message': 'API Error: ${errorData['error']['message'] ?? response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'เครือข่ายมีปัญหา: $e',
+      };
+    }
+  }
 }
+

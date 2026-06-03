@@ -66,12 +66,12 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryBlue.withOpacity(0.1),
+                          color: AppColors.primaryBlue.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -183,8 +183,9 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTestTab() {
     return SingleChildScrollView(
@@ -471,7 +472,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                         '/27',
                         style: TextStyle(
                           fontSize: 11,
-                          color: (display['color'] as Color).withOpacity(0.7),
+                          color: (display['color'] as Color).withValues(alpha: 0.7),
                         ),
                       ),
                     ],

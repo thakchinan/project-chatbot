@@ -5,6 +5,12 @@ import '../../services/api_service.dart';
 import '../../services/tts_service.dart';
 import '../../services/stt_service.dart';
 import 'settings_screen.dart';
+import 'mini_games_screen.dart';
+import 'test_screen.dart';
+import 'nutrition_screen.dart';
+import 'caretaker_screen.dart';
+import 'weekly_report_screen.dart';
+import 'caregiver_dashboard_screen.dart';
 
 class RecommendationScreen extends StatefulWidget {
   final User? user;
@@ -29,6 +35,12 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   int? _speakingMessageIndex;
 
   bool _isVoiceMode = false;
+  List<String> _suggestedQuestions = [
+    'ขอวิธีจัดการความเครียดสะสม',
+    'ขอแนะนำอาหารบำรุงสุขภาพจิต',
+    'ตรวจคลื่นสมองมีขั้นตอนอย่างไร?',
+    'วิเคราะห์แนวโน้มสุขภาพจิตสัปดาห์นี้'
+  ];
   String _partialText = '';
 
   late AnimationController _micPulseController;
@@ -232,9 +244,16 @@ class _RecommendationScreenState extends State<RecommendationScreen>
     if (_messageController.text.trim().isEmpty) return;
 
     final messageText = _messageController.text;
+    
+    if (_handleActionCommands(messageText)) {
+      _messageController.clear();
+      return;
+    }
+
     _messageController.clear();
 
     setState(() {
+      _suggestedQuestions = []; // Clear suggestions
       _messages.add(ChatMessage(
         text: messageText,
         isBot: false,
@@ -270,6 +289,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           _isSending = false;
         });
         _scrollToBottom();
+        _generateSuggestedQuestions(messageText); // Generate next recommendations
 
         if (_autoSpeak) {
           setState(() => _speakingMessageIndex = _messages.length - 1);
@@ -292,6 +312,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         _isSending = false;
       });
       _scrollToBottom();
+      _generateSuggestedQuestions(messageText); // Generate next recommendations
 
       if (_autoSpeak) {
         setState(() => _speakingMessageIndex = _messages.length - 1);
@@ -299,6 +320,256 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         if (mounted) setState(() => _speakingMessageIndex = null);
       }
     }
+  }
+
+  String _extractKeyPhrase(String query) {
+    String cleaned = query
+        .replaceAll('สวัสดี', '')
+        .replaceAll('อยาก', '')
+        .replaceAll('ช่วย', '')
+        .replaceAll('แนะนำ', '')
+        .replaceAll('ขอ', '')
+        .replaceAll('หน่อย', '')
+        .replaceAll('ครับ', '')
+        .replaceAll('ค่ะ', '')
+        .replaceAll('จ้า', '')
+        .replaceAll('?', '')
+        .replaceAll('？', '')
+        .trim();
+        
+    if (cleaned.length < 2) {
+      return '';
+    }
+    return cleaned;
+  }
+
+  void _generateSuggestedQuestions(String lastQuery) {
+    final text = lastQuery.toLowerCase().trim();
+    List<String> suggestions = [];
+    final phrase = _extractKeyPhrase(lastQuery);
+
+    if (text.contains('นอน') || text.contains('sleep') || text.contains('หลับ')) {
+      final topic = phrase.isNotEmpty ? phrase : 'การนอนหลับ';
+      suggestions = [
+        'ขอวิธีช่วยให้ $topic ดีขึ้น',
+        'คลื่นสมองส่งผลต่อ $topic อย่างไร?',
+        'อาหารที่ช่วยให้ $topic สบายและหลับลึก',
+        'ขอเทคนิคผ่อนคลายเพื่อ $topic'
+      ];
+    } else if (text.contains('เครียด') || text.contains('stress') || text.contains('กังวล') || text.contains('กลัว')) {
+      final topic = phrase.isNotEmpty ? phrase : 'ความเครียด';
+      suggestions = [
+        'เมนูอาหารช่วยลด $topic',
+        'วิธีผ่อนคลายและลด $topic ใน 5 นาที',
+        'ทำแบบประเมินเช็คระดับ $topic',
+        'สถิติรายงานสุขภาพจิตเรื่อง $topic'
+      ];
+    } else if (text.contains('อาหาร') || text.contains('กิน') || text.contains('โภชนาการ') || text.contains('เมนู')) {
+      final topic = phrase.isNotEmpty ? phrase : 'อาหารและโภชนาการ';
+      suggestions = [
+        'เมนูแนะนำเพิ่มเติมเกี่ยวกับ $topic',
+        'ความสำคัญของ $topic ต่อคลื่นสมอง',
+        'อาหารประเภทไหนควรเลี่ยงเกี่ยวกับ $topic',
+        'แอปแนะนำโภชนาการ/เมนูลดเครียด'
+      ];
+    } else if (text.contains('คลื่นสมอง') || text.contains('eeg') || text.contains('muse')) {
+      final topic = phrase.isNotEmpty ? phrase : 'คลื่นสมอง';
+      suggestions = [
+        'อธิบายการทำงานของ $topic เพิ่มเติม',
+        'วิธีฝึกควบคุม $topic ด้วยตนเอง',
+        'การวิเคราะห์รายงาน $topic รายสัปดาห์',
+        'สมาธิและสติส่งผลต่อ $topic อย่างไร?'
+      ];
+    } else if (text.contains('รายงาน') || text.contains('report') || text.contains('สรุป')) {
+      final topic = phrase.isNotEmpty ? phrase : 'รายงานสุขภาพประจำสัปดาห์';
+      suggestions = [
+        'รายละเอียดข้อมูลของ $topic',
+        'วิธีอ่านค่าสถิติจาก $topic',
+        'ดาวน์โหลดไฟล์ PDF ของ $topic',
+        'ส่ง $topic นี้ให้ผู้ดูแลอย่างไร?'
+      ];
+    } else if (text.contains('เกม') || text.contains('game') || text.contains('เล่น')) {
+      final topic = phrase.isNotEmpty ? phrase : 'เกมเสริมทักษะ';
+      suggestions = [
+        'เปิดหน้า $topic ให้ฉันหน่อย',
+        'ประโยชน์ของ $topic ต่อความจำ',
+        'คะแนนสถิติสูงสุดในการเล่น $topic',
+        'มี $topic แบบอื่นแนะนำอีกไหม?'
+      ];
+    } else if (text.contains('ผู้ดูแล') || text.contains('caretaker') || text.contains('caregiver')) {
+      final topic = phrase.isNotEmpty ? phrase : 'ระบบผู้ดูแล';
+      suggestions = [
+        'วิธีตั้งค่าใช้งาน $topic',
+        'ฟังก์ชันหลักของ $topic มีอะไรบ้าง?',
+        'ส่งข้อความแจ้งเตือนด่วนผ่าน $topic',
+        'เบอร์ติดต่อฉุกเฉินสำหรับ $topic'
+      ];
+    } else if (phrase.isNotEmpty && phrase.length > 2) {
+      suggestions = [
+        'ขอคำอธิบายเพิ่มเติมเกี่ยวกับ "$phrase"',
+        'ความรู้รอบตัวเรื่อง "$phrase" กับสุขภาพจิต',
+        'มีคำแนะนำพิเศษเพิ่มเติมสำหรับ "$phrase" ไหม?',
+        'ขอเมนูอาหารหรือวิธีดูแลสุขภาพเรื่อง "$phrase"'
+      ];
+    } else {
+      suggestions = [
+        'ขอวิธีจัดการความเครียดสะสม',
+        'ขอเมนูอาหารบำรุงสมองและอารมณ์',
+        'แนะนำวิธีฝึกสมาธิด้วยคลื่นสมอง',
+        'อธิบายผลวิเคราะห์สุขภาพจิตล่าสุด'
+      ];
+    }
+
+    setState(() {
+      _suggestedQuestions = suggestions;
+    });
+  }
+
+  void _onSuggestionTap(String question) {
+    _messageController.text = question;
+    _sendMessage();
+  }
+
+  Widget _buildSuggestedQuestionsArea() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tips_and_updates_outlined, color: AppColors.primaryBlue, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'ถามต่อเกี่ยวกับเรื่องนี้:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textGray,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: _suggestedQuestions.map((question) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: () => _onSuggestionTap(question),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: AppTheme.glassDecoration(
+                        color: AppColors.primaryBlue,
+                        opacity: 0.08,
+                        borderColor: AppColors.primaryBlue.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        question,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _handleActionCommands(String text) {
+    final lowerText = text.toLowerCase().trim();
+    
+    String? title;
+    String? voiceText;
+    Widget Function()? destinationBuilder;
+    
+    if (lowerText.contains('เกม') || lowerText.contains('game')) {
+      title = 'หน้าเกมเสริมทักษะ';
+      voiceText = 'กำลังเปิดหน้าเกมเสริมทักษะค่ะ';
+      destinationBuilder = () => MiniGamesScreen(user: widget.user);
+    } else if (lowerText.contains('แบบทดสอบ') || lowerText.contains('แบบประเมิน') || lowerText.contains('test') || lowerText.contains('phq')) {
+      title = 'แบบประเมินสุขภาพจิต PHQ-9';
+      voiceText = 'กำลังเปิดแบบประเมินสุขภาพจิตพีเอชคิวเก้าค่ะ';
+      destinationBuilder = () => TestScreen(user: widget.user);
+    } else if (lowerText.contains('ผู้ดูแล') || lowerText.contains('caretaker') || lowerText.contains('caregiver') || 
+               lowerText.contains('หมอ') || lowerText.contains('แพทย์') || lowerText.contains('ฉุกเฉิน') || lowerText.contains('สายด่วน')) {
+      title = 'ระบบผู้ดูแลและสายด่วนฉุกเฉิน';
+      voiceText = 'กำลังเปิดหน้าผู้ดูแลและสายด่วนฉุกเฉินค่ะ';
+      destinationBuilder = () {
+        if (widget.user != null && widget.user!.role == 'caretaker') {
+          return CaregiverDashboardScreen(user: widget.user!);
+        } else {
+          return const CaretakerScreen();
+        }
+      };
+    } else if (lowerText.contains('อาหาร') || lowerText.contains('nutrition') || lowerText.contains('กินอะไร')) {
+      title = 'คำแนะนำโภชนาการ';
+      voiceText = 'กำลังเปิดหน้าคำแนะนำโภชนาการค่ะ';
+      destinationBuilder = () => const NutritionScreen();
+    } else if (lowerText.contains('รายงาน') || lowerText.contains('weekly report') || lowerText.contains('สรุปสุขภาพ')) {
+      title = 'รายงานสรุปประจำสัปดาห์';
+      voiceText = 'กำลังเปิดหน้ารายงานสรุปสุขภาพประจำสัปดาห์ค่ะ';
+      destinationBuilder = () => WeeklyReportScreen(user: widget.user);
+    }
+
+    if (title != null && destinationBuilder != null) {
+      final finalTitle = title;
+      final finalVoiceText = voiceText ?? 'กำลังเปิดหน้า $title ค่ะ';
+      final finalDest = destinationBuilder;
+
+      // Add user message to history
+      setState(() {
+        _messages.add(ChatMessage(
+          text: text,
+          isBot: false,
+          time: TimeOfDay.now().format(context),
+        ));
+        _isSending = true;
+      });
+      _scrollToBottom();
+
+      // Trigger bot response and speech immediately, then navigation
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          setState(() {
+            _messages.add(ChatMessage(
+              text: '🤖 กำลังนำคุณไปยังหน้า $finalTitle ใน 2 วินาที...\n(หรือคุณสามารถแตะปุ่มด้านล่างเพื่อไปทันที)',
+              isBot: true,
+              time: TimeOfDay.now().format(context),
+            ));
+            _isSending = false;
+          });
+          _scrollToBottom();
+          
+          if (_autoSpeak) {
+            _ttsService.speak(finalVoiceText);
+          }
+
+          // Delay navigation
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => finalDest()),
+              );
+            }
+          });
+        }
+      });
+      return true;
+    }
+    return false;
   }
 
   String _getLocalBotResponse(String message) {
@@ -341,12 +612,12 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            color: AppColors.primaryBlue.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -482,11 +753,17 @@ class _RecommendationScreenState extends State<RecommendationScreen>
 
                 if (_isVoiceMode) _buildVoiceListeningBar(),
 
+                if (_suggestedQuestions.isNotEmpty && !_isSending && !_isVoiceMode) ...[
+                  const SizedBox(height: 4),
+                  _buildSuggestedQuestionsArea(),
+                ],
+
                 const SizedBox(height: 8),
 
                 _buildInputArea(),
               ],
             ),
+        ),
       ),
     );
   }
@@ -722,6 +999,43 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                       height: 1.5,
                     ),
                   ),
+                  if (message.isBot && message.text.contains('🤖 กำลังนำคุณไปยังหน้า')) ...[
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Widget dest;
+                        if (message.text.contains('หน้าเกมเสริมทักษะ')) {
+                          dest = MiniGamesScreen(user: widget.user);
+                        } else if (message.text.contains('แบบประเมินสุขภาพจิต PHQ-9')) {
+                          dest = TestScreen(user: widget.user);
+                        } else if (message.text.contains('ระบบผู้ดูแลและสายด่วนฉุกเฉิน')) {
+                          if (widget.user != null && widget.user!.role == 'caretaker') {
+                            dest = CaregiverDashboardScreen(user: widget.user!);
+                          } else {
+                            dest = const CaretakerScreen();
+                          }
+                        } else if (message.text.contains('คำแนะนำโภชนาการ')) {
+                          dest = const NutritionScreen();
+                        } else if (message.text.contains('รายงานสรุปประจำสัปดาห์')) {
+                          dest = WeeklyReportScreen(user: widget.user);
+                        } else {
+                          return;
+                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => dest),
+                        );
+                      },
+                      icon: const Icon(Icons.rocket_launch, size: 16, color: Colors.white),
+                      label: const Text('ไปทันที', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

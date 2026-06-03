@@ -8,12 +8,9 @@ class TTSService {
   final FlutterTts _flutterTts = FlutterTts();
   bool _isInitialized = false;
   bool _isSpeaking = false;
-  bool _autoSpeak = false;
+  bool autoSpeak = false;
 
   bool get isSpeaking => _isSpeaking;
-
-  bool get autoSpeak => _autoSpeak;
-  set autoSpeak(bool value) => _autoSpeak = value;
 
   Future<void> init() async {
     if (_isInitialized) return;

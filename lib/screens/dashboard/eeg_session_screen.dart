@@ -631,9 +631,9 @@ class _EegSessionScreenState extends State<EegSessionScreen>
           isMatch = true;
           feedback = 'พบความถี่ต่ำสอดคล้องกับความเศร้า';
           if (delta > 35.0) addDetail(true, 'Delta พุ่งสูง (อาจมีการขมวดคิ้ว/น้ำตาคลอ/สะอื้น)');
-          if (theta > 18.0) addDetail(true, 'Theta สูง (${theta.toStringAsFixed(1)}) สะท้อนความรู้สึกดิ่งลึก');
+          if (theta > 18.0) addDetail(true, 'Theta สูง (${theta.toStringAsFixed(1)}) สะท้อนความรู้สึกเครียดลึก');
         } else {
-          feedback = 'ควบคุมอารมณ์ได้ดี ไม่ค่อยดิ่ง';
+          feedback = 'ควบคุมอารมณ์ได้ดี ไม่ค่อยเครียด';
           addDetail(false, 'ไม่พบคลื่นความถี่ต่ำที่บ่งชี้ความเศร้ารุนแรง');
         }
         break;
