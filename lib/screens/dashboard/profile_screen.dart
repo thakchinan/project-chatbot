@@ -86,94 +86,151 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   children: [
 
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(6, 8, 20, 30),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(32),
-                          bottomRight: Radius.circular(32),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF667eea).withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
+                    // Header Row
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryBlue.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              color: AppColors.primaryBlue,
+                              size: 24,
+                            ),
                           ),
-                        ],
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        child: Column(
-                          children: [
-
-                            Row(
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const SizedBox(width: 14),
-                                const Expanded(
-                                  child: Text(
-                                    'โปรไฟล์',
-                                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                Text(
+                                  'โปรไฟล์',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textDark,
+                                    letterSpacing: -0.5,
                                   ),
                                 ),
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => SettingsScreen(user: _currentUser)),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
+                                Text(
+                                  'ข้อมูลส่วนตัวและการตั้งค่า',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textGray,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
-
-                            GestureDetector(
-                              onTap: _openEditProfile,
-                              child: Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 3),
-                                  image: _currentUser.avatarUrl != null && _currentUser.avatarUrl!.isNotEmpty
-                                      ? DecorationImage(
-                                          image: NetworkImage(_currentUser.avatarUrl!),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                ),
-                                child: _currentUser.avatarUrl == null || _currentUser.avatarUrl!.isEmpty
-                                    ? const Icon(Icons.person_rounded, size: 50, color: Colors.white)
-                                    : null,
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => SettingsScreen(user: _currentUser)),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.settings_outlined,
+                                color: AppColors.textDark,
+                                size: 22,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _currentUser.fullName ?? _currentUser.username,
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Centered User Avatar Card
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          GestureDetector(
+                            onTap: _openEditProfile,
+                            child: Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBlue.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.grey.shade100, width: 3),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                                image: _currentUser.avatarUrl != null && _currentUser.avatarUrl!.isNotEmpty
+                                    ? DecorationImage(
+                                        image: NetworkImage(_currentUser.avatarUrl!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: _currentUser.avatarUrl == null || _currentUser.avatarUrl!.isEmpty
+                                  ? const Icon(Icons.person_rounded, size: 45, color: AppColors.primaryBlue)
+                                  : null,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _currentUser.email ?? '',
-                              style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.7)),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _currentUser.fullName ?? _currentUser.username,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _currentUser.email ?? '',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textGray,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -204,11 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 width: 4,
                                 height: 20,
                                 decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  ),
+                                  gradient: AppGradients.primaryBlue,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
@@ -266,6 +319,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: Colors.red,
                       onTap: () => _showLogoutConfirmation(context),
                     ),
+                    const SizedBox(height: 100), // Spacing for floating navigation bar
                         ],
                       ),
                     ),

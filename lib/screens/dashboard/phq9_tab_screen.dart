@@ -52,40 +52,32 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
         child: Column(
           children: [
             // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(28),
-                  bottomRight: Radius.circular(28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               child: Column(
                 children: [
-                  // Title
+                  // Title Row
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(14),
+                          color: AppColors.primaryBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.psychology_outlined,
-                            color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.psychology_outlined,
+                          color: AppColors.primaryBlue,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -96,15 +88,16 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                               'แบบทดสอบ PHQ-9',
                               style: TextStyle(
                                 fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textDark,
+                                letterSpacing: -0.5,
                               ),
                             ),
                             Text(
                               'Patient Health Questionnaire-9',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.white70,
+                                color: AppColors.textGray,
                               ),
                             ),
                           ],
@@ -113,23 +106,30 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Tab bar
+                  // Tab bar container
                   Container(
-                    margin: const EdgeInsets.only(bottom: 12),
+                    margin: const EdgeInsets.only(bottom: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
+                      color: Colors.grey.shade200.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: TabBar(
                       controller: _tabController,
                       indicator: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.primaryBlue,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryBlue.withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       indicatorSize: TabBarIndicatorSize.tab,
                       indicatorPadding: const EdgeInsets.all(3),
-                      labelColor: AppColors.primaryBlue,
-                      unselectedLabelColor: Colors.white.withOpacity(0.8),
+                      labelColor: Colors.white,
+                      unselectedLabelColor: AppColors.textGray,
                       labelStyle: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

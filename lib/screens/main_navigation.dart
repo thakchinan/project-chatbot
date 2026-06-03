@@ -32,7 +32,12 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   List<Widget> get _screens => [
-    HomeScreen(user: _currentUser),
+    HomeScreen(
+      user: _currentUser,
+      onTabSelected: (index) {
+        setState(() => _currentIndex = index);
+      },
+    ),
     Phq9TabScreen(user: _currentUser),
     RecommendationScreen(user: _currentUser),
     ActivitiesDashboardScreen(user: _currentUser),

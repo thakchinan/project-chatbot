@@ -14,11 +14,13 @@ import '../../eeg_research/eeg_research_screen.dart';
 import 'eeg_assessment_report_screen.dart';
 import 'eeg_report_history_screen.dart';
 import 'settings_screen.dart';
+import 'mini_games_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
+  final Function(int)? onTabSelected;
 
-  const HomeScreen({super.key, required this.user});
+  const HomeScreen({super.key, required this.user, this.onTabSelected});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -29,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final EmotionDetectionService _emotionService = EmotionDetectionService();
   late final WebViewController _videoWebViewController;
   bool _isVideoLoaded = false;
+
   EmotionResult? _pytorchEmotion;
   EmotionResult? _tfliteEmotion;
   bool _isDetectingEmotion = false;
@@ -707,40 +710,22 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                 child: Row(
                   children: [
                     Container(
-                      width: 54,
-                      height: 54,
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.primaryBlue.withOpacity(0.1),
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                         image: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
@@ -757,9 +742,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? (widget.user.fullName ?? widget.user.username)[0].toUpperCase()
                                     : 'U',
                                 style: const TextStyle(
-                                  fontSize: 24,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4A7FC1),
+                                  color: AppColors.primaryBlue,
                                 ),
                               ),
                             )
@@ -770,13 +755,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'สวัสดี!',
-                            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.85)),
+                          const Text(
+                            'สวัสดี! 👋',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textGray,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             widget.user.fullName ?? widget.user.username,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textDark,
+                              letterSpacing: -0.5,
+                            ),
                           ),
                         ],
                       ),
@@ -788,17 +783,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(14),
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
+                        child: const Icon(
+                          Icons.settings_outlined,
+                          color: AppColors.textDark,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -809,18 +815,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHealthSummaryCard(),
               const SizedBox(height: 24),
 
-              // 2. Interactive Brain Section Title
-              const Text(
-                'สมองจำลอง 3 มิติ',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // 3. Clean 3D Brain View
+              // 3. Clean 3D Brain View (Title text removed as requested)
               Container(
                 width: double.infinity,
                 height: 240,
@@ -949,7 +944,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'ทำแบบทดสอบ',
                       gradient: AppGradients.primaryBlue.colors,
                       onTap: () {
-                        // Will implement navigation or switch tab later
+                        widget.onTabSelected?.call(1);
                       },
                     ),
                   ),
@@ -961,7 +956,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       label: 'มินิเกมฝึกสมอง',
                       gradient: AppGradients.green.colors,
                       onTap: () {
-                         // Will implement navigation to activities
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MiniGamesScreen(user: widget.user),
+                          ),
+                        );
                       },
                     ),
                   ),
@@ -974,17 +974,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _museService.isConnected
-                        ? [const Color(0xFF11998e), const Color(0xFF38ef7d)]
-                        : [const Color(0xFF667eea), const Color(0xFF764ba2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: _museService.isConnected
+                      ? AppGradients.green
+                      : AppGradients.primaryBlue,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: (_museService.isConnected ? const Color(0xFF11998e) : const Color(0xFF667eea)).withOpacity(0.3),
+                      color: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withOpacity(0.15),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -1140,9 +1136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                              ),
+                              gradient: AppGradients.primaryBlue,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 22),
@@ -1325,15 +1319,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+                      colors: [Color(0xFF2E2E3A), Color(0xFF252530)],
                     ),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFF6C63FF).withOpacity(0.3),
+                      color: AppColors.primaryBlue.withOpacity(0.2),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        color: Colors.black.withOpacity(0.08),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -1345,7 +1339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF6C63FF), Color(0xFF00D4AA)],
+                            colors: [Color(0xFF8C85E8), Color(0xFF60DFCD)],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),

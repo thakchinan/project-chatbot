@@ -2,96 +2,96 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Premium, slightly softer and deeper blues
-  static const Color primaryBlue = Color(0xFF3B71CA);
-  static const Color primaryLightBlue = Color(0xFF9BA4B5);
-  static const Color accentBlue = Color(0xFF5B8DEF);
+  // Premium, softer and slate-like pastel blues
+  static const Color primaryBlue = Color(0xFF7E9CB9);
+  static const Color primaryLightBlue = Color(0xFFC4D3E3);
+  static const Color accentBlue = Color(0xFF9EBAE3);
 
-  // Softer greens
-  static const Color primaryGreen = Color(0xFF52B788);
-  static const Color lightGreen = Color(0xFF74C69D);
-  static const Color softGreen = Color(0xFFD8F3DC);
+  // Soft pastel greens
+  static const Color primaryGreen = Color(0xFF8EBAA7);
+  static const Color lightGreen = Color(0xFFB3D4C5);
+  static const Color softGreen = Color(0xFFE5F5EE);
 
-  // Elegant Backgrounds
-  static const Color bgBlue = Color(0xFFF4F7FE);
-  static const Color bgGreen = Color(0xFFF2FAF5);
-  static const Color bgPurple = Color(0xFFF6F5FC);
-  static const Color bgYellow = Color(0xFFFDFBF7);
+  // Elegant Backgrounds (very light and clean)
+  static const Color bgBlue = Color(0xFFF2F6FC);
+  static const Color bgGreen = Color(0xFFF3FAF6);
+  static const Color bgPurple = Color(0xFFF7F6FC);
+  static const Color bgYellow = Color(0xFFFCFAF5);
 
   // Sophisticated Text Colors
   static const Color textDark = Color(0xFF1E293B);
   static const Color textGray = Color(0xFF64748B);
   static const Color textLight = Color(0xFF94A3B8);
 
-  // Semantic
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFEF4444);
-  static const Color orange = Color(0xFFF97316);
+  // Softer Semantic Colors
+  static const Color success = Color(0xFF89C9B1);
+  static const Color warning = Color(0xFFF7C882);
+  static const Color error = Color(0xFFECA3A3);
+  static const Color orange = Color(0xFFF7B08B);
 
   // Chart
-  static const Color chartPurple = Color(0xFF8B5CF6);
-  static const Color chartBlue = Color(0xFF3B82F6);
-  static const Color chartGreen = Color(0xFF10B981);
+  static const Color chartPurple = Color(0xFFC3B0E9);
+  static const Color chartBlue = Color(0xFF9CB8E2);
+  static const Color chartGreen = Color(0xFF8BC5AE);
 
   // Games
-  static const Color gameRed = Color(0xFFFF6B6B);
-  static const Color gameTeal = Color(0xFF4ECDC4);
-  static const Color gameYellow = Color(0xFFFFE66D);
-  static const Color gameMint = Color(0xFF95E1D3);
+  static const Color gameRed = Color(0xFFF3A0A0);
+  static const Color gameTeal = Color(0xFF9AD5D1);
+  static const Color gameYellow = Color(0xFFFFF09E);
+  static const Color gameMint = Color(0xFFC7EDE6);
 }
 
 class AppGradients {
   static const LinearGradient primaryBlue = LinearGradient(
-    colors: [Color(0xFF3B71CA), Color(0xFF5B8DEF)],
+    colors: [Color(0xFF7E9CB9), Color(0xFF9EBAE3)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient green = LinearGradient(
-    colors: [Color(0xFF52B788), Color(0xFF74C69D)],
+    colors: [Color(0xFF8EBAA7), Color(0xFFB3D4C5)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient headerBlue = LinearGradient(
-    colors: [Color(0xFFF4F7FE), Color(0xFFE2EAF8)],
+    colors: [Color(0xFFF2F6FC), Color(0xFFE4ECF6)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient headerGreen = LinearGradient(
-    colors: [Color(0xFFF2FAF5), Color(0xFFE3F5EB)],
+    colors: [Color(0xFFF3FAF6), Color(0xFFE4F3EC)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient headerPurple = LinearGradient(
-    colors: [Color(0xFFF6F5FC), Color(0xFFEBE8F6)],
+    colors: [Color(0xFFF7F6FC), Color(0xFFECEAF7)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient headerYellow = LinearGradient(
-    colors: [Color(0xFFFDFBF7), Color(0xFFF9F4E8)],
+    colors: [Color(0xFFFCFAF5), Color(0xFFF6F0E4)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static const LinearGradient memoryGame = LinearGradient(
-    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+    colors: [Color(0xFF9DA8E3), Color(0xFFC0AEE3)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient colorGame = LinearGradient(
-    colors: [Color(0xFFF093FB), Color(0xFFF5576C)],
+    colors: [Color(0xFFF9B8CE), Color(0xFFF9A8BA)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient triviaGame = LinearGradient(
-    colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
+    colors: [Color(0xFF8EC4BA), Color(0xFFAFE3D0)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
