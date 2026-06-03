@@ -11,7 +11,7 @@ import '../emotion_detection/models/emotion_type.dart';
 import 'eeg_risk_gauge.dart';
 import 'eeg_topographic_map.dart';
 
-/// ใบสรุปประเมินภาวะซึมเศร้า (qEEG) — Premium Design
+/// ใบสรุปประเมินความเครียด (qEEG) — Premium Design
 class EegAssessmentReportView extends StatefulWidget {
   final Map<String, dynamic> summary;
   final User user;
@@ -266,7 +266,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ใบสรุปประเมินภาวะซึมเศร้า', style: _h1.copyWith(color: Colors.white, fontSize: 18)),
+                Text('ใบสรุปประเมินความเครียด', style: _h1.copyWith(color: Colors.white, fontSize: 18)),
                 const SizedBox(height: 2),
                 Text('จากการทดสอบสัญญาณสมอง (qEEG)', style: _body.copyWith(color: const Color(0xFF93C5FD), fontWeight: FontWeight.w600)),
                 Text('Quantitative EEG Analysis', style: _caption.copyWith(color: Colors.white54)),
@@ -358,7 +358,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         const SizedBox(height: 12),
         ...bands.map((b) => _bandCard(b.$1, b.$2, b.$3, b.$4, b.$5)),
         _ratioCard('Alpha Asymmetry', 'ความสมดุลอารมณ์ซีกซ้าย-ขวา', (_localSummary['alphaAsymmetry'] as num? ?? 0.0).toDouble(), true),
-        _ratioCard('Beta/Theta', 'สมาธิและภาวะซึมเศร้า', (_localSummary['betaThetaRatio'] as num? ?? 0.0).toDouble(), false),
+        _ratioCard('Beta/Theta', 'สมาธิและภาวะความเครียด', (_localSummary['betaThetaRatio'] as num? ?? 0.0).toDouble(), false),
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
@@ -379,7 +379,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
               Text(
                 '• Z-Score ปกติอยู่ระหว่าง -1.0 ถึง +1.0 เกินกว่านี้สะท้อนภาวะตึงเครียดหรือสมองล้าสะสม\n'
                 '• ความสมดุลสมอง (Alpha Asymmetry) ค่าปกติควรใกล้เคียง 0 (เกณฑ์ปกติอยู่ในช่วง -0.5 ถึง +0.5)\n'
-                '• อัตราส่วนสมาธิและภาวะซึมเศร้า (Beta/Theta Ratio) ค่าปกติควรน้อยกว่า 1.5',
+                '• อัตราส่วนสมาธิและภาวะความเครียด (Beta/Theta Ratio) ค่าปกติควรน้อยกว่า 1.5',
                 style: _caption.copyWith(fontSize: 9.5, height: 1.4, color: const Color(0xFF64748B)),
               ),
             ],
@@ -724,7 +724,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'หมายเหตุ: ผลการทดสอบนี้ไม่สามารถใช้วินิจฉัยภาวะซึมเศร้าได้โดยลำพัง ต้องนำผลไปประกอบการพิจารณาร่วมกับการประเมินทางคลินิกโดยผู้เชี่ยวชาญเท่านั้น',
+            'หมายเหตุ: ผลการทดสอบนี้ไม่สามารถใช้วินิจฉัยภาวะความเครียดสะสมได้โดยลำพัง ต้องนำผลไปประกอบการพิจารณาร่วมกับการประเมินทางคลินิกโดยผู้เชี่ยวชาญเท่านั้น',
             style: GoogleFonts.notoSansThai(fontSize: 10, color: const Color(0xFFCBD5E1), height: 1.5),
           ),
         ),

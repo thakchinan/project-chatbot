@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/muse_service.dart';
 import 'stream/muse2_eeg_stream.dart';

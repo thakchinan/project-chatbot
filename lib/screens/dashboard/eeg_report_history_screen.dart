@@ -134,7 +134,7 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'ใบสรุปประเมินภาวะซึมเศร้า',
+                                        'ใบสรุปประเมินความเครียด',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,

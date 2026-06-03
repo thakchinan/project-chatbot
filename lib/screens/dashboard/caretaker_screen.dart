@@ -83,7 +83,7 @@ class CaretakerScreen extends StatelessWidget {
               icon: Icons.person,
               name: 'นพ.สมชาย ใจดี',
               role: 'จิตแพทย์',
-              specialty: 'เชี่ยวชาญด้านโรคซึมเศร้าและวิตกกังวล',
+              specialty: 'เชี่ยวชาญด้านความเครียดและวิตกกังวล',
               phone: '02-123-4567',
             ),
             _buildCaretakerCard(

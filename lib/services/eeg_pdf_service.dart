@@ -56,7 +56,7 @@ class EegPdfService {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('ใบสรุปประเมินภาวะซึมเศร้า', style: pw.TextStyle(font: fontBold, fontSize: 18, color: PdfColors.white)),
+                  pw.Text('ใบสรุปประเมินความเครียด', style: pw.TextStyle(font: fontBold, fontSize: 18, color: PdfColors.white)),
                   pw.SizedBox(height: 2),
                   pw.Text('จากการทดสอบสัญญาณสมอง (qEEG) / Quantitative EEG Analysis', style: pw.TextStyle(font: font, fontSize: 11, color: PdfColor.fromHex('#93C5FD'))),
                 ],
@@ -410,7 +410,7 @@ class EegPdfService {
                   ),
                   pw.Expanded(
                     child: pw.Text(
-                      'หมายเหตุ: ผลการทดสอบนี้ไม่สามารถใช้วินิจฉัยภาวะซึมเศร้าได้โดยลำพัง ต้องนำผลไปประกอบการพิจารณาร่วมกับการประเมินทางคลินิกโดยผู้เชี่ยวชาญเท่านั้น',
+                      'หมายเหตุ: ผลการทดสอบนี้ไม่สามารถใช้วินิจฉัยภาวะความเครียดสะสมได้โดยลำพัง ต้องนำผลไปประกอบการพิจารณาร่วมกับการประเมินทางคลินิกโดยผู้เชี่ยวชาญเท่านั้น',
                       style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800, height: 1.4),
                     ),
                   ),
@@ -459,12 +459,12 @@ class EegPdfService {
   static pw.Widget _buildZScoreTable(pw.Font font, pw.Font fontBold, Map<String, dynamic> s) {
     final rows = [
       ['Delta (0.5–4 Hz)', 'ความง่วง/สมองล้า', s['deltaZScore'] as double? ?? 0.0],
-      ['Theta (4–8 Hz)', 'ภาวะซึมเศร้า/ครุ่นคิด', s['thetaZScore'] as double? ?? 0.0],
+      ['Theta (4–8 Hz)', 'ภาวะความเครียด/ครุ่นคิด', s['thetaZScore'] as double? ?? 0.0],
       ['Alpha (8–13 Hz)', 'ผ่อนคลาย/สมดุล', s['alphaZScore'] as double? ?? 0.0],
       ['Beta (13–30 Hz)', 'การคิดวิเคราะห์', s['betaZScore'] as double? ?? 0.0],
       ['High Beta (30–40 Hz)', 'ความเครียด/วิตกกังวล', s['highBetaZScore'] as double? ?? 0.0],
       ['Alpha Asymmetry', 'ความสมดุลอารมณ์', s['alphaAsymmetry'] as double? ?? 0.0],
-      ['Beta/Theta Ratio', 'สมาธิและภาวะซึมเศร้า', s['betaThetaRatio'] as double? ?? 0.0],
+      ['Beta/Theta Ratio', 'สมาธิและภาวะความเครียด', s['betaThetaRatio'] as double? ?? 0.0],
     ];
 
     return pw.Table(

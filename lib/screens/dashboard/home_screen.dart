@@ -1360,13 +1360,13 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'normal':
         return {'label': 'ปกติ', 'emoji': '😊', 'color': const Color(0xFF4CAF50)};
       case 'mild':
-        return {'label': 'ซึมเศร้าเล็กน้อย', 'emoji': '😐', 'color': const Color(0xFFFFC107)};
+        return {'label': 'ความเครียดเล็กน้อย', 'emoji': '😐', 'color': const Color(0xFFFFC107)};
       case 'moderate':
-        return {'label': 'ซึมเศร้าปานกลาง', 'emoji': '😟', 'color': const Color(0xFFFF9800)};
+        return {'label': 'ความเครียดปานกลาง', 'emoji': '😟', 'color': const Color(0xFFFF9800)};
       case 'high':
-        return {'label': 'ค่อนข้างรุนแรง', 'emoji': '😰', 'color': const Color(0xFFFF5722)};
+        return {'label': 'ความเครียดค่อนข้างรุนแรง', 'emoji': '😰', 'color': const Color(0xFFFF5722)};
       case 'severe':
-        return {'label': 'รุนแรง', 'emoji': '🆘', 'color': const Color(0xFFF44336)};
+        return {'label': 'ความเครียดรุนแรง', 'emoji': '🆘', 'color': const Color(0xFFF44336)};
       default:
         return {'label': 'ยังไม่ได้ทดสอบ', 'emoji': '❓', 'color': Colors.grey};
     }
@@ -1816,7 +1816,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'บันทึกคลื่นสมองเพื่อวิเคราะห์ภาวะซึมเศร้า (qEEG)',
+            'บันทึกคลื่นสมองเพื่อวิเคราะห์ความเครียด (qEEG)',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 16),
@@ -1934,7 +1934,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'ใบสรุปประเมินภาวะซึมเศร้า (qEEG)',
+                      'ใบสรุปประเมินความเครียด (qEEG)',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     Text(

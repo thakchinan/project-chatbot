@@ -61,7 +61,7 @@ class StressTestResult {
 ==========================
 วันที่ทดสอบ: ${testDate.toString().substring(0, 16)}
 คะแนนความเครียด: $stressScore/100
-คะแนนซึมเศร้า: $depressionScore/100
+คะแนนความตึงเครียด: $depressionScore/100
 ระดับ: $stressLevelText
 การประเมิน: ${evaluateStress()}
 ${assessment != null ? 'หมายเหตุ: $assessment' : ''}

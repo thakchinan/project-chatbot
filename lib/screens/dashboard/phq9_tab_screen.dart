@@ -236,7 +236,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'แบบประเมินภาวะซึมเศร้ามาตรฐานสากล',
+                  'แบบประเมินภาวะความเครียดมาตรฐานสากล',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.9),
@@ -331,12 +331,12 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 const SizedBox(height: 12),
                 _buildScoreRange('0-4', 'ปกติ', const Color(0xFF4CAF50)),
                 _buildScoreRange(
-                    '5-9', 'ซึมเศร้าเล็กน้อย', const Color(0xFFFFC107)),
+                    '5-9', 'ความเครียดเล็กน้อย', const Color(0xFFFFC107)),
                 _buildScoreRange(
-                    '10-14', 'ซึมเศร้าปานกลาง', const Color(0xFFFF9800)),
+                    '10-14', 'ความเครียดปานกลาง', const Color(0xFFFF9800)),
                 _buildScoreRange(
-                    '15-19', 'ค่อนข้างรุนแรง', const Color(0xFFFF5722)),
-                _buildScoreRange('20-27', 'รุนแรง', const Color(0xFFF44336)),
+                    '15-19', 'ความเครียดค่อนข้างรุนแรง', const Color(0xFFFF5722)),
+                _buildScoreRange('20-27', 'ความเครียดรุนแรง', const Color(0xFFF44336)),
               ],
             ),
           ),
@@ -676,16 +676,16 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
       case 'normal':
         return {'label': 'ปกติ', 'color': const Color(0xFF4CAF50)};
       case 'mild':
-        return {'label': 'ซึมเศร้าเล็กน้อย', 'color': const Color(0xFFFFC107)};
+        return {'label': 'ความเครียดเล็กน้อย', 'color': const Color(0xFFFFC107)};
       case 'moderate':
         return {
-          'label': 'ซึมเศร้าปานกลาง',
+          'label': 'ความเครียดปานกลาง',
           'color': const Color(0xFFFF9800)
         };
       case 'high':
-        return {'label': 'ค่อนข้างรุนแรง', 'color': const Color(0xFFFF5722)};
+        return {'label': 'ความเครียดค่อนข้างรุนแรง', 'color': const Color(0xFFFF5722)};
       case 'severe':
-        return {'label': 'รุนแรง', 'color': const Color(0xFFF44336)};
+        return {'label': 'ความเครียดรุนแรง', 'color': const Color(0xFFF44336)};
       default:
         return {'label': 'ยังไม่ได้ทดสอบ', 'color': Colors.grey};
     }

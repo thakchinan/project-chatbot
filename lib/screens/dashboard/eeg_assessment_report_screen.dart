@@ -24,7 +24,7 @@ class EegAssessmentReportScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
         title: const Text(
-          'ใบสรุปประเมินภาวะซึมเศร้า',
+          'ใบสรุปประเมินความเครียด',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
