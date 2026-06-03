@@ -240,7 +240,7 @@ class EegAssessmentService {
     }
     final ratio = (s['betaThetaRatio'] as num? ?? 0.0).toDouble();
     if (ratio > 1.5) {
-      buf.write('และอัตราส่วน Beta/Theta ที่สูงขึ้น ซึ่งสัมพันธ์กับภาวะซึมเศร้า');
+      buf.write('และอัตราส่วน Beta/Theta ที่สูงขึ้น ซึ่งสัมพันธ์กับภาวะความเครียด');
     } else {
       buf.write('อัตราส่วน Beta/Theta อยู่ในเกณฑ์ปกติ');
     }
@@ -321,7 +321,7 @@ class EegAssessmentService {
       if (value.abs() > 0.5) return 'ความสมดุลซีกซ้าย-ขวาเสี่ยง';
       return 'ใกล้เคียงปกติ';
     }
-    if (value > 1.5) return 'สูงกว่าปกติ (สัมพันธ์ภาวะซึมเศร้า)';
+    if (value > 1.5) return 'สูงกว่าปกติ (สัมพันธ์ภาวะความเครียด)';
     return 'อยู่ในเกณฑ์ปกติ';
   }
 

@@ -126,51 +126,51 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
     if (totalScore <= 4) {
       return {
         'level': 'ปกติ / น้อยมาก',
-        'levelEn': 'Minimal Depression',
+        'levelEn': 'Minimal Stress',
         'stressLevel': 'normal',
         'color': const Color(0xFF4CAF50),
         'icon': Icons.sentiment_very_satisfied,
-        'recommendation': 'ไม่พบอาการซึมเศร้า สุขภาพจิตของคุณอยู่ในเกณฑ์ดี',
+        'recommendation': 'ไม่พบอาการความเครียด สุขภาพจิตของคุณอยู่ในเกณฑ์ดี',
         'action': 'ดูแลสุขภาพกายใจเช่นเดิม ออกกำลังกาย นอนหลับพักผ่อนให้เพียงพอ',
       };
     } else if (totalScore <= 9) {
       return {
-        'level': 'ซึมเศร้าเล็กน้อย',
-        'levelEn': 'Mild Depression',
+        'level': 'ความเครียดเล็กน้อย',
+        'levelEn': 'Mild Stress',
         'stressLevel': 'mild',
         'color': const Color(0xFFFFC107),
         'icon': Icons.sentiment_satisfied,
-        'recommendation': 'มีอาการซึมเศร้าเล็กน้อย ควรเฝ้าระวังและติดตามอาการ',
+        'recommendation': 'มีอาการความเครียดเล็กน้อย ควรเฝ้าระวังและติดตามอาการ',
         'action': 'แนะนำให้ทำกิจกรรมที่ชอบ ออกกำลังกาย พูดคุยกับคนใกล้ชิด',
       };
     } else if (totalScore <= 14) {
       return {
-        'level': 'ซึมเศร้าปานกลาง',
-        'levelEn': 'Moderate Depression',
+        'level': 'ความเครียดปานกลาง',
+        'levelEn': 'Moderate Stress',
         'stressLevel': 'moderate',
         'color': const Color(0xFFFF9800),
         'icon': Icons.sentiment_neutral,
-        'recommendation': 'มีอาการซึมเศร้าปานกลาง ควรปรึกษาผู้เชี่ยวชาญ',
+        'recommendation': 'มีอาการความเครียดปานกลาง ควรปรึกษาผู้เชี่ยวชาญ',
         'action': 'ควรพบแพทย์หรือนักจิตวิทยาเพื่อวางแผนการดูแลรักษา',
       };
     } else if (totalScore <= 19) {
       return {
-        'level': 'ซึมเศร้าค่อนข้างรุนแรง',
-        'levelEn': 'Moderately Severe Depression',
+        'level': 'ความเครียดค่อนข้างรุนแรง',
+        'levelEn': 'Moderately Severe Stress',
         'stressLevel': 'high',
         'color': const Color(0xFFFF5722),
         'icon': Icons.sentiment_dissatisfied,
-        'recommendation': 'มีอาการซึมเศร้าค่อนข้างรุนแรง จำเป็นต้องได้รับการดูแล',
+        'recommendation': 'มีอาการความเครียดค่อนข้างรุนแรง จำเป็นต้องได้รับการดูแล',
         'action': 'ควรพบจิตแพทย์โดยเร็ว เพื่อรับการรักษาที่เหมาะสม',
       };
     } else {
       return {
-        'level': 'ซึมเศร้ารุนแรง',
-        'levelEn': 'Severe Depression',
+        'level': 'ความเครียดรุนแรง',
+        'levelEn': 'Severe Stress',
         'stressLevel': 'severe',
         'color': const Color(0xFFF44336),
         'icon': Icons.sentiment_very_dissatisfied,
-        'recommendation': 'มีอาการซึมเศร้าระดับรุนแรง ต้องได้รับการรักษาทันที',
+        'recommendation': 'มีอาการความเครียดระดับรุนแรง ต้องได้รับการรักษาทันที',
         'action': 'กรุณาพบจิตแพทย์โดยด่วน สายด่วนสุขภาพจิต 1323',
       };
     }
@@ -301,7 +301,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'แบบประเมินภาวะซึมเศร้ามาตรฐานสากล',
+                  'แบบประเมินภาวะความเครียดมาตรฐานสากล',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.9),
@@ -379,10 +379,10 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 12),
                 _buildScoreRange('0-4', 'ปกติ', const Color(0xFF4CAF50)),
-                _buildScoreRange('5-9', 'ซึมเศร้าเล็กน้อย', const Color(0xFFFFC107)),
-                _buildScoreRange('10-14', 'ซึมเศร้าปานกลาง', const Color(0xFFFF9800)),
-                _buildScoreRange('15-19', 'ค่อนข้างรุนแรง', const Color(0xFFFF5722)),
-                _buildScoreRange('20-27', 'รุนแรง', const Color(0xFFF44336)),
+                _buildScoreRange('5-9', 'ความเครียดเล็กน้อย', const Color(0xFFFFC107)),
+                _buildScoreRange('10-14', 'ความเครียดปานกลาง', const Color(0xFFFF9800)),
+                _buildScoreRange('15-19', 'ความเครียดค่อนข้างรุนแรง', const Color(0xFFFF5722)),
+                _buildScoreRange('20-27', 'ความเครียดรุนแรง', const Color(0xFFF44336)),
               ],
             ),
           ),

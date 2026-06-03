@@ -62,11 +62,7 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Smart Brain',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primaryBlue),
-          useMaterial3: true,
-          textTheme: GoogleFonts.promptTextTheme(),
-        ),
+        theme: AppTheme.lightTheme,
         home: const WelcomeScreen(),
       ),
     );

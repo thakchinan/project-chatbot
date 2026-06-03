@@ -43,15 +43,19 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
                 _buildHeader(),
 
@@ -95,11 +99,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                                   icon: Icons.people_alt_rounded,
                                   label: 'ผู้ดูแล',
                                   subtitle: 'ติดต่อผู้ดูแลของคุณ',
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+                                  gradient: AppGradients.primaryBlue,
                                   iconBgColor: Colors.white.withOpacity(0.2),
                                   delay: 0,
                                   onTap: () {
@@ -213,74 +213,71 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4A7FC1).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Row(
         children: [
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'กิจกรรม',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.1),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'สวัสดี คุณ${widget.user.fullName ?? widget.user.username}',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.white.withOpacity(0.9),
+              ],
+            ),
+            child: const Icon(
+              Icons.grid_view_rounded,
+              color: AppColors.primaryBlue,
+              size: 24,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'ดูแลสุขภาพจิตกันเถอะ!',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.7),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'กิจกรรม',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  'คุณ${widget.user.fullName ?? widget.user.username} • ดูแลสุขภาพจิตกันเถอะ!',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textGray,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user)),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: AppTheme.glassDecoration(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.settings_outlined,
+                color: AppColors.textDark,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -311,20 +308,14 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         onTap: onTap,
         child: Container(
           height: 160,
-          decoration: BoxDecoration(
-            gradient: gradient,
+          decoration: AppTheme.glassDecoration(
+            color: gradient.colors[0],
+            opacity: 0.12,
+            borderColor: gradient.colors[0].withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Stack(
             children: [
-
               Positioned(
                 top: -20,
                 right: -20,
@@ -333,7 +324,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: gradient.colors[0].withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -345,11 +336,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                    color: gradient.colors[0].withValues(alpha: 0.03),
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -360,28 +350,28 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: iconBgColor,
+                        color: gradient.colors[0].withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 26),
+                      child: Icon(icon, color: gradient.colors[0], size: 26),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: gradient.colors[0],
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           subtitle,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.white.withOpacity(0.75),
+                            color: AppColors.textGray,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -501,20 +491,11 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         child: Container(
           width: double.infinity,
           height: 120,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF667eea), Color(0xFF11998e)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+          decoration: AppTheme.glassDecoration(
+            color: AppColors.primaryBlue,
+            opacity: 0.15,
+            borderColor: AppColors.primaryBlue.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF667eea).withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Stack(
             children: [
@@ -524,7 +505,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   width: 100, height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: AppColors.primaryBlue.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -535,25 +516,25 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     Container(
                       width: 56, height: 56,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.primaryBlue.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 30),
+                      child: const Icon(Icons.psychology_rounded, color: AppColors.primaryBlue, size: 30),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'เก็บข้อมูลอารมณ์',
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textDark),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'บันทึก EEG พร้อมกระตุ้นอารมณ์ 6 แบบ เพื่อวิเคราะห์สุขภาพจิต',
-                            style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85), height: 1.3),
+                            style: TextStyle(fontSize: 12, color: AppColors.textGray, height: 1.3),
                             maxLines: 2, overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -563,10 +544,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.primaryBlue.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primaryBlue, size: 16),
                     ),
                   ],
                 ),
@@ -599,24 +580,14 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         child: Container(
           width: double.infinity,
           height: 120,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFF7E5F), Color(0xFFFEB47B)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+          decoration: AppTheme.glassDecoration(
+            color: const Color(0xFFFFAE96),
+            opacity: 0.15,
+            borderColor: const Color(0xFFFFAE96).withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFF7E5F).withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Stack(
             children: [
-
               Positioned(
                 right: -10,
                 top: -10,
@@ -625,7 +596,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: const Color(0xFFFFAE96).withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -637,11 +608,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.06),
+                    color: const Color(0xFFFFAE96).withValues(alpha: 0.03),
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -650,31 +620,31 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: const Color(0xFFFFAE96).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 30),
+                      child: const Icon(Icons.restaurant_rounded, color: Color(0xFFFFAE96), size: 30),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'โภชนาการคลายเครียด',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.textDark,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'อาหารและสารอาหารที่ช่วยลดความเครียด พร้อมสรรพคุณ',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.85),
+                              color: AppColors.textGray,
                               height: 1.3,
                             ),
                             maxLines: 2,
@@ -687,10 +657,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: const Color(0xFFFFAE96).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFFAE96), size: 16),
                     ),
                   ],
                 ),
@@ -711,16 +681,11 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
+        color: color,
+        opacity: 0.08,
+        borderColor: color.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [

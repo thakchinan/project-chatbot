@@ -17,30 +17,29 @@ class MiniGamesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: AppGradients.primaryBlue,
-          ),
-        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'มินิเกมคลายเครียด',
           style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+            fontWeight: FontWeight.w700,
           ),
         ),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               const Text(
                 'เลือกเกมที่ต้องการเล่น',
                 style: TextStyle(
@@ -88,16 +87,8 @@ class MiniGamesScreen extends StatelessWidget {
 
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
+                decoration: AppTheme.glassDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primaryBlue.withValues(alpha: 0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +126,8 @@ class MiniGamesScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -153,16 +145,11 @@ class MiniGamesScreen extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        decoration: BoxDecoration(
-          gradient: gradient,
+        decoration: AppTheme.glassDecoration(
+          color: gradient.colors.first,
+          opacity: 0.12,
+          borderColor: gradient.colors.first.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.colors.first.withValues(alpha: 0.4),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -175,7 +162,7 @@ class MiniGamesScreen extends StatelessWidget {
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: gradient.colors.first.withValues(alpha: 0.05),
                 ),
               ),
             ),
@@ -187,11 +174,10 @@ class MiniGamesScreen extends StatelessWidget {
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: gradient.colors.first.withValues(alpha: 0.03),
                 ),
               ),
             ),
-            
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -200,9 +186,9 @@ class MiniGamesScreen extends StatelessWidget {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: gradient.colors.first.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                      border: Border.all(color: gradient.colors.first.withValues(alpha: 0.35)),
                     ),
                     child: Center(
                       child: Text(
@@ -218,18 +204,18 @@ class MiniGamesScreen extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: gradient.colors.first,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           desc,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: AppColors.textGray,
                           ),
                         ),
                       ],
@@ -239,12 +225,12 @@ class MiniGamesScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
+                      color: gradient.colors.first.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.play_arrow_rounded,
-                      color: Colors.white,
+                      color: gradient.colors.first,
                       size: 28,
                     ),
                   ),

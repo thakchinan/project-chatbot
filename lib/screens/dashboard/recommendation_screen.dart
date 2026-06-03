@@ -358,94 +358,116 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgBlue,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: AppGradients.primaryBlue,
-          ),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
         ),
-        leading: Navigator.canPop(context) ? IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ) : null,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'สมาร์ทเบรน AI',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-                ),
-                Text(
-                  _isVoiceMode ? '🎤 กำลังฟัง...' : 'ผู้เชี่ยวชาญคลื่นสมอง',
-                  style: TextStyle(
-                    color: _isVoiceMode ? const Color(0xFFFFCDD2) : Colors.white.withOpacity(0.7),
-                    fontSize: 11,
-                    fontWeight: _isVoiceMode ? FontWeight.w600 : FontWeight.normal,
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                  // Clean Header Row
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.psychology_outlined,
+                            color: AppColors.primaryBlue,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'สมาร์ทเบรน AI',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textDark,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                _isVoiceMode ? '🎤 กำลังฟัง...' : 'ผู้เชี่ยวชาญคลื่นสมอง',
+                                style: TextStyle(
+                                  color: _isVoiceMode ? AppColors.error : AppColors.textGray,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Volume toggle
+                        IconButton(
+                          onPressed: () {
+                            setState(() => _autoSpeak = !_autoSpeak);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(_autoSpeak ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(_autoSpeak ? 'เปิดพูดอัตโนมัติ 🔊' : 'ปิดพูดอัตโนมัติ 🔇'),
+                                  ],
+                                ),
+                                duration: const Duration(seconds: 1),
+                                backgroundColor: _autoSpeak ? Colors.green : Colors.grey,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            _autoSpeak ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                            color: _autoSpeak ? AppColors.primaryBlue : AppColors.textLight,
+                          ),
+                        ),
+                        // Settings
+                        GestureDetector(
+                          onTap: () {
+                            if (widget.user != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user!)),
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: AppTheme.glassDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.settings_outlined,
+                              color: AppColors.textDark,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() => _autoSpeak = !_autoSpeak);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(_autoSpeak ? Icons.volume_up : Icons.volume_off, color: Colors.white, size: 20),
-                      const SizedBox(width: 8),
-                      Text(_autoSpeak ? 'เปิดพูดอัตโนมัติ 🔊' : 'ปิดพูดอัตโนมัติ 🔇'),
-                    ],
-                  ),
-                  duration: const Duration(seconds: 1),
-                  backgroundColor: _autoSpeak ? Colors.green : Colors.grey,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              );
-            },
-            icon: Icon(
-              _autoSpeak ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-              color: _autoSpeak ? Colors.white : Colors.white.withOpacity(0.5),
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              if (widget.user != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SettingsScreen(user: widget.user!)),
-                );
-              }
-            },
-            icon: Icon(Icons.settings_rounded, color: Colors.white.withOpacity(0.8)),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
+                  const SizedBox(height: 10),
                 Expanded(
                   child: ListView.builder(
                     controller: _scrollController,
@@ -500,6 +522,7 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                 _buildInputArea(),
               ],
             ),
+      ),
     );
   }
 
@@ -606,19 +629,12 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryBlue.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        opacity: 0.75,
       ),
       child: Row(
         children: [
@@ -654,8 +670,9 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.bgBlue.withValues(alpha: 0.5),
+              decoration: AppTheme.glassDecoration(
+                color: AppColors.bgBlue,
+                opacity: 0.5,
                 borderRadius: BorderRadius.circular(25),
               ),
               child: TextField(
@@ -715,34 +732,27 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              decoration: BoxDecoration(
-                gradient: message.isBot ? null : AppGradients.primaryBlue,
-                color: message.isBot ? Colors.white : null,
-                borderRadius: BorderRadius.circular(24).copyWith(
-                  bottomLeft: message.isBot ? const Radius.circular(6) : null,
-                  bottomRight: message.isBot ? null : const Radius.circular(6),
-                ),
-                boxShadow: message.isBot ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ] : [
-                  BoxShadow(
-                    color: AppColors.primaryBlue.withValues(alpha: 0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              decoration: message.isBot
+                  ? AppTheme.glassDecoration(
+                      borderRadius: BorderRadius.circular(24).copyWith(
+                        bottomLeft: const Radius.circular(6),
+                      ),
+                    )
+                  : AppTheme.glassDecoration(
+                      color: AppColors.primaryBlue,
+                      opacity: 0.18,
+                      borderColor: AppColors.primaryBlue.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(24).copyWith(
+                        bottomRight: const Radius.circular(6),
+                      ),
+                    ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     message.text,
-                    style: TextStyle(
-                      color: message.isBot ? AppColors.textDark : Colors.white,
+                    style: const TextStyle(
+                      color: AppColors.textDark,
                       fontSize: 15,
                       height: 1.5,
                     ),

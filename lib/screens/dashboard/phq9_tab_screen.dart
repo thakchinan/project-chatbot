@@ -47,45 +47,41 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Column(
-          children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
             // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(28),
-                  bottomRight: Radius.circular(28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               child: Column(
                 children: [
-                  // Title
+                  // Title Row
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(14),
+                          color: AppColors.primaryBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.psychology_outlined,
-                            color: Colors.white, size: 24),
+                        child: const Icon(
+                          Icons.psychology_outlined,
+                          color: AppColors.primaryBlue,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -96,15 +92,16 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                               'แบบทดสอบ PHQ-9',
                               style: TextStyle(
                                 fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textDark,
+                                letterSpacing: -0.5,
                               ),
                             ),
                             Text(
                               'Patient Health Questionnaire-9',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.white70,
+                                color: AppColors.textGray,
                               ),
                             ),
                           ],
@@ -113,23 +110,29 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Tab bar
+                  // Tab bar container
                   Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
+                    margin: const EdgeInsets.only(bottom: 4),
+                    decoration: AppTheme.glassDecoration(
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: TabBar(
                       controller: _tabController,
                       indicator: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.primaryBlue,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryBlue.withValues(alpha: 0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       indicatorSize: TabBarIndicatorSize.tab,
                       indicatorPadding: const EdgeInsets.all(3),
-                      labelColor: AppColors.primaryBlue,
-                      unselectedLabelColor: Colors.white.withOpacity(0.8),
+                      labelColor: Colors.white,
+                      unselectedLabelColor: AppColors.textGray,
                       labelStyle: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -192,35 +195,23 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primaryBlue,
-                  AppColors.primaryBlue.withOpacity(0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+            decoration: AppTheme.glassDecoration(
+              color: AppColors.primaryBlue,
+              opacity: 0.15,
+              borderColor: AppColors.primaryBlue.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryBlue.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             child: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: AppColors.primaryBlue.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.psychology_outlined,
-                    color: Colors.white,
+                    color: AppColors.primaryBlue,
                     size: 40,
                   ),
                 ),
@@ -230,16 +221,16 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.textDark,
                     letterSpacing: 2,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'แบบประเมินภาวะซึมเศร้ามาตรฐานสากล',
+                const Text(
+                  'แบบประเมินภาวะความเครียดมาตรฐานสากล',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: AppColors.textGray,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -253,17 +244,8 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: AppTheme.glassDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.shade100),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,16 +289,8 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: AppTheme.glassDecoration(
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,12 +305,12 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 const SizedBox(height: 12),
                 _buildScoreRange('0-4', 'ปกติ', const Color(0xFF4CAF50)),
                 _buildScoreRange(
-                    '5-9', 'ซึมเศร้าเล็กน้อย', const Color(0xFFFFC107)),
+                    '5-9', 'ความเครียดเล็กน้อย', const Color(0xFFFFC107)),
                 _buildScoreRange(
-                    '10-14', 'ซึมเศร้าปานกลาง', const Color(0xFFFF9800)),
+                    '10-14', 'ความเครียดปานกลาง', const Color(0xFFFF9800)),
                 _buildScoreRange(
-                    '15-19', 'ค่อนข้างรุนแรง', const Color(0xFFFF5722)),
-                _buildScoreRange('20-27', 'รุนแรง', const Color(0xFFF44336)),
+                    '15-19', 'ความเครียดค่อนข้างรุนแรง', const Color(0xFFFF5722)),
+                _buildScoreRange('20-27', 'ความเครียดรุนแรง', const Color(0xFFF44336)),
               ],
             ),
           ),
@@ -360,8 +334,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
-                elevation: 4,
-                shadowColor: AppColors.primaryBlue.withOpacity(0.4),
+                elevation: 0,
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -440,21 +413,15 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
     final score = latest['stress_score'] ?? latest['depression_score'] ?? 0;
     final display = _getStressDisplay(stressLevel);
 
+    final Color rangeColor = display['color'] as Color;
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            (display['color'] as Color).withOpacity(0.1),
-            (display['color'] as Color).withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: rangeColor,
+        opacity: 0.08,
+        borderColor: rangeColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: (display['color'] as Color).withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -482,9 +449,9 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 height: 70,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: (display['color'] as Color).withOpacity(0.15),
+                  color: rangeColor.withValues(alpha: 0.15),
                   border: Border.all(
-                    color: (display['color'] as Color).withOpacity(0.4),
+                    color: rangeColor.withValues(alpha: 0.4),
                     width: 3,
                   ),
                 ),
@@ -559,17 +526,8 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -607,7 +565,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: (display['color'] as Color).withOpacity(0.1),
+              color: (display['color'] as Color).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -676,16 +634,16 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
       case 'normal':
         return {'label': 'ปกติ', 'color': const Color(0xFF4CAF50)};
       case 'mild':
-        return {'label': 'ซึมเศร้าเล็กน้อย', 'color': const Color(0xFFFFC107)};
+        return {'label': 'ความเครียดเล็กน้อย', 'color': const Color(0xFFFFC107)};
       case 'moderate':
         return {
-          'label': 'ซึมเศร้าปานกลาง',
+          'label': 'ความเครียดปานกลาง',
           'color': const Color(0xFFFF9800)
         };
       case 'high':
-        return {'label': 'ค่อนข้างรุนแรง', 'color': const Color(0xFFFF5722)};
+        return {'label': 'ความเครียดค่อนข้างรุนแรง', 'color': const Color(0xFFFF5722)};
       case 'severe':
-        return {'label': 'รุนแรง', 'color': const Color(0xFFF44336)};
+        return {'label': 'ความเครียดรุนแรง', 'color': const Color(0xFFF44336)};
       default:
         return {'label': 'ยังไม่ได้ทดสอบ', 'color': Colors.grey};
     }

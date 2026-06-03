@@ -28,10 +28,14 @@ class _NutritionScreenState extends State<NutritionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Column(
-          children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
 
             _buildHeader(context),
 
@@ -54,94 +58,59 @@ class _NutritionScreenState extends State<NutritionScreen>
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(6, 8, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFF7E5F), Color(0xFFFEB47B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: Column(
         children: [
-
           Row(
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
+                icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textDark, size: 20),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'โภชนาการคลายเครียด',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textDark,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      'อาหารและวิตามินที่ช่วยลดระดับ cortisol',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textGray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: AppColors.primaryGreen.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 16),
-                    const SizedBox(width: 4),
+                    Icon(Icons.local_fire_department_rounded, color: AppColors.primaryGreen, size: 16),
+                    SizedBox(width: 4),
                     Text(
                       'ลดเครียด',
-                      style: TextStyle(color: Colors.white.withOpacity(0.95), fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.primaryGreen, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: [
-
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Center(
-                    child: Text('🥗', style: TextStyle(fontSize: 32)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'โภชนาการคลายเครียด',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'อาหารที่ช่วยลดระดับ cortisol\nและเสริมสร้างสารสุขในสมอง',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.85),
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -151,28 +120,27 @@ class _NutritionScreenState extends State<NutritionScreen>
   Widget _buildTabBar() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFFFF7E5F), Color(0xFFFEB47B)],
+            colors: [AppColors.orange, Color(0xFFFFD4B2)],
           ),
           borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.orange.withValues(alpha: 0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey[500],
+        unselectedLabelColor: AppColors.textGray,
         labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
         dividerColor: Colors.transparent,
@@ -229,7 +197,7 @@ class _NutritionScreenState extends State<NutritionScreen>
         name: 'ไข่',
         keyNutrient: 'โคลีน, วิตามิน D, ทริปโตเฟน',
         benefit: 'ช่วยการทำงานของสารสื่อประสาท ลดความเครียด',
-        detail: 'โคลีนเป็นสารที่จำเป็นต่อการสร้าง acetylcholine ซึ่งเกี่ยวข้องกับอารมณ์และความจำ วิตามิน D ช่วยควบคุมอารมณ์ ผู้ที่ขาดวิตามิน D มีโอกาสเครียดและซึมเศร้ามากกว่า 2 เท่า',
+        detail: 'โคลีนเป็นสารที่จำเป็นต่อการสร้าง acetylcholine ซึ่งเกี่ยวข้องกับอารมณ์และความจำ วิตามิน D ช่วยควบคุมอารมณ์ ผู้ที่ขาดวิตามิน D มีโอกาสเครียดสูงกว่าปกติมากกว่า 2 เท่า',
         portion: 'แนะนำ 1-2 ฟอง/วัน',
         color: const Color(0xFFFF9800),
       ),
@@ -282,7 +250,7 @@ class _NutritionScreenState extends State<NutritionScreen>
       {
         'emoji': '☀️',
         'name': 'วิตามิน D',
-        'benefit': 'ควบคุมอารมณ์ ลดความเสี่ยงภาวะซึมเศร้าและเครียด',
+        'benefit': 'ควบคุมอารมณ์ ลดความเสี่ยงภาวะความเครียดสะสม',
         'source': 'แสงแดด, ปลาทะเล, ไข่แดง, นมเสริม',
         'color': const Color(0xFFFFC107),
       },
@@ -407,14 +375,11 @@ class _NutritionScreenState extends State<NutritionScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [gradientColors[0].withOpacity(0.12), gradientColors[1].withOpacity(0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: gradientColors[0],
+        opacity: 0.08,
+        borderColor: gradientColors[0].withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: gradientColors[0].withOpacity(0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,7 +388,9 @@ class _NutritionScreenState extends State<NutritionScreen>
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: gradientColors),
+              gradient: LinearGradient(
+                colors: [gradientColors[0].withValues(alpha: 0.8), gradientColors[1].withValues(alpha: 0.8)],
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
@@ -465,22 +432,11 @@ class _NutritionScreenState extends State<NutritionScreen>
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
+        color: isExpanded ? item.color : Colors.white,
+        opacity: isExpanded ? 0.08 : 0.55,
+        borderColor: isExpanded ? item.color.withValues(alpha: 0.45) : Colors.white.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isExpanded ? item.color.withOpacity(0.3) : Colors.transparent,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isExpanded
-                ? item.color.withOpacity(0.12)
-                : Colors.black.withOpacity(0.04),
-            blurRadius: isExpanded ? 16 : 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -504,7 +460,7 @@ class _NutritionScreenState extends State<NutritionScreen>
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: item.color.withOpacity(0.1),
+                        color: item.color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Center(child: Text(item.emoji, style: const TextStyle(fontSize: 28))),
@@ -588,7 +544,7 @@ class _NutritionScreenState extends State<NutritionScreen>
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: item.color.withOpacity(0.06),
+                          color: item.color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -629,16 +585,8 @@ class _NutritionScreenState extends State<NutritionScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -647,7 +595,7 @@ class _NutritionScreenState extends State<NutritionScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
@@ -667,7 +615,7 @@ class _NutritionScreenState extends State<NutritionScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -702,16 +650,8 @@ class _NutritionScreenState extends State<NutritionScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,7 +660,7 @@ class _NutritionScreenState extends State<NutritionScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(child: Text(emoji, style: const TextStyle(fontSize: 26))),
@@ -741,9 +681,9 @@ class _NutritionScreenState extends State<NutritionScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.1),
+                      color: Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

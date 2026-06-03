@@ -10,14 +10,17 @@ import '../../services/api_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/eeg_assessment_service.dart';
 import '../../emotion_detection/emotion_detection.dart';
+import '../../eeg_research/eeg_research_screen.dart';
 import 'eeg_assessment_report_screen.dart';
 import 'eeg_report_history_screen.dart';
 import 'settings_screen.dart';
+import 'mini_games_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
+  final Function(int)? onTabSelected;
 
-  const HomeScreen({super.key, required this.user});
+  const HomeScreen({super.key, required this.user, this.onTabSelected});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -28,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final EmotionDetectionService _emotionService = EmotionDetectionService();
   late final WebViewController _videoWebViewController;
   bool _isVideoLoaded = false;
+
   EmotionResult? _pytorchEmotion;
   EmotionResult? _tfliteEmotion;
   bool _isDetectingEmotion = false;
@@ -57,10 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // JavaScript to hide Spline watermark and set dark bg
+    // JavaScript to hide Spline watermark and set transparent bg
     const splineJS = '''
       (function() {
-        document.body.style.backgroundColor = '#0F1629';
+        document.body.style.backgroundColor = 'transparent';
         function hideWatermark() {
           var els = document.querySelectorAll('a[href*="spline"], div[class*="watermark"], div[class*="logo"]');
           els.forEach(function(el) { el.style.display = 'none'; });
@@ -79,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _videoWebViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
     if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
-      _videoWebViewController.setBackgroundColor(const Color(0xFF0F1629));
+      _videoWebViewController.setBackgroundColor(Colors.transparent);
     }
     _videoWebViewController
       ..setNavigationDelegate(NavigationDelegate(
@@ -699,47 +703,33 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
 
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4A7FC1), Color(0xFF6BA3E8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                 child: Row(
                   children: [
                     Container(
-                      width: 54,
-                      height: 54,
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.primaryBlue.withOpacity(0.1),
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                         image: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
@@ -756,9 +746,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? (widget.user.fullName ?? widget.user.username)[0].toUpperCase()
                                     : 'U',
                                 style: const TextStyle(
-                                  fontSize: 24,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF4A7FC1),
+                                  color: AppColors.primaryBlue,
                                 ),
                               ),
                             )
@@ -769,13 +759,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'สวัสดี!',
-                            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.85)),
+                          const Text(
+                            'สวัสดี! 👋',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textGray,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             widget.user.fullName ?? widget.user.username,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textDark,
+                              letterSpacing: -0.5,
+                            ),
                           ),
                         ],
                       ),
@@ -787,57 +787,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(14),
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
+                        child: const Icon(
+                          Icons.settings_outlined,
+                          color: AppColors.textDark,
+                          size: 22,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+              // 1. Health Summary
+              _buildHealthSummaryCard(),
+              const SizedBox(height: 24),
 
-              // Video Embedded View
+              // 3. Clean 3D Brain View (Title text removed as requested)
               Container(
                 width: double.infinity,
-                height: 380,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F1629), Color(0xFF1A1F3D)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: const Color(0xFF4A7FC1).withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF4A7FC1).withOpacity(0.15),
-                      blurRadius: 24,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
+                height: 240,
+                decoration: AppTheme.glassDecoration(),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: Stack(
                     children: [
+                      // The 3D WebView
                       Positioned.fill(
                         child: WebViewWidget(
                           controller: _videoWebViewController,
@@ -848,28 +839,65 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
+
+                      // Modern Status Badge
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: AppTheme.glassDecoration(
+                            opacity: 0.85,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _museService.isConnected ? Colors.green : Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _museService.isConnected ? 'เชื่อมต่อแล้ว' : 'สแตนด์บาย',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                       if (!_isVideoLoaded)
                         Positioned.fill(
                           child: Container(
-                            color: const Color(0xFF0F1629),
+                            color: Colors.white,
                             child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SizedBox(
-                                    width: 40,
-                                    height: 40,
+                                    width: 32,
+                                    height: 32,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 3,
-                                      color: const Color(0xFF4A7FC1).withOpacity(0.8),
+                                      strokeWidth: 2,
+                                      color: AppColors.primaryBlue,
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 12),
                                   Text(
-                                    'กำลังโหลดวิดีโอ...',
+                                    'กำลังโหลดโมเดล 3 มิติ...',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -881,27 +909,61 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
+              // 4. Quick Actions
+              const Text(
+                'เมนูด่วน',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildQuickAction(
+                      context,
+                      icon: Icons.quiz_rounded,
+                      label: 'ทำแบบทดสอบ',
+                      gradient: AppGradients.primaryBlue.colors,
+                      onTap: () {
+                        widget.onTabSelected?.call(1);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildQuickAction(
+                      context,
+                      icon: Icons.gamepad_rounded,
+                      label: 'มินิเกมฝึกสมอง',
+                      gradient: AppGradients.green.colors,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MiniGamesScreen(user: widget.user),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // 5. Muse Connection Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _museService.isConnected
-                        ? [const Color(0xFF11998e), const Color(0xFF38ef7d)]
-                        : [const Color(0xFF667eea), const Color(0xFF764ba2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                decoration: AppTheme.glassDecoration(
+                  color: _museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue,
+                  opacity: 0.15,
+                  borderColor: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_museService.isConnected ? const Color(0xFF11998e) : const Color(0xFF667eea)).withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
                 ),
                 child: Stack(
                   children: [
@@ -927,12 +989,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Icon(
                                 _museService.isConnected ? Icons.bluetooth_connected_rounded : Icons.bluetooth_rounded,
-                                color: Colors.white,
+                                color: _museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue,
                                 size: 24,
                               ),
                             ),
@@ -943,12 +1005,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   const Text(
                                     'Muse EEG Headband',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     _museService.status,
-                                    style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textGray),
                                   ),
                                 ],
                               ),
@@ -958,10 +1020,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 12,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.primaryGreen,
                                   shape: BoxShape.circle,
                                   boxShadow: [
-                                    BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 8, spreadRadius: 2),
+                                    BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2),
                                   ],
                                 ),
                               ),
@@ -971,9 +1033,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.devices_rounded, size: 14, color: Colors.white.withOpacity(0.7)),
+                              const Icon(Icons.devices_rounded, size: 14, color: AppColors.textGray),
                               const SizedBox(width: 4),
-                              Text('${_museService.deviceName}', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
+                              Text('${_museService.deviceName}', style: const TextStyle(fontSize: 12, color: AppColors.textGray)),
                             ],
                           ),
                         ],
@@ -986,24 +1048,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? null
                                     : (_museService.isConnected ? _disconnectMuse : _scanAndConnect),
                                 icon: _isLoading || _museService.isConnecting
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _museService.isConnected ? AppColors.error : AppColors.primaryBlue))
                                     : Icon(
                                         _museService.isConnected ? Icons.bluetooth_disabled_rounded : Icons.bluetooth_searching_rounded,
                                         size: 18,
-                                        color: _museService.isConnected ? Colors.white : const Color(0xFF667eea),
+                                        color: _museService.isConnected ? AppColors.error : AppColors.primaryBlue,
                                       ),
                                 label: Text(
                                   _museService.isConnecting
                                       ? 'กำลังเชื่อมต่อ...'
                                       : (_museService.isConnected ? 'ยกเลิกเชื่อมต่อ' : 'เชื่อมต่อ Muse'),
                                   style: TextStyle(
-                                    color: _museService.isConnected ? Colors.white : const Color(0xFF667eea),
+                                    color: _museService.isConnected ? AppColors.error : AppColors.primaryBlue,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _museService.isConnected ? Colors.white.withOpacity(0.2) : Colors.white,
+                                  backgroundColor: _museService.isConnected ? AppColors.error.withValues(alpha: 0.15) : AppColors.primaryBlue.withValues(alpha: 0.15),
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   elevation: 0,
@@ -1015,12 +1077,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ElevatedButton(
                                 onPressed: _saveBrainwaveData,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.15),
                                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   elevation: 0,
                                 ),
-                                child: const Text('💾 บันทึก', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                                child: const Text('💾 บันทึก', style: TextStyle(color: AppColors.primaryBlue, fontSize: 13, fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ],
@@ -1036,13 +1098,8 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_museService.isConnected && _museService.latestData == null && !_museService.isSimulating) ...[
                 Container(
                   padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                  decoration: AppTheme.glassDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFE8F0FE)),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 3)),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1053,9 +1110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                              ),
+                              gradient: AppGradients.primaryBlue,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 22),
@@ -1122,19 +1177,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (_museService.packetCount == 0) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF8E1),
+                          decoration: AppTheme.glassDecoration(
+                            color: AppColors.warning,
+                            opacity: 0.12,
+                            borderColor: AppColors.warning.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFFFE082)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: Color(0xFFF9A825), size: 18),
+                              const Icon(Icons.info_outline, color: AppColors.orange, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'รอสัญญาณจากอุปกรณ์... ตรวจสอบว่าสวม Muse แนบหน้าผากแล้ว',
-                                  style: TextStyle(fontSize: 12, color: Colors.orange[900]),
+                                  style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.8)),
                                 ),
                               ),
                             ],
@@ -1143,20 +1199,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       ] else ...[
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0F4FF),
+                          decoration: AppTheme.glassDecoration(
+                            color: AppColors.primaryBlue,
+                            opacity: 0.1,
+                            borderColor: AppColors.primaryBlue.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.science_rounded, color: Color(0xFF667eea), size: 18),
+                              const Icon(Icons.science_rounded, color: AppColors.primaryBlue, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _museService.isWaitingForFFT
                                       ? 'Buffer เต็มแล้ว กำลัง FFT แปลงสัญญาณเป็นคลื่นความถี่...'
                                       : 'ต้องสะสม 256 samples เพื่อให้ FFT วิเคราะห์คลื่นสมองได้แม่นยำ',
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF5A67D8)),
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textDark),
                                 ),
                               ),
                             ],
@@ -1172,13 +1230,8 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_museService.isConnected && _museService.latestData != null) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                  decoration: AppTheme.glassDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.grey.shade100),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1198,11 +1251,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildWaveRow('Delta (0.5-4 Hz)', _museService.latestData!.delta, Colors.purple, 'การนอนหลับลึก'),
-                      _buildWaveRow('Theta (4-8 Hz)', _museService.latestData!.theta, Colors.green, 'ผ่อนคลาย/สมาธิ'),
-                      _buildWaveRow('Alpha (8-12 Hz)', _museService.latestData!.alpha, Colors.blue, 'ตื่นตัว ผ่อนคลาย'),
-                      _buildWaveRow('Beta (12-30 Hz)', _museService.latestData!.beta, Colors.orange, 'คิดวิเคราะห์'),
-                      _buildWaveRow('Gamma (30+ Hz)', _museService.latestData!.gamma, Colors.red, 'สมาธิสูง'),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 16,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _buildCircularWaveIndicator('Delta', _museService.latestData!.delta, const Color(0xFF8B5CF6), 'หลับลึก'),
+                          _buildCircularWaveIndicator('Theta', _museService.latestData!.theta, const Color(0xFF10B981), 'ผ่อนคลาย'),
+                          _buildCircularWaveIndicator('Alpha', _museService.latestData!.alpha, const Color(0xFF3B82F6), 'ตื่นตัว'),
+                          _buildCircularWaveIndicator('Beta', _museService.latestData!.beta, const Color(0xFFF59E0B), 'คิดวิเคราะห์'),
+                          _buildCircularWaveIndicator('Gamma', _museService.latestData!.gamma, const Color(0xFFEF4444), 'สมาธิสูง'),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1216,6 +1276,78 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 16),
               ],
 
+              // 🔬 Research Mode button
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EegResearchScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2E2E3A), Color(0xFF252530)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryBlue.withOpacity(0.2),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF8C85E8), Color(0xFF60DFCD)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.science, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🔬 Research Mode',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'EEG Research-Grade Pipeline • Oscilloscope • PSD • Quality',
+                              style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               if (_isEegCountdownDone && _eegSummaryResult != null) ...[
                 _buildLatestReportBanner(),
                 const SizedBox(height: 16),
@@ -1224,45 +1356,61 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildWaveRow(String name, double value, Color color, String desc) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildCircularWaveIndicator(String name, double value, Color color, String desc) {
+    return Container(
+      width: 100,
+      padding: const EdgeInsets.all(12),
+      decoration: AppTheme.glassDecoration(
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+          const SizedBox(height: 12),
+          Stack(
+            alignment: Alignment.center,
             children: [
               SizedBox(
-                width: 120,
-                child: Text(name, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: value / 100,
-                    backgroundColor: color.withOpacity(0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                    minHeight: 8,
-                  ),
+                width: 60,
+                height: 60,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: value / 100),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, val, _) {
+                    return CircularProgressIndicator(
+                      value: val,
+                      strokeWidth: 6,
+                      backgroundColor: color.withOpacity(0.15),
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                      strokeCap: StrokeCap.round,
+                    );
+                  },
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 40,
-                child: Text('${value.round()}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color), textAlign: TextAlign.right),
+              Text(
+                '${value.round()}%',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(left: 120),
-            child: Text(desc, style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+          const SizedBox(height: 12),
+          Text(
+            desc,
+            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1272,7 +1420,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildScoreCard(String label, int value, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      decoration: AppTheme.glassDecoration(
+        color: color,
+        opacity: 0.1,
+        borderColor: color.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
           Text('$value%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
@@ -1287,13 +1440,13 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'normal':
         return {'label': 'ปกติ', 'emoji': '😊', 'color': const Color(0xFF4CAF50)};
       case 'mild':
-        return {'label': 'ซึมเศร้าเล็กน้อย', 'emoji': '😐', 'color': const Color(0xFFFFC107)};
+        return {'label': 'ความเครียดเล็กน้อย', 'emoji': '😐', 'color': const Color(0xFFFFC107)};
       case 'moderate':
-        return {'label': 'ซึมเศร้าปานกลาง', 'emoji': '😟', 'color': const Color(0xFFFF9800)};
+        return {'label': 'ความเครียดปานกลาง', 'emoji': '😟', 'color': const Color(0xFFFF9800)};
       case 'high':
-        return {'label': 'ค่อนข้างรุนแรง', 'emoji': '😰', 'color': const Color(0xFFFF5722)};
+        return {'label': 'ความเครียดค่อนข้างรุนแรง', 'emoji': '😰', 'color': const Color(0xFFFF5722)};
       case 'severe':
-        return {'label': 'รุนแรง', 'emoji': '🆘', 'color': const Color(0xFFF44336)};
+        return {'label': 'ความเครียดรุนแรง', 'emoji': '🆘', 'color': const Color(0xFFF44336)};
       default:
         return {'label': 'ยังไม่ได้ทดสอบ', 'emoji': '❓', 'color': Colors.grey};
     }
@@ -1313,14 +1466,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [statusColor.withOpacity(0.08), statusColor.withOpacity(0.03)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: statusColor,
+        opacity: 0.08,
+        borderColor: statusColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1395,17 +1545,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final emotionType = emotion != null ? EmotionType.fromString(emotion.emotionType) : null;
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade200),
+        opacity: 0.45,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1494,17 +1636,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF667eea).withOpacity(0.08),
-            const Color(0xFF764ba2).withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: const Color(0xFF667eea),
+        opacity: 0.08,
+        borderColor: const Color(0xFF667eea).withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF667eea).withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1661,26 +1797,17 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        decoration: AppTheme.glassDecoration(
+          color: gradient[0],
+          opacity: 0.12,
+          borderColor: gradient[0].withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: gradient[0].withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: Colors.white, size: 30),
+            Icon(icon, color: gradient[0], size: 30),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: gradient[0])),
           ],
         ),
       ),
@@ -1696,20 +1823,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: _isEegCountdownRunning
-              ? [const Color(0xFF1a237e).withOpacity(0.1), const Color(0xFF0d47a1).withOpacity(0.05)]
-              : [const Color(0xFF0d47a1).withOpacity(0.08), const Color(0xFF1565c0).withOpacity(0.04)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: const Color(0xFF1a237e),
+        opacity: _isEegCountdownRunning ? 0.1 : 0.08,
+        borderColor: const Color(0xFF1a237e).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _isEegCountdownRunning
-              ? const Color(0xFF1a237e).withOpacity(0.3)
-              : const Color(0xFF0d47a1).withOpacity(0.2),
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1743,7 +1861,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'บันทึกคลื่นสมองเพื่อวิเคราะห์ภาวะซึมเศร้า (qEEG)',
+            'บันทึกคลื่นสมองเพื่อวิเคราะห์ความเครียด (qEEG)',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
           const SizedBox(height: 16),
@@ -1755,8 +1873,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 120, height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: [Color(0xFF1a237e), Color(0xFF0d47a1)]),
-                  boxShadow: [BoxShadow(color: const Color(0xFF1a237e).withOpacity(0.3), blurRadius: 20, spreadRadius: 3)],
+                  color: const Color(0xFF1a237e).withValues(alpha: 0.85),
+                  boxShadow: [BoxShadow(color: const Color(0xFF1a237e).withValues(alpha: 0.2), blurRadius: 20, spreadRadius: 3)],
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1777,7 +1895,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
                 minHeight: 8,
-                backgroundColor: const Color(0xFF1a237e).withOpacity(0.1),
+                backgroundColor: const Color(0xFF1a237e).withValues(alpha: 0.1),
                 valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1a237e)),
               ),
             ),
@@ -1810,7 +1928,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: const Color(0xFF1a237e),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 3,
+                  elevation: 0,
                 ),
               ),
             ),
@@ -1841,16 +1959,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final s = _eegSummaryResult!;
     final riskColor = EegAssessmentService.riskColor(s);
     return Material(
-      color: Colors.white,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: _openLatestReport,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
+          decoration: AppTheme.glassDecoration(
+            color: riskColor,
+            opacity: 0.08,
+            borderColor: riskColor.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: riskColor.withValues(alpha: 0.4)),
           ),
           child: Row(
             children: [
@@ -1861,14 +1981,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'ใบสรุปประเมินภาวะซึมเศร้า (qEEG)',
+                      'ใบสรุปประเมินความเครียด (qEEG)',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     Text(
                       s['riskLevel'] as String? ?? '',
                       style: TextStyle(color: riskColor, fontWeight: FontWeight.w600),
                     ),
-                    Text(
+                    const Text(
                       'แตะเพื่อเปิดใบสรุปฉบับเต็ม',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                     ),
@@ -1882,5 +2002,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
-
+} // End of _HomeScreenState
