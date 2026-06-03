@@ -95,6 +95,12 @@ class AppGradients {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static const LinearGradient glassBackgroundGradient = LinearGradient(
+    colors: [Color(0xFFEBF2FA), Color(0xFFFAFDFF), Color(0xFFF4F7F6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
 
 class AppTextStyles {
@@ -271,9 +277,34 @@ class AppTheme {
 
   static List<BoxShadow> get coloredShadow => [
     BoxShadow(
-      color: AppColors.primaryBlue.withOpacity(0.2),
+      color: AppColors.primaryBlue.withValues(alpha: 0.2),
       blurRadius: 20,
       offset: const Offset(0, 8),
     ),
   ];
+
+  static List<BoxShadow> get glassShadow => [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.03),
+      blurRadius: 20,
+      offset: const Offset(0, 6),
+    ),
+  ];
+
+  static BoxDecoration glassDecoration({
+    BorderRadiusGeometry? borderRadius,
+    Color? color,
+    double opacity = 0.55,
+    Color? borderColor,
+  }) {
+    return BoxDecoration(
+      color: (color ?? Colors.white).withValues(alpha: opacity),
+      borderRadius: borderRadius ?? BorderRadius.circular(24),
+      border: Border.all(
+        color: (borderColor ?? Colors.white).withValues(alpha: 0.65),
+        width: 1.5,
+      ),
+      boxShadow: glassShadow,
+    );
+  }
 }
