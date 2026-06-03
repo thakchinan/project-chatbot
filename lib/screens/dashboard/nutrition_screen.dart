@@ -54,8 +54,9 @@ class _NutritionScreenState extends State<NutritionScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(BuildContext context) {
     return Padding(

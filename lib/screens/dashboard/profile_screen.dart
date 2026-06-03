@@ -314,8 +314,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildProfileField(
     IconData icon,

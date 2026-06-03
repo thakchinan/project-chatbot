@@ -523,8 +523,9 @@ class _RecommendationScreenState extends State<RecommendationScreen>
               ],
             ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildVoiceListeningBar() {
     return AnimatedBuilder(

@@ -209,8 +209,9 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader() {
     return Padding(

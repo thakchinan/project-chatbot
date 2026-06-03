@@ -15,6 +15,7 @@ import 'eeg_assessment_report_screen.dart';
 import 'eeg_report_history_screen.dart';
 import 'settings_screen.dart';
 import 'mini_games_screen.dart';
+import 'weekly_report_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -55,6 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Accumulated EEG data during countdown
   final List<Map<String, double>> _eegSamples = [];
+
+  // SOS Hold State
+  bool _isSosHolding = false;
+  double _sosProgress = 0.0;
+  Timer? _sosTimer;
 
 
   @override
@@ -257,6 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _emotionService.dispose();
     _eegCountdownTimer?.cancel();
     _eegSampleTimer?.cancel();
+    _sosTimer?.cancel();
 
     _testResultSub?.cancel();
     _brainwaveSub?.cancel();
@@ -700,6 +707,120 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // === SOS Hold-to-Trigger Methods ===
+
+  void _startSosHold() {
+    setState(() {
+      _isSosHolding = true;
+      _sosProgress = 0.0;
+    });
+
+    const totalMs = 3000;
+    const intervalMs = 50;
+    const increment = intervalMs / totalMs;
+
+    _sosTimer = Timer.periodic(const Duration(milliseconds: intervalMs), (timer) {
+      if (!mounted) { timer.cancel(); return; }
+      setState(() {
+        _sosProgress += increment;
+      });
+      if (_sosProgress >= 1.0) {
+        timer.cancel();
+        _triggerSos();
+      }
+    });
+  }
+
+  void _cancelSosHold() {
+    _sosTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _isSosHolding = false;
+        _sosProgress = 0.0;
+      });
+    }
+  }
+
+  Future<void> _triggerSos() async {
+    setState(() {
+      _isSosHolding = false;
+      _sosProgress = 0.0;
+    });
+
+    bool alertSaved = false;
+    String errorMsg = '';
+
+    try {
+      await SupabaseService.client.from('caregiver_alerts').insert({
+        'user_id': widget.user.id,
+        'level': 'high',
+        'title': 'ขอความช่วยเหลือด่วน (SOS)',
+        'message': 'ผู้สูงอายุกดปุ่มขอความช่วยเหลือฉุกเฉินบนหน้าจอหลัก โปรดติดต่อกลับทันที',
+        'source': 'sos_button',
+      });
+      alertSaved = true;
+      debugPrint('✅ SOS alert saved to database');
+    } catch (e) {
+      errorMsg = e.toString();
+      debugPrint('❌ SOS alert save failed: $e');
+    }
+
+    // Send FCM push (best-effort, don't block on failure)
+    if (alertSaved) {
+      try {
+        await ApiService.sendFCMPushNotification(
+          widget.user.id,
+          '🆘 แจ้งเตือนฉุกเฉิน!',
+          'ผู้สูงอายุกดปุ่มขอความช่วยเหลือฉุกเฉิน โปรดติดต่อกลับทันที',
+        );
+      } catch (e) {
+        debugPrint('⚠️ FCM push failed (non-critical): $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(
+              alertSaved ? Icons.warning_amber_rounded : Icons.error_rounded,
+              color: alertSaved ? Colors.orange : Colors.red,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                alertSaved ? 'แจ้งเหตุฉุกเฉินแล้ว' : 'ส่งไม่สำเร็จ',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          alertSaved
+              ? 'ระบบได้ส่งการแจ้งเตือนไปยังผู้ดูแลของคุณเรียบร้อยแล้ว กรุณารอสักครู่ ผู้ดูแลกำลังติดต่อกลับ'
+              : 'ไม่สามารถส่งการแจ้งเตือนได้ กรุณาลองใหม่อีกครั้ง หรือโทรขอความช่วยเหลือที่สายด่วน 1669\n\n($errorMsg)',
+          style: const TextStyle(height: 1.5),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: alertSaved ? Colors.redAccent : AppColors.primaryBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text('ตกลง', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -815,6 +936,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+              // 0. SOS Emergency Button
+              _buildSOSCard(),
+              const SizedBox(height: 14),
+
+              // 0.5 AI Mental Health Prediction
+              _buildAIPredictionCard(),
+              const SizedBox(height: 20),
+
               // 1. Health Summary
               _buildHealthSummaryCard(),
               const SizedBox(height: 24),
@@ -1998,6 +2127,179 @@ class _HomeScreenState extends State<HomeScreen> {
               const Icon(Icons.chevron_right),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  // === SOS Card Widget ===
+  Widget _buildSOSCard() {
+    return GestureDetector(
+      onLongPressStart: (_) => _startSosHold(),
+      onLongPressEnd: (_) => _cancelSosHold(),
+      onLongPressCancel: _cancelSosHold,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: _isSosHolding
+                ? const [Color(0xFFB71C1C), Color(0xFFD32F2F)]
+                : const [Color(0xFFE53935), Color(0xFFFF7043)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE53935).withOpacity(_isSosHolding ? 0.5 : 0.3),
+              blurRadius: _isSosHolding ? 24 : 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Text(
+                    'SOS',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ขอความช่วยเหลือด่วน',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'กดค้าง 3 วินาทีเพื่อเรียกผู้ดูแล',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.85),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (_isSosHolding) ...[
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: _sosProgress,
+                  minHeight: 8,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${(3 - (_sosProgress * 3)).ceil()} วินาที...',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // === AI Prediction Card Widget ===
+  Widget _buildAIPredictionCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WeeklyReportScreen(user: widget.user),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF5C6BC0), Color(0xFF7E57C2)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF5C6BC0).withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'พยากรณ์สุขภาพจิต (AI)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'วิเคราะห์ความเสี่ยงล่วงหน้า 14 วัน',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white.withOpacity(0.7),
+              size: 18,
+            ),
+          ],
         ),
       ),
     );

@@ -183,8 +183,9 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTestTab() {
     return SingleChildScrollView(

@@ -165,9 +165,16 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
           final contacts = ((snapshot.data?['contacts'] as List?) ?? const []).cast<dynamic>();
           final highAlerts = alerts.where((a) => a['level'] == 'high').length;
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
+          return RefreshIndicator(
+            onRefresh: () async {
+              setState(() {
+                _summaryFuture = _loadSummary();
+              });
+              await _summaryFuture;
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
               _hero(highAlerts),
               const SizedBox(height: 16),
               if (snapshot.connectionState != ConnectionState.done)
@@ -248,6 +255,7 @@ class _CaretakerScreenState extends State<CaretakerScreen> {
                 ),
               ],
             ],
+            ),
           );
         },
       ),
