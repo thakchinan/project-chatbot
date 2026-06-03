@@ -112,7 +112,7 @@ class QualityMeter extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                '${score.toStringAsFixed(0)}',
+                score.toStringAsFixed(0),
                 style: TextStyle(
                   color: level.color,
                   fontSize: 20,
@@ -272,7 +272,7 @@ class QualityMeter extends StatelessWidget {
                 SizedBox(
                   width: 35,
                   child: Text(
-                    '${snr.toStringAsFixed(1)}',
+                    snr.toStringAsFixed(1),
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
@@ -293,17 +293,13 @@ class QualityMeter extends StatelessWidget {
     final rate = quality.overallArtifactRate;
     final percent = (rate * 100).clamp(0, 100);
     Color barColor;
-    String label;
 
     if (rate < 0.10) {
       barColor = const Color(0xFF2ECC71);
-      label = 'ดี (<10%)';
     } else if (rate < 0.30) {
       barColor = const Color(0xFFF39C12);
-      label = 'พอใช้ (10-30%)';
     } else {
       barColor = const Color(0xFFE74C3C);
-      label = 'แย่ (>30%)';
     }
 
     return Row(

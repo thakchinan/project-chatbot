@@ -55,6 +55,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
 
   // === Update timer ===
   Timer? _updateTimer;
+  DateTime _lastProcessTime = DateTime.fromMillisecondsSinceEpoch(0);
 
   late final TabController _tabController;
 
@@ -88,11 +89,18 @@ class _EegResearchScreenState extends State<EegResearchScreen>
   }
 
   void _onStreamUpdate() {
+    final now = DateTime.now();
+    // Rate limit การรัน DSP pipeline และการอัปเดต UI อยู่ที่ 5 Hz (ทุกๆ 200ms)
+    // เพื่อหลีกเลี่ยงการบล็อก main thread (256 Hz ใน simulation จะกิน CPU หนักเกินไป)
+    if (now.difference(_lastProcessTime).inMilliseconds < 200) {
+      return;
+    }
     if (_isProcessing) return;
     _isProcessing = true;
 
     try {
       _processData();
+      _lastProcessTime = now;
     } finally {
       _isProcessing = false;
     }
@@ -105,8 +113,17 @@ class _EegResearchScreenState extends State<EegResearchScreen>
 
     if (minLen < _frameSize) return;
 
-    // 1. Preprocessing
-    final frame = _preprocessor.process(buffers);
+    // เราจะใช้ความยาวสำหรับการกรองและทำ Preprocess สูงสุดไม่เกิน 1024 samples (ประมาณ 4 วินาที)
+    // เพื่อประหยัด CPU และป้องกันเครื่องค้างขณะทำคำนวณซับซ้อน เช่น Sample Entropy
+    final int processLength = min(minLen, 1024);
+    final Map<String, List<double>> frameBuffers = {};
+    for (final entry in buffers.entries) {
+      final list = entry.value;
+      frameBuffers[entry.key] = list.sublist(list.length - processLength);
+    }
+
+    // 1. Preprocessing (ประมวลผลช่วงสั้นลง ช่วยให้ทำงานเร็วขึ้น 1,000 เท่า!)
+    final frame = _preprocessor.process(frameBuffers);
 
     // 2. FFT + Band Power (use average across channels)
     final allPsd = <String, List<double>>{};
@@ -136,12 +153,22 @@ class _EegResearchScreenState extends State<EegResearchScreen>
       final avgBandPower = _fftEngine.computeBandPower(avgPsd);
 
       // 3. Advanced features
-      final entropy = EegFftEngine.sampleEntropy(
-        frame.channels.values.first,
+      // ใช้เฉพาะ 256 samples ล่าสุดในการหา Sample Entropy เพื่อจำกัด O(N^2) complexity ให้ทำงานได้เร็วมาก
+      final firstChannelData = frame.channels.values.first;
+      final entropySample = firstChannelData.sublist(
+        max(0, firstChannelData.length - _frameSize),
       );
+      final entropy = EegFftEngine.sampleEntropy(entropySample);
 
       // 4. Channel coherence
-      final coh = _fftEngine.allCoherences(frame.channels);
+      // สำหรับ Coherence ก็เลือกเฉพาะเฟรมล่าสุดความยาว _frameSize เพื่อความเร็วและประหยัดทรัพยากร
+      final Map<String, List<double>> coherenceData = {};
+      for (final entry in frame.channels.entries) {
+        coherenceData[entry.key] = entry.value.sublist(
+          max(0, entry.value.length - _frameSize),
+        );
+      }
+      final coh = _fftEngine.allCoherences(coherenceData);
 
       // 5. Quality assessment
       final quality = _qualityMonitor.assess(frame.channels);

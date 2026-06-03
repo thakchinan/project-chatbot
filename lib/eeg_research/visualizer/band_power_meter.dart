@@ -133,7 +133,6 @@ class BandPowerMeter extends StatelessWidget {
     final label = def['label'] as String;
     final range = def['range'] as String;
     final color = def['color'] as Color;
-    final desc = def['desc'] as String;
 
     final value = relativePower[key] ?? 0;
     final percent = (value * 100).clamp(0, 100);

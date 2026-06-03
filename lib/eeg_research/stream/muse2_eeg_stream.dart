@@ -46,7 +46,6 @@ class Muse2EegStream extends ChangeNotifier {
   bool _isRunning = false;
   int _totalSamplesReceived = 0;
   int _interpolatedSamples = 0;
-  DateTime? _lastSampleTime;
 
   /// Latest per-channel raw data (µV)
   double _lastTP9 = 0, _lastAF7 = 0, _lastAF8 = 0, _lastTP10 = 0;
@@ -160,7 +159,6 @@ class Muse2EegStream extends ChangeNotifier {
     _tp10Buffer.clear();
     _totalSamplesReceived = 0;
     _interpolatedSamples = 0;
-    _lastSampleTime = null;
     notifyListeners();
   }
 
@@ -216,7 +214,6 @@ class Muse2EegStream extends ChangeNotifier {
     _addToBuffer(_tp10Buffer, sample.tp10);
 
     _totalSamplesReceived++;
-    _lastSampleTime = now;
 
     if (!_sampleController.isClosed) {
       _sampleController.add(sample);

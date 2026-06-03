@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import '../models/quality_metrics.dart';
 import '../spectral/eeg_fft_engine.dart';
 
