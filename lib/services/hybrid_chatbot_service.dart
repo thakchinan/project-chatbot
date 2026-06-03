@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'chatbot_action_service.dart';
 
 class HybridChatbotService {
   // === API Keys ===
@@ -46,6 +47,7 @@ class HybridChatbotService {
 
   /// Core entry point for sending a message using the Hybrid Router
   static Future<Map<String, dynamic>> sendMessage({
+    required int userId,
     required String message,
     List<Map<String, dynamic>>? chatHistory,
     String? base64Image,
@@ -70,6 +72,7 @@ class HybridChatbotService {
     // 2. Dispatch to the appropriate API provider
     if (targetModel == _gpt4oModel) {
       return _callOpenAI(
+        userId: userId,
         model: targetModel,
         message: finalMessage,
         chatHistory: chatHistory,
@@ -77,6 +80,7 @@ class HybridChatbotService {
       );
     } else {
       return _callAnthropic(
+        userId: userId,
         model: targetModel,
         message: finalMessage,
         chatHistory: chatHistory,
@@ -131,6 +135,7 @@ class HybridChatbotService {
   // OpenAI Integration (GPT-4o)
   // ==========================================
   static Future<Map<String, dynamic>> _callOpenAI({
+    required int userId,
     required String model,
     required String message,
     List<Map<String, dynamic>>? chatHistory,
@@ -177,6 +182,7 @@ class HybridChatbotService {
         body: json.encode({
           'model': model,
           'messages': messages,
+          'tools': ChatbotActionService.getTools(),
           'max_tokens': 800,
           'temperature': 0.7,
         }),
@@ -184,9 +190,37 @@ class HybridChatbotService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        final responseMessage = data['choices'][0]['message'];
+        
+        // Handle Tool Calls
+        if (responseMessage['tool_calls'] != null && (responseMessage['tool_calls'] as List).isNotEmpty) {
+          try {
+            final toolCall = responseMessage['tool_calls'][0];
+            final functionName = toolCall['function']['name'];
+            final arguments = json.decode(toolCall['function']['arguments']);
+
+            final actionResult = await ChatbotActionService.executeToolCall(
+              userId: userId,
+              functionName: functionName,
+              arguments: arguments,
+              originalMessage: message,
+            );
+
+            return {
+              'success': true,
+              'bot_response': actionResult.response,
+              'model_used': model,
+              'navigation_target': actionResult.navigationTarget,
+              'action_type': actionResult.actionType,
+            };
+          } catch (e) {
+            debugPrint('Error executing tool call: $e');
+          }
+        }
+
         return {
           'success': true,
-          'bot_response': data['choices'][0]['message']['content'],
+          'bot_response': responseMessage['content'],
           'model_used': model,
         };
       } else {
@@ -201,6 +235,7 @@ class HybridChatbotService {
   // Anthropic Integration (Claude 3.5 Family)
   // ==========================================
   static Future<Map<String, dynamic>> _callAnthropic({
+    required int userId,
     required String model,
     required String message,
     List<Map<String, dynamic>>? chatHistory,
@@ -224,6 +259,16 @@ class HybridChatbotService {
 
       messages.add({'role': 'user', 'content': message});
 
+      // Map OpenAI tools to Anthropic tool schema
+      final anthropicTools = ChatbotActionService.getTools().map((t) {
+        final func = t['function'];
+        return {
+          'name': func['name'],
+          'description': func['description'],
+          'input_schema': func['parameters'],
+        };
+      }).toList();
+
       final response = await http.post(
         Uri.parse(_anthropicBaseUrl),
         headers: {
@@ -235,6 +280,7 @@ class HybridChatbotService {
           'model': model,
           'system': _systemPrompt,
           'messages': messages,
+          'tools': anthropicTools,
           'max_tokens': 800,
           'temperature': 0.7,
         }),
@@ -242,9 +288,37 @@ class HybridChatbotService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        
+        // Handle Tool Calls
+        if (data['stop_reason'] == 'tool_use') {
+          try {
+            final toolUse = (data['content'] as List).firstWhere((c) => c['type'] == 'tool_use');
+            final functionName = toolUse['name'];
+            final arguments = toolUse['input'] as Map<String, dynamic>;
+
+            final actionResult = await ChatbotActionService.executeToolCall(
+              userId: userId,
+              functionName: functionName,
+              arguments: arguments,
+              originalMessage: message,
+            );
+
+            return {
+              'success': true,
+              'bot_response': actionResult.response,
+              'model_used': model,
+              'navigation_target': actionResult.navigationTarget,
+              'action_type': actionResult.actionType,
+            };
+          } catch (e) {
+            debugPrint('Error executing tool call: $e');
+          }
+        }
+
+        final textContent = (data['content'] as List).firstWhere((c) => c['type'] == 'text', orElse: () => {'text': ''});
         return {
           'success': true,
-          'bot_response': data['content'][0]['text'],
+          'bot_response': textContent['text'],
           'model_used': model,
         };
       } else {
