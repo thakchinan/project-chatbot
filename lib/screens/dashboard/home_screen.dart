@@ -703,12 +703,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
 
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -819,17 +823,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 width: double.infinity,
                 height: 240,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
+                decoration: AppTheme.glassDecoration(),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: Stack(
@@ -852,17 +846,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         left: 16,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.85),
+                          decoration: AppTheme.glassDecoration(
+                            opacity: 0.85,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade200),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -973,18 +959,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: _museService.isConnected
-                      ? AppGradients.green
-                      : AppGradients.primaryBlue,
+                decoration: AppTheme.glassDecoration(
+                  color: _museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue,
+                  opacity: 0.15,
+                  borderColor: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withOpacity(0.15),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
                 ),
                 child: Stack(
                   children: [
@@ -1010,12 +989,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Icon(
                                 _museService.isConnected ? Icons.bluetooth_connected_rounded : Icons.bluetooth_rounded,
-                                color: Colors.white,
+                                color: _museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue,
                                 size: 24,
                               ),
                             ),
@@ -1026,12 +1005,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   const Text(
                                     'Muse EEG Headband',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     _museService.status,
-                                    style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textGray),
                                   ),
                                 ],
                               ),
@@ -1041,10 +1020,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 12,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.primaryGreen,
                                   shape: BoxShape.circle,
                                   boxShadow: [
-                                    BoxShadow(color: Colors.white.withOpacity(0.5), blurRadius: 8, spreadRadius: 2),
+                                    BoxShadow(color: AppColors.primaryGreen.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2),
                                   ],
                                 ),
                               ),
@@ -1054,9 +1033,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              Icon(Icons.devices_rounded, size: 14, color: Colors.white.withOpacity(0.7)),
+                              const Icon(Icons.devices_rounded, size: 14, color: AppColors.textGray),
                               const SizedBox(width: 4),
-                              Text('${_museService.deviceName}', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
+                              Text('${_museService.deviceName}', style: const TextStyle(fontSize: 12, color: AppColors.textGray)),
                             ],
                           ),
                         ],
@@ -1069,24 +1048,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? null
                                     : (_museService.isConnected ? _disconnectMuse : _scanAndConnect),
                                 icon: _isLoading || _museService.isConnecting
-                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _museService.isConnected ? AppColors.error : AppColors.primaryBlue))
                                     : Icon(
                                         _museService.isConnected ? Icons.bluetooth_disabled_rounded : Icons.bluetooth_searching_rounded,
                                         size: 18,
-                                        color: _museService.isConnected ? Colors.white : const Color(0xFF667eea),
+                                        color: _museService.isConnected ? AppColors.error : AppColors.primaryBlue,
                                       ),
                                 label: Text(
                                   _museService.isConnecting
                                       ? 'กำลังเชื่อมต่อ...'
                                       : (_museService.isConnected ? 'ยกเลิกเชื่อมต่อ' : 'เชื่อมต่อ Muse'),
                                   style: TextStyle(
-                                    color: _museService.isConnected ? Colors.white : const Color(0xFF667eea),
+                                    color: _museService.isConnected ? AppColors.error : AppColors.primaryBlue,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _museService.isConnected ? Colors.white.withOpacity(0.2) : Colors.white,
+                                  backgroundColor: _museService.isConnected ? AppColors.error.withValues(alpha: 0.15) : AppColors.primaryBlue.withValues(alpha: 0.15),
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   elevation: 0,
@@ -1098,12 +1077,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ElevatedButton(
                                 onPressed: _saveBrainwaveData,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.15),
                                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   elevation: 0,
                                 ),
-                                child: const Text('💾 บันทึก', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                                child: const Text('💾 บันทึก', style: TextStyle(color: AppColors.primaryBlue, fontSize: 13, fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ],
@@ -1119,13 +1098,8 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_museService.isConnected && _museService.latestData == null && !_museService.isSimulating) ...[
                 Container(
                   padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                  decoration: AppTheme.glassDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFE8F0FE)),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 3)),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1203,19 +1177,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (_museService.packetCount == 0) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF8E1),
+                          decoration: AppTheme.glassDecoration(
+                            color: AppColors.warning,
+                            opacity: 0.12,
+                            borderColor: AppColors.warning.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFFFE082)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline, color: Color(0xFFF9A825), size: 18),
+                              const Icon(Icons.info_outline, color: AppColors.orange, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'รอสัญญาณจากอุปกรณ์... ตรวจสอบว่าสวม Muse แนบหน้าผากแล้ว',
-                                  style: TextStyle(fontSize: 12, color: Colors.orange[900]),
+                                  style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.8)),
                                 ),
                               ),
                             ],
@@ -1224,20 +1199,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       ] else ...[
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF0F4FF),
+                          decoration: AppTheme.glassDecoration(
+                            color: AppColors.primaryBlue,
+                            opacity: 0.1,
+                            borderColor: AppColors.primaryBlue.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.science_rounded, color: Color(0xFF667eea), size: 18),
+                              const Icon(Icons.science_rounded, color: AppColors.primaryBlue, size: 18),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _museService.isWaitingForFFT
                                       ? 'Buffer เต็มแล้ว กำลัง FFT แปลงสัญญาณเป็นคลื่นความถี่...'
                                       : 'ต้องสะสม 256 samples เพื่อให้ FFT วิเคราะห์คลื่นสมองได้แม่นยำ',
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFF5A67D8)),
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textDark),
                                 ),
                               ),
                             ],
@@ -1253,13 +1230,8 @@ class _HomeScreenState extends State<HomeScreen> {
               if (_museService.isConnected && _museService.latestData != null) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+                  decoration: AppTheme.glassDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: Colors.grey.shade100),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1384,6 +1356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -1394,16 +1367,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: 100,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1455,7 +1420,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildScoreCard(String label, int value, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      decoration: AppTheme.glassDecoration(
+        color: color,
+        opacity: 0.1,
+        borderColor: color.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
           Text('$value%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
@@ -1496,14 +1466,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [statusColor.withOpacity(0.08), statusColor.withOpacity(0.03)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: statusColor,
+        opacity: 0.08,
+        borderColor: statusColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1578,17 +1545,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final emotionType = emotion != null ? EmotionType.fromString(emotion.emotionType) : null;
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade200),
+        opacity: 0.45,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1677,17 +1636,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF667eea).withOpacity(0.08),
-            const Color(0xFF764ba2).withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: const Color(0xFF667eea),
+        opacity: 0.08,
+        borderColor: const Color(0xFF667eea).withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF667eea).withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1844,26 +1797,17 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        decoration: AppTheme.glassDecoration(
+          color: gradient[0],
+          opacity: 0.12,
+          borderColor: gradient[0].withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: gradient[0].withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: Colors.white, size: 30),
+            Icon(icon, color: gradient[0], size: 30),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: gradient[0])),
           ],
         ),
       ),
@@ -1879,20 +1823,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: _isEegCountdownRunning
-              ? [const Color(0xFF1a237e).withOpacity(0.1), const Color(0xFF0d47a1).withOpacity(0.05)]
-              : [const Color(0xFF0d47a1).withOpacity(0.08), const Color(0xFF1565c0).withOpacity(0.04)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: const Color(0xFF1a237e),
+        opacity: _isEegCountdownRunning ? 0.1 : 0.08,
+        borderColor: const Color(0xFF1a237e).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _isEegCountdownRunning
-              ? const Color(0xFF1a237e).withOpacity(0.3)
-              : const Color(0xFF0d47a1).withOpacity(0.2),
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1938,8 +1873,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 120, height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: [Color(0xFF1a237e), Color(0xFF0d47a1)]),
-                  boxShadow: [BoxShadow(color: const Color(0xFF1a237e).withOpacity(0.3), blurRadius: 20, spreadRadius: 3)],
+                  color: const Color(0xFF1a237e).withValues(alpha: 0.85),
+                  boxShadow: [BoxShadow(color: const Color(0xFF1a237e).withValues(alpha: 0.2), blurRadius: 20, spreadRadius: 3)],
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1960,7 +1895,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
                 minHeight: 8,
-                backgroundColor: const Color(0xFF1a237e).withOpacity(0.1),
+                backgroundColor: const Color(0xFF1a237e).withValues(alpha: 0.1),
                 valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1a237e)),
               ),
             ),
@@ -1993,7 +1928,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: const Color(0xFF1a237e),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 3,
+                  elevation: 0,
                 ),
               ),
             ),
@@ -2024,16 +1959,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final s = _eegSummaryResult!;
     final riskColor = EegAssessmentService.riskColor(s);
     return Material(
-      color: Colors.white,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: _openLatestReport,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
+          decoration: AppTheme.glassDecoration(
+            color: riskColor,
+            opacity: 0.08,
+            borderColor: riskColor.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: riskColor.withOpacity(0.4)),
           ),
           child: Row(
             children: [

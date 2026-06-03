@@ -47,10 +47,14 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Column(
-          children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
             // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -109,8 +113,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                   // Tab bar container
                   Container(
                     margin: const EdgeInsets.only(bottom: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200.withOpacity(0.7),
+                    decoration: AppTheme.glassDecoration(
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: TabBar(
@@ -120,7 +123,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryBlue.withOpacity(0.2),
+                            color: AppColors.primaryBlue.withValues(alpha: 0.2),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -192,35 +195,23 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primaryBlue,
-                  AppColors.primaryBlue.withOpacity(0.8),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+            decoration: AppTheme.glassDecoration(
+              color: AppColors.primaryBlue,
+              opacity: 0.15,
+              borderColor: AppColors.primaryBlue.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryBlue.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             child: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: AppColors.primaryBlue.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.psychology_outlined,
-                    color: Colors.white,
+                    color: AppColors.primaryBlue,
                     size: 40,
                   ),
                 ),
@@ -230,16 +221,16 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: AppColors.textDark,
                     letterSpacing: 2,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                const Text(
                   'แบบประเมินภาวะความเครียดมาตรฐานสากล',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: AppColors.textGray,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -253,17 +244,8 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: AppTheme.glassDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.shade100),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,16 +289,8 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: AppTheme.glassDecoration(
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,8 +334,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
-                elevation: 4,
-                shadowColor: AppColors.primaryBlue.withOpacity(0.4),
+                elevation: 0,
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -440,21 +413,15 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
     final score = latest['stress_score'] ?? latest['depression_score'] ?? 0;
     final display = _getStressDisplay(stressLevel);
 
+    final Color rangeColor = display['color'] as Color;
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            (display['color'] as Color).withOpacity(0.1),
-            (display['color'] as Color).withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: rangeColor,
+        opacity: 0.08,
+        borderColor: rangeColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: (display['color'] as Color).withOpacity(0.3)),
       ),
       child: Column(
         children: [
@@ -482,9 +449,9 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                 height: 70,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: (display['color'] as Color).withOpacity(0.15),
+                  color: rangeColor.withValues(alpha: 0.15),
                   border: Border.all(
-                    color: (display['color'] as Color).withOpacity(0.4),
+                    color: rangeColor.withValues(alpha: 0.4),
                     width: 3,
                   ),
                 ),
@@ -559,17 +526,8 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -607,7 +565,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: (display['color'] as Color).withOpacity(0.1),
+              color: (display['color'] as Color).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(

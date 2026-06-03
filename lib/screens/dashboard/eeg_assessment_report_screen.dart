@@ -3,6 +3,8 @@ import '../../models/user.dart';
 import '../../widgets/eeg_assessment_report_view.dart';
 import 'eeg_report_history_screen.dart';
 
+import '../../theme/app_theme.dart';
+
 /// แสดงใบสรุป qEEG แบบเต็มหน้าจอ (หลังวัด 90 วินาที หรือจากประวัติ)
 class EegAssessmentReportScreen extends StatelessWidget {
   final User user;
@@ -21,32 +23,26 @@ class EegAssessmentReportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryBlue),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'ใบสรุปประเมินความเครียด',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textDark,
             fontWeight: FontWeight.w700,
             fontSize: 16,
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF0F1B4C),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0F1B4C), Color(0xFF1E3A8A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history_rounded),
+            icon: const Icon(Icons.history_rounded, color: AppColors.primaryBlue),
             tooltip: 'ประวัติใบสรุป',
             onPressed: () {
               Navigator.push(
@@ -59,10 +55,15 @@ class EegAssessmentReportScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: EegAssessmentReportView(
-        summary: summary,
-        user: user,
-        recordedAtOverride: recordedAt,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: EegAssessmentReportView(
+          summary: summary,
+          user: user,
+          recordedAtOverride: recordedAt,
+        ),
       ),
     );
   }

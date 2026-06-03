@@ -323,12 +323,16 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgBlue,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
                   // Clean Header Row
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
@@ -415,16 +419,8 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                           },
                           child: Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                            decoration: AppTheme.glassDecoration(
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Icon(
                               Icons.settings_outlined,
@@ -598,19 +594,12 @@ class _RecommendationScreenState extends State<RecommendationScreen>
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryBlue.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        opacity: 0.75,
       ),
       child: Row(
         children: [
@@ -646,8 +635,9 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.bgBlue.withValues(alpha: 0.5),
+              decoration: AppTheme.glassDecoration(
+                color: AppColors.bgBlue,
+                opacity: 0.5,
                 borderRadius: BorderRadius.circular(25),
               ),
               child: TextField(
@@ -707,34 +697,27 @@ class _RecommendationScreenState extends State<RecommendationScreen>
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              decoration: BoxDecoration(
-                gradient: message.isBot ? null : AppGradients.primaryBlue,
-                color: message.isBot ? Colors.white : null,
-                borderRadius: BorderRadius.circular(24).copyWith(
-                  bottomLeft: message.isBot ? const Radius.circular(6) : null,
-                  bottomRight: message.isBot ? null : const Radius.circular(6),
-                ),
-                boxShadow: message.isBot ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ] : [
-                  BoxShadow(
-                    color: AppColors.primaryBlue.withValues(alpha: 0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+              decoration: message.isBot
+                  ? AppTheme.glassDecoration(
+                      borderRadius: BorderRadius.circular(24).copyWith(
+                        bottomLeft: const Radius.circular(6),
+                      ),
+                    )
+                  : AppTheme.glassDecoration(
+                      color: AppColors.primaryBlue,
+                      opacity: 0.18,
+                      borderColor: AppColors.primaryBlue.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(24).copyWith(
+                        bottomRight: const Radius.circular(6),
+                      ),
+                    ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     message.text,
-                    style: TextStyle(
-                      color: message.isBot ? AppColors.textDark : Colors.white,
+                    style: const TextStyle(
+                      color: AppColors.textDark,
                       fontSize: 15,
                       height: 1.5,
                     ),

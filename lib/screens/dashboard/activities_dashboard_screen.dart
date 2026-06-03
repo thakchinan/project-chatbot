@@ -42,15 +42,19 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
                 _buildHeader(),
 
@@ -257,16 +261,8 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
             },
             child: Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+              decoration: AppTheme.glassDecoration(
+                borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
                 Icons.settings_outlined,
@@ -303,20 +299,14 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         onTap: onTap,
         child: Container(
           height: 160,
-          decoration: BoxDecoration(
-            gradient: gradient,
+          decoration: AppTheme.glassDecoration(
+            color: gradient.colors[0],
+            opacity: 0.12,
+            borderColor: gradient.colors[0].withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Stack(
             children: [
-
               Positioned(
                 top: -20,
                 right: -20,
@@ -325,7 +315,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 80,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: gradient.colors[0].withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -337,11 +327,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
+                    color: gradient.colors[0].withValues(alpha: 0.03),
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -352,28 +341,28 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: iconBgColor,
+                        color: gradient.colors[0].withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 26),
+                      child: Icon(icon, color: gradient.colors[0], size: 26),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           label,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: gradient.colors[0],
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           subtitle,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 11,
-                            color: Colors.white.withOpacity(0.75),
+                            color: AppColors.textGray,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -415,16 +404,11 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         child: Container(
           width: double.infinity,
           height: 120,
-          decoration: BoxDecoration(
-            gradient: AppGradients.primaryBlue,
+          decoration: AppTheme.glassDecoration(
+            color: AppColors.primaryBlue,
+            opacity: 0.15,
+            borderColor: AppColors.primaryBlue.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryBlue.withOpacity(0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Stack(
             children: [
@@ -434,7 +418,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   width: 100, height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: AppColors.primaryBlue.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -445,25 +429,25 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     Container(
                       width: 56, height: 56,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.primaryBlue.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 30),
+                      child: const Icon(Icons.psychology_rounded, color: AppColors.primaryBlue, size: 30),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'เก็บข้อมูลอารมณ์',
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textDark),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'บันทึก EEG พร้อมกระตุ้นอารมณ์ 6 แบบ เพื่อวิเคราะห์สุขภาพจิต',
-                            style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85), height: 1.3),
+                            style: TextStyle(fontSize: 12, color: AppColors.textGray, height: 1.3),
                             maxLines: 2, overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -473,10 +457,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.primaryBlue.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primaryBlue, size: 16),
                     ),
                   ],
                 ),
@@ -509,24 +493,14 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         child: Container(
           width: double.infinity,
           height: 120,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFAE96), Color(0xFFFFD4B2)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+          decoration: AppTheme.glassDecoration(
+            color: const Color(0xFFFFAE96),
+            opacity: 0.15,
+            borderColor: const Color(0xFFFFAE96).withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFFFAE96).withOpacity(0.15),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Stack(
             children: [
-
               Positioned(
                 right: -10,
                 top: -10,
@@ -535,7 +509,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 100,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.08),
+                    color: const Color(0xFFFFAE96).withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -547,11 +521,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.06),
+                    color: const Color(0xFFFFAE96).withValues(alpha: 0.03),
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Row(
@@ -560,31 +533,31 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: const Color(0xFFFFAE96).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 30),
+                      child: const Icon(Icons.restaurant_rounded, color: Color(0xFFFFAE96), size: 30),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'โภชนาการคลายเครียด',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.textDark,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             'อาหารและสารอาหารที่ช่วยลดความเครียด พร้อมสรรพคุณ',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.85),
+                              color: AppColors.textGray,
                               height: 1.3,
                             ),
                             maxLines: 2,
@@ -597,10 +570,10 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: const Color(0xFFFFAE96).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFFAE96), size: 16),
                     ),
                   ],
                 ),
@@ -621,16 +594,11 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
+        color: color,
+        opacity: 0.08,
+        borderColor: color.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../services/eeg_assessment_service.dart';
@@ -48,16 +48,25 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text(
-          'ประวัติใบสรุป qEEG',
-          style: GoogleFonts.notoSansThai(color: Colors.white, fontWeight: FontWeight.w600),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryBlue),
+          onPressed: () => Navigator.pop(context),
         ),
-        backgroundColor: const Color(0xFF1a237e),
-        foregroundColor: Colors.white,
+        title: const Text(
+          'ประวัติใบสรุป qEEG',
+          style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700),
+        ),
+        centerTitle: true,
       ),
-      body: _loading
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: _loading
           ? const Center(child: CircularProgressIndicator())
           : _reports.isEmpty
               ? Center(
@@ -98,10 +107,9 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
                           summary['recordedAt'] as String?;
 
                       return Material(
-                        color: Colors.white,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -115,8 +123,15 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
                               ),
                             );
                           },
-                          child: Padding(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
                             padding: const EdgeInsets.all(16),
+                            decoration: AppTheme.glassDecoration(
+                              color: riskColor,
+                              opacity: 0.08,
+                              borderColor: riskColor.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: Row(
                               children: [
                                 Container(
@@ -176,6 +191,7 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
                     },
                   ),
                 ),
+      ),
     );
   }
 }

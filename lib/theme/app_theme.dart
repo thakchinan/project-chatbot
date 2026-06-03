@@ -268,7 +268,7 @@ class AppTheme {
   // Premium subtle shadow for cards and containers
   static List<BoxShadow> get premiumShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.04),
+      color: Colors.black.withValues(alpha: 0.04),
       blurRadius: 24,
       offset: const Offset(0, 8),
       spreadRadius: 0,

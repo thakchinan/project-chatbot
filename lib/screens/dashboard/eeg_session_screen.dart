@@ -649,15 +649,12 @@ class _EegSessionScreenState extends State<EegSessionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFFAFBFF),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(gradient: AppGradients.primaryBlue),
-        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryBlue),
           onPressed: () {
             if (_isRunning) {
               showDialog(
@@ -685,7 +682,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
         ),
         title: const Text(
           'เก็บข้อมูลอารมณ์',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w700),
         ),
         centerTitle: true,
       ),

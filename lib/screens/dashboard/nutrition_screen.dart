@@ -28,10 +28,14 @@ class _NutritionScreenState extends State<NutritionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Column(
-          children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
 
             _buildHeader(context),
 
@@ -116,8 +120,7 @@ class _NutritionScreenState extends State<NutritionScreen>
   Widget _buildTabBar() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200.withOpacity(0.7),
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
@@ -129,7 +132,7 @@ class _NutritionScreenState extends State<NutritionScreen>
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: AppColors.orange.withOpacity(0.2),
+              color: AppColors.orange.withValues(alpha: 0.2),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -372,14 +375,11 @@ class _NutritionScreenState extends State<NutritionScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [gradientColors[0].withOpacity(0.12), gradientColors[1].withOpacity(0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      decoration: AppTheme.glassDecoration(
+        color: gradientColors[0],
+        opacity: 0.08,
+        borderColor: gradientColors[0].withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: gradientColors[0].withOpacity(0.2)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,7 +388,9 @@ class _NutritionScreenState extends State<NutritionScreen>
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: gradientColors),
+              gradient: LinearGradient(
+                colors: [gradientColors[0].withValues(alpha: 0.8), gradientColors[1].withValues(alpha: 0.8)],
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: Colors.white, size: 22),
@@ -430,22 +432,11 @@ class _NutritionScreenState extends State<NutritionScreen>
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
+        color: isExpanded ? item.color : Colors.white,
+        opacity: isExpanded ? 0.08 : 0.55,
+        borderColor: isExpanded ? item.color.withValues(alpha: 0.45) : Colors.white.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isExpanded ? item.color.withOpacity(0.3) : Colors.transparent,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isExpanded
-                ? item.color.withOpacity(0.12)
-                : Colors.black.withOpacity(0.04),
-            blurRadius: isExpanded ? 16 : 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -469,7 +460,7 @@ class _NutritionScreenState extends State<NutritionScreen>
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                        color: item.color.withOpacity(0.1),
+                        color: item.color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Center(child: Text(item.emoji, style: const TextStyle(fontSize: 28))),
@@ -553,7 +544,7 @@ class _NutritionScreenState extends State<NutritionScreen>
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: item.color.withOpacity(0.06),
+                          color: item.color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -594,16 +585,8 @@ class _NutritionScreenState extends State<NutritionScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,7 +595,7 @@ class _NutritionScreenState extends State<NutritionScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
@@ -632,7 +615,7 @@ class _NutritionScreenState extends State<NutritionScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.08),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -667,16 +650,8 @@ class _NutritionScreenState extends State<NutritionScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      decoration: AppTheme.glassDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -685,7 +660,7 @@ class _NutritionScreenState extends State<NutritionScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(child: Text(emoji, style: const TextStyle(fontSize: 26))),
@@ -706,9 +681,9 @@ class _NutritionScreenState extends State<NutritionScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.1),
+                      color: Colors.amber.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.withOpacity(0.2)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
