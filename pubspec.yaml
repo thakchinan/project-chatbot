@@ -75,6 +75,7 @@ dependencies:
   printing: ^5.14.3
   model_viewer_plus: ^1.10.0
   webview_flutter: ^4.13.1
+  video_player: ^2.9.3
 
 dev_dependencies:
   flutter_test:
@@ -111,6 +112,7 @@ flutter:
   assets:
     - assets/images/
     - assets/models/
+    - assets/videos/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

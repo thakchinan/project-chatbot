@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:video_player/video_player.dart';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/muse_service.dart';
@@ -29,7 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final MuseService _museService = MuseService();
   final EmotionDetectionService _emotionService = EmotionDetectionService();
-  late final WebViewController _videoWebViewController;
+  late final VideoPlayerController _videoController;
   bool _isVideoLoaded = false;
 
   EmotionResult? _pytorchEmotion;
@@ -61,38 +59,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // JavaScript to hide Spline watermark and set transparent bg
-    const splineJS = '''
-      (function() {
-        document.body.style.backgroundColor = 'transparent';
-        function hideWatermark() {
-          var els = document.querySelectorAll('a[href*="spline"], div[class*="watermark"], div[class*="logo"]');
-          els.forEach(function(el) { el.style.display = 'none'; });
-          var allDivs = document.querySelectorAll('div');
-          allDivs.forEach(function(d) {
-            if (d.textContent && d.textContent.includes('Built with Spline')) {
-              d.style.display = 'none';
-            }
-          });
+    // Initialize video player with local asset
+    _videoController = VideoPlayerController.asset('assets/videos/brain_demo.mov')
+      ..setLooping(true)
+      ..setVolume(0)
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() => _isVideoLoaded = true);
+          _videoController.play();
         }
-        hideWatermark();
-        setInterval(hideWatermark, 1000);
-      })();
-    ''';
-
-    _videoWebViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted);
-    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.macOS) {
-      _videoWebViewController.setBackgroundColor(Colors.transparent);
-    }
-    _videoWebViewController
-      ..setNavigationDelegate(NavigationDelegate(
-        onPageFinished: (url) {
-          _videoWebViewController.runJavaScript(splineJS);
-          if (mounted) setState(() => _isVideoLoaded = true);
-        },
-      ))
-      ..loadRequest(Uri.parse('https://my.spline.design/untitled-HfIixx8UIc1mREO9Ims7nA0X/'));
+      });
 
     _museService.addListener(_onMuseDataUpdate);
     _subscribeRealtime();
@@ -263,6 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _museService.removeListener(_onMuseDataUpdate);
     _museService.stopSimulation();
+    _videoController.dispose();
     super.dispose();
   }
 
@@ -819,55 +796,84 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHealthSummaryCard(),
               const SizedBox(height: 24),
 
-              // 3. Clean 3D Brain View (Title text removed as requested)
-              Container(
-                width: double.infinity,
-                height: 240,
-                decoration: AppTheme.glassDecoration(),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+              // Video Brain View — edge-to-edge, no frame
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 220,
                   child: Stack(
                     children: [
-                      // The 3D WebView
+                      // The Video Player — fills entire area
                       Positioned.fill(
-                        child: WebViewWidget(
-                          controller: _videoWebViewController,
-                          gestureRecognizers: {
-                            Factory<OneSequenceGestureRecognizer>(
-                              () => EagerGestureRecognizer(),
+                        child: _isVideoLoaded
+                            ? FittedBox(
+                                fit: BoxFit.cover,
+                                clipBehavior: Clip.hardEdge,
+                                child: SizedBox(
+                                  width: _videoController.value.size.width,
+                                  height: _videoController.value.size.height,
+                                  child: VideoPlayer(_videoController),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+
+                      // Subtle gradient overlay at bottom for depth
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 60,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.15),
+                              ],
                             ),
-                          },
+                          ),
                         ),
                       ),
 
                       // Modern Status Badge
+                      if (_museService.isConnected)
                       Positioned(
-                        top: 16,
-                        left: 16,
+                        top: 12,
+                        left: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: AppTheme.glassDecoration(
-                            opacity: 0.85,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.35),
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 0.5,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                width: 8,
-                                height: 8,
+                                width: 7,
+                                height: 7,
                                 decoration: BoxDecoration(
-                                  color: _museService.isConnected ? Colors.green : Colors.grey,
+                                  color: const Color(0xFF4ADE80),
                                   shape: BoxShape.circle,
+                                  boxShadow: [BoxShadow(color: const Color(0xFF4ADE80).withOpacity(0.6), blurRadius: 6)],
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                _museService.isConnected ? 'เชื่อมต่อแล้ว' : 'สแตนด์บาย',
+                              const Text(
+                                'เชื่อมต่อแล้ว',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.2,
                                 ),
                               ),
                             ],
@@ -875,27 +881,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
 
+                      // Loading overlay
                       if (!_isVideoLoaded)
                         Positioned.fill(
                           child: Container(
-                            color: Colors.white,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  const Color(0xFF1a1a2e),
+                                  const Color(0xFF16213e),
+                                ],
+                              ),
+                            ),
                             child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SizedBox(
-                                    width: 32,
-                                    height: 32,
+                                    width: 28,
+                                    height: 28,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: AppColors.primaryBlue,
+                                      color: Colors.white.withOpacity(0.7),
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 10),
                                   Text(
-                                    'กำลังโหลดโมเดล 3 มิติ...',
+                                    'กำลังโหลดวิดีโอ...',
                                     style: TextStyle(
-                                      color: Colors.grey.shade600,
+                                      color: Colors.white.withOpacity(0.6),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
                                     ),
