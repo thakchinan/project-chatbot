@@ -27,10 +27,6 @@ DECLARE
         'elderly_profiles',
         'emergency_contacts',
         'conversations',
-        'user_knowledge',
-        'chat_context',
-        'user_knowledge_backup',
-        'user_knowledge_id_map',
         -- Tables ที่มี FK ทั้งขาเข้าและขาออก
         'eeg_sessions',
         'brainwave_data',

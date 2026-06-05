@@ -581,6 +581,33 @@ class SupabaseService {
     }
   }
 
+  static Future<void> saveRetrievalLogs({
+    required int messageId,
+    required List<Map<String, dynamic>> searchResults,
+    required String queryText,
+  }) async {
+    try {
+      final List<Map<String, dynamic>> logs = [];
+      for (int i = 0; i < searchResults.length; i++) {
+        final res = searchResults[i];
+        logs.add({
+          'message_id': messageId,
+          'knowledge_id': res['id'],
+          'query_text': queryText,
+          'similarity_score': res['similarity'] ?? 1.0,
+          'rank_order': i + 1,
+          'was_used': true,
+        });
+      }
+      if (logs.isNotEmpty) {
+        await client.from('retrieval_logs').insert(logs);
+        debugPrint('Saved ${logs.length} retrieval logs for message $messageId');
+      }
+    } catch (e) {
+      debugPrint('Error saving retrieval logs: $e');
+    }
+  }
+
   static Future<Map<String, dynamic>> getChatHistory(int userId) async {
     try {
       final response = await client

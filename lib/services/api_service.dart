@@ -148,11 +148,15 @@ class ApiService {
     List<Map<String, dynamic>>? chatHistory,
   }) async {
 
-    await SupabaseService.sendChatMessage(
+    final userMessageResult = await SupabaseService.sendChatMessage(
       userId: userId,
       message: message,
       isBot: false,
     );
+
+    final int? userMessageId = userMessageResult['success'] == true
+        ? userMessageResult['message_id'] as int?
+        : null;
 
     ChatGPTService.setUserId(userId);
 
@@ -160,6 +164,7 @@ class ApiService {
       message: message,
       chatHistory: chatHistory,
       userId: userId,
+      userMessageId: userMessageId,
     );
 
     if (result['success'] == true && result['bot_response'] != null) {

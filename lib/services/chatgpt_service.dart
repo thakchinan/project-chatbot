@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'rag_service.dart';
+import 'supabase_service.dart';
 
 class ChatGPTService {
 
@@ -130,6 +131,7 @@ class ChatGPTService {
     required String message,
     List<Map<String, dynamic>>? chatHistory,
     int? userId,
+    int? userMessageId,
   }) async {
 
     if (_apiKey == 'YOUR_OPENAI_API_KEY' || _apiKey.isEmpty) {
@@ -162,6 +164,14 @@ class ChatGPTService {
 
           for (final r in searchResults) {
             debugPrint('   📖 ${r['title']}');
+          }
+
+          if (userMessageId != null) {
+            SupabaseService.saveRetrievalLogs(
+              messageId: userMessageId,
+              searchResults: searchResults,
+              queryText: message,
+            );
           }
         }
 
