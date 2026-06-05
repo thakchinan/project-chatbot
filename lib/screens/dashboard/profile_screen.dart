@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
-import '../../services/supabase_service.dart';
 import '../auth/welcome_screen.dart';
 import 'edit_profile_screen.dart';
 import 'help_screen.dart';
 import 'settings_screen.dart';
 import 'weekly_report_screen.dart';
-import 'caregiver_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final User user;
@@ -73,49 +71,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (updatedUser != null) {
       setState(() => _currentUser = updatedUser);
       widget.onUserUpdated?.call(updatedUser);
-    }
-  }
-
-  Future<void> _toggleUserRole() async {
-    setState(() => _isLoading = true);
-    final newRole = _currentUser.role == 'caretaker' ? 'user' : 'caretaker';
-    try {
-      final result = await SupabaseService.updateProfile(
-        userId: _currentUser.id,
-        role: newRole,
-      );
-      if (result['success'] == true) {
-        final freshUser = _currentUser.copyWith(role: newRole);
-        setState(() {
-          _currentUser = freshUser;
-        });
-        widget.onUserUpdated?.call(freshUser);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('เปลี่ยนบทบาทเป็น ${_currentUser.role == 'caretaker' ? "ผู้ดูแล" : "ผู้รับการดูแล"} สำเร็จ!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('ไม่สามารถเปลี่ยนบทบาทได้: ${result['message']}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('เกิดข้อผิดพลาด: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -313,13 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildProfileField(Icons.person_outline_rounded, 'ชื่อจริง-นามสกุล', _currentUser.fullName ?? '-'),
                           _buildProfileField(Icons.phone_outlined, 'เบอร์โทรศัพท์', _currentUser.phone ?? '-'),
                           _buildProfileField(Icons.email_outlined, 'อีเมล', _currentUser.email ?? '-'),
-                          _buildProfileField(Icons.cake_outlined, 'วันเกิด', _currentUser.birthDate ?? '-'),
-                          _buildProfileField(
-                            Icons.badge_outlined,
-                            'บทบาทผู้ใช้งาน',
-                            _currentUser.role == 'caretaker' ? 'ผู้ดูแล (Caretaker)' : 'ผู้รับการดูแล (User)',
-                            isLast: true,
-                          ),
+                          _buildProfileField(Icons.cake_outlined, 'วันเกิด', _currentUser.birthDate ?? '-', isLast: true),
                         ],
                       ),
                     ),
@@ -337,28 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                       },
                     ),
-                    if (_currentUser.role == 'caretaker')
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.dashboard_outlined,
-                        label: 'แดชบอร์ดผู้ดูแล (Caretaker)',
-                        color: Colors.purple,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => CaregiverDashboardScreen(user: _currentUser)),
-                          );
-                        },
-                      ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.swap_horiz_rounded,
-                      label: _currentUser.role == 'caretaker'
-                          ? 'เปลี่ยนบทบาทเป็นผู้รับการดูแล (User)'
-                          : 'เปลี่ยนบทบาทเป็นผู้ดูแล (Caretaker)',
-                      color: Colors.teal,
-                      onTap: _toggleUserRole,
-                    ),
+
                     _buildMenuItem(
                       context,
                       icon: Icons.person_outline_rounded,

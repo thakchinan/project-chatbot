@@ -8,9 +8,7 @@ import 'settings_screen.dart';
 import 'mini_games_screen.dart';
 import 'test_screen.dart';
 import 'nutrition_screen.dart';
-import 'caretaker_screen.dart';
 import 'weekly_report_screen.dart';
-import 'caregiver_dashboard_screen.dart';
 
 class RecommendationScreen extends StatefulWidget {
   final User? user;
@@ -386,7 +384,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         'รายละเอียดข้อมูลของ $topic',
         'วิธีอ่านค่าสถิติจาก $topic',
         'ดาวน์โหลดไฟล์ PDF ของ $topic',
-        'ส่ง $topic นี้ให้ผู้ดูแลอย่างไร?'
       ];
     } else if (text.contains('เกม') || text.contains('game') || text.contains('เล่น')) {
       final topic = phrase.isNotEmpty ? phrase : 'เกมเสริมทักษะ';
@@ -395,14 +392,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
         'ประโยชน์ของ $topic ต่อความจำ',
         'คะแนนสถิติสูงสุดในการเล่น $topic',
         'มี $topic แบบอื่นแนะนำอีกไหม?'
-      ];
-    } else if (text.contains('ผู้ดูแล') || text.contains('caretaker') || text.contains('caregiver')) {
-      final topic = phrase.isNotEmpty ? phrase : 'ระบบผู้ดูแล';
-      suggestions = [
-        'วิธีตั้งค่าใช้งาน $topic',
-        'ฟังก์ชันหลักของ $topic มีอะไรบ้าง?',
-        'ส่งข้อความแจ้งเตือนด่วนผ่าน $topic',
-        'เบอร์ติดต่อฉุกเฉินสำหรับ $topic'
       ];
     } else if (phrase.isNotEmpty && phrase.length > 2) {
       suggestions = [
@@ -502,17 +491,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
       title = 'แบบประเมินสุขภาพจิต PHQ-9';
       voiceText = 'กำลังเปิดแบบประเมินสุขภาพจิตพีเอชคิวเก้าค่ะ';
       destinationBuilder = () => TestScreen(user: widget.user);
-    } else if (lowerText.contains('ผู้ดูแล') || lowerText.contains('caretaker') || lowerText.contains('caregiver') || 
-               lowerText.contains('หมอ') || lowerText.contains('แพทย์') || lowerText.contains('ฉุกเฉิน') || lowerText.contains('สายด่วน')) {
-      title = 'ระบบผู้ดูแลและสายด่วนฉุกเฉิน';
-      voiceText = 'กำลังเปิดหน้าผู้ดูแลและสายด่วนฉุกเฉินค่ะ';
-      destinationBuilder = () {
-        if (widget.user != null && widget.user!.role == 'caretaker') {
-          return CaregiverDashboardScreen(user: widget.user!);
-        } else {
-          return const CaretakerScreen();
-        }
-      };
     } else if (lowerText.contains('อาหาร') || lowerText.contains('nutrition') || lowerText.contains('กินอะไร')) {
       title = 'คำแนะนำโภชนาการ';
       voiceText = 'กำลังเปิดหน้าคำแนะนำโภชนาการค่ะ';
@@ -1032,12 +1010,6 @@ class _RecommendationScreenState extends State<RecommendationScreen>
                           dest = MiniGamesScreen(user: widget.user);
                         } else if (message.text.contains('แบบประเมินสุขภาพจิต PHQ-9')) {
                           dest = TestScreen(user: widget.user);
-                        } else if (message.text.contains('ระบบผู้ดูแลและสายด่วนฉุกเฉิน')) {
-                          if (widget.user != null && widget.user!.role == 'caretaker') {
-                            dest = CaregiverDashboardScreen(user: widget.user!);
-                          } else {
-                            dest = const CaretakerScreen();
-                          }
                         } else if (message.text.contains('คำแนะนำโภชนาการ')) {
                           dest = const NutritionScreen();
                         } else if (message.text.contains('รายงานสรุปประจำสัปดาห์')) {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/muse_service.dart';
-import 'caretaker_screen.dart';
 import 'eeg_session_screen.dart';
 import 'mini_games_screen.dart';
 import 'nutrition_screen.dart';
@@ -91,42 +90,19 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                       return Column(
                         children: [
 
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildPremiumCard(
-                                  icon: Icons.people_alt_rounded,
-                                  label: 'ผู้ดูแล',
-                                  subtitle: 'ติดต่อผู้ดูแลของคุณ',
-                                  gradient: AppGradients.primaryBlue,
-                                  iconBgColor: Colors.white.withValues(alpha: 0.2),
-                                  delay: 0,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const CaretakerScreen()),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: _buildPremiumCard(
-                                  icon: Icons.sports_esports_rounded,
-                                  label: 'เกมคลายเครียด',
-                                  subtitle: 'บริหารสมองด้วยมินิเกม',
-                                  gradient: AppGradients.green,
-                                  iconBgColor: Colors.white.withValues(alpha: 0.2),
-                                  delay: 1,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => MiniGamesScreen(user: widget.user)),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
+                          _buildPremiumCard(
+                            icon: Icons.sports_esports_rounded,
+                            label: 'เกมคลายเครียด',
+                            subtitle: 'บริหารสมองด้วยมินิเกม',
+                            gradient: AppGradients.green,
+                            iconBgColor: Colors.white.withValues(alpha: 0.2),
+                            delay: 0,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => MiniGamesScreen(user: widget.user)),
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 14),
