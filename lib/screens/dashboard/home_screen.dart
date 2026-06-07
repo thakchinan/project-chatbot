@@ -30,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late final VideoPlayerController _videoController;
   bool _isVideoLoaded = false;
 
-  EmotionResult? _pytorchEmotion;
   EmotionResult? _tfliteEmotion;
   bool _isDetectingEmotion = false;
   Timer? _emotionDetectionTimer;
@@ -206,11 +205,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _pytorchEmotion = results['pytorch'];
           _tfliteEmotion = results['tflite'];
         });
 
-        final mainResult = results['pytorch'];
+        final mainResult = results['tflite'];
         if (mainResult != null && mainResult.confidence >= EmotionConstants.confidenceThreshold) {
           ApiService.saveEmotionLog(
             userId: widget.user.id,
@@ -324,12 +322,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'gamma': summary['avgGamma'] as double? ?? 0.0,
       };
       final results = await _emotionService.detectFromEEG(sessionEegData);
-      final pytorchResult = results['pytorch'];
-      if (pytorchResult != null) {
-        summary['predictedMentalState'] = pytorchResult.emotionType;
-        summary['predictedMentalStateLabel'] = EmotionType.fromString(pytorchResult.emotionType).label;
-        summary['predictedMentalStateConfidence'] = pytorchResult.confidence;
-      }
       final tfliteResult = results['tflite'];
       if (tfliteResult != null) {
         summary['tfliteMentalState'] = tfliteResult.emotionType;
@@ -1683,42 +1675,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildResponsive((narrow) => narrow
-              ? Column(
-                  children: [
-                    _buildModelPredictionSubcard(
-                      title: 'วิเคราะห์สภาวะจิตใจ',
-                      emotion: _pytorchEmotion,
-                      isPyTorch: true,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildModelPredictionSubcard(
-                      title: 'วิเคราะห์สภาวะอารมณ์',
-                      emotion: _tfliteEmotion,
-                      isPyTorch: false,
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      child: _buildModelPredictionSubcard(
-                        title: 'วิเคราะห์สภาวะจิตใจ',
-                        emotion: _pytorchEmotion,
-                        isPyTorch: true,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildModelPredictionSubcard(
-                        title: 'วิเคราะห์สภาวะอารมณ์',
-                        emotion: _tfliteEmotion,
-                        isPyTorch: false,
-                      ),
-                    ),
-                  ],
-                )),
+          _buildModelPredictionSubcard(
+            title: 'วิเคราะห์สภาวะอารมณ์',
+            emotion: _tfliteEmotion,
+            isPyTorch: false,
+          ),
         ],
       ),
     );

@@ -27,10 +27,6 @@ class EegPdfService {
     final age = EegAssessmentService.ageFromBirthDate(user.birthDate);
     final recordedAtStr = EegAssessmentService.formatDate(s['recordedAt'] as String?);
 
-    final mentalStateLabel = s['predictedMentalStateLabel'] as String?;
-    final confidence = s['predictedMentalStateConfidence'] as double?;
-    final confidencePercent = confidence != null ? ' (${(confidence * 100).toStringAsFixed(0)}%)' : '';
-
     final tfliteLabel = s['tfliteMentalStateLabel'] as String?;
     final tfliteConf = s['tfliteMentalStateConfidence'] as double?;
     final tfliteConfPercent = tfliteConf != null ? ' (${(tfliteConf * 100).toStringAsFixed(0)}%)' : '';
@@ -166,19 +162,6 @@ class EegPdfService {
                   child: _buildMetricBox(
                     font,
                     fontBold,
-                    'การประเมินสภาวะจิตใจ',
-                    mentalStateLabel ?? 'ไม่มีข้อมูล',
-                    confidencePercent.isNotEmpty ? 'มั่นใจ$confidencePercent' : 'สภาวะอารมณ์',
-                    mentalStateLabel == 'สภาวะเป็นลบ'
-                        ? PdfColors.red
-                        : (mentalStateLabel == 'สภาวะเป็นบวก' ? PdfColors.green : PdfColors.blue),
-                  ),
-                ),
-                pw.SizedBox(width: 6),
-                pw.Expanded(
-                  child: _buildMetricBox(
-                    font,
-                    fontBold,
                     'การประเมินสภาวะอารมณ์',
                     tfliteLabel ?? 'ไม่มีข้อมูล',
                     tfliteConfPercent.isNotEmpty ? 'มั่นใจ$tfliteConfPercent' : 'สภาวะอารมณ์',
@@ -300,31 +283,7 @@ class EegPdfService {
             // Clinical Summary
             pw.Text('สรุปความหมายเชิงคลินิก', style: pw.TextStyle(font: fontBold, fontSize: 12, color: PdfColor.fromHex('#0F1B4C'))),
             pw.SizedBox(height: 4),
-            if (mentalStateLabel != null) ...[
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: pw.BoxDecoration(
-                  color: PdfColor.fromHex('#EEF2FF'),
-                  border: pw.Border.all(color: PdfColor.fromHex('#C7D2FE')),
-                  borderRadius: pw.BorderRadius.circular(6),
-                ),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      'การวิเคราะห์สภาวะจิตใจ (Mental State):',
-                      style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromHex('#4F46E5')),
-                    ),
-                    pw.Text(
-                      '$mentalStateLabel$confidencePercent',
-                      style: pw.TextStyle(font: fontBold, fontSize: 9.0, color: PdfColor.fromHex('#0F1B4C')),
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 4),
-            ],
+
             if (tfliteLabel != null) ...[
               pw.Container(
                 width: double.infinity,

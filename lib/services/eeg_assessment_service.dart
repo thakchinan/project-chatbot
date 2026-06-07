@@ -190,26 +190,14 @@ class EegAssessmentService {
 
   static String clinicalSummary(Map<String, dynamic> s) {
     final buf = StringBuffer();
-    final mentalStateLabel = s['predictedMentalStateLabel'] as String?;
-    final confidence = s['predictedMentalStateConfidence'] as double?;
-
     final tfliteLabel = s['tfliteMentalStateLabel'] as String?;
     final tfliteConf = s['tfliteMentalStateConfidence'] as double?;
 
-    if (mentalStateLabel != null || tfliteLabel != null) {
+    if (tfliteLabel != null) {
       buf.write('การวิเคราะห์ด้วย AI บ่งชี้สภาวะอารมณ์: ');
-      if (mentalStateLabel != null) {
-        buf.write('ผลประเมินสภาวะจิตใจบ่งชี้ "$mentalStateLabel"');
-        if (confidence != null) {
-          buf.write(' (มั่นใจ ${(confidence * 100).toStringAsFixed(0)}%)');
-        }
-      }
-      if (tfliteLabel != null) {
-        if (mentalStateLabel != null) buf.write(' และ ');
-        buf.write('ผลประเมินสภาวะอารมณ์บ่งชี้ "$tfliteLabel"');
-        if (tfliteConf != null) {
-          buf.write(' (มั่นใจ ${(tfliteConf * 100).toStringAsFixed(0)}%)');
-        }
+      buf.write('ผลประเมินสภาวะอารมณ์บ่งชี้ "$tfliteLabel"');
+      if (tfliteConf != null) {
+        buf.write(' (มั่นใจ ${(tfliteConf * 100).toStringAsFixed(0)}%)');
       }
       buf.write(' โดยจากการตรวจวิเคราะห์ค่าสถิติ ');
     } else {
@@ -227,7 +215,7 @@ class EegAssessmentService {
     if (aZ.abs() > 1.0) abnormal.add('Alpha');
     if (bZ.abs() > 1.0) abnormal.add('Beta');
 
-    if (mentalStateLabel != null || tfliteLabel != null) {
+    if (tfliteLabel != null) {
       buf.write('พบสัญญาณสมองเบี่ยงเบนในช่วง ');
     }
     buf.write(abnormal.isEmpty ? 'ไม่มี (ปกติ)' : abnormal.join(' และ '));
@@ -249,13 +237,6 @@ class EegAssessmentService {
 
   static List<String> observations(Map<String, dynamic> s) {
     final obs = <String>[];
-    final mentalStateLabel = s['predictedMentalStateLabel'] as String?;
-    final confidence = s['predictedMentalStateConfidence'] as double?;
-    if (mentalStateLabel != null) {
-      final confStr = confidence != null ? ' (ความมั่นใจ ${(confidence * 100).toStringAsFixed(0)}%)' : '';
-      obs.add('ผลประเมินสภาวะจิตใจ: $mentalStateLabel$confStr');
-    }
-
     final tfliteLabel = s['tfliteMentalStateLabel'] as String?;
     final tfliteConf = s['tfliteMentalStateConfidence'] as double?;
     if (tfliteLabel != null) {
@@ -285,14 +266,20 @@ class EegAssessmentService {
   static List<String> recommendations(Map<String, dynamic> s) {
     final recs = <String>[];
     final idx = (s['eegIndex'] as num? ?? 50.0).toDouble();
-    final mentalState = s['predictedMentalState'] as String?;
     final tfliteState = s['tfliteMentalState'] as String?;
 
-    final isNegative = (mentalState != null && (mentalState.toLowerCase() == 'negative' || mentalState.toLowerCase() == 'stressed' || mentalState.toLowerCase() == 'sad' || mentalState.toLowerCase() == 'angry')) ||
-                       (tfliteState != null && (tfliteState.toLowerCase() == 'negative' || tfliteState.toLowerCase() == 'stressed' || tfliteState.toLowerCase() == 'sad' || tfliteState.toLowerCase() == 'angry'));
+    final isNegative = tfliteState != null &&
+        (tfliteState.toLowerCase() == 'negative' ||
+            tfliteState.toLowerCase() == 'stressed' ||
+            tfliteState.toLowerCase() == 'sad' ||
+            tfliteState.toLowerCase() == 'angry');
 
-    final isPositive = (mentalState != null && (mentalState.toLowerCase() == 'positive' || mentalState.toLowerCase() == 'happy' || mentalState.toLowerCase() == 'calm')) ||
-                       (tfliteState != null && (tfliteState.toLowerCase() == 'positive' || tfliteState.toLowerCase() == 'happy' || tfliteState.toLowerCase() == 'calm' || tfliteState.toLowerCase() == 'relaxed' || tfliteState.toLowerCase() == 'focused'));
+    final isPositive = tfliteState != null &&
+        (tfliteState.toLowerCase() == 'positive' ||
+            tfliteState.toLowerCase() == 'happy' ||
+            tfliteState.toLowerCase() == 'calm' ||
+            tfliteState.toLowerCase() == 'relaxed' ||
+            tfliteState.toLowerCase() == 'focused');
 
     if (isNegative) {
       recs.add('แนะนำกิจกรรมผ่อนคลายความเครียด เช่น ฝึกกำหนดลมหายใจช้าๆ หรือนั่งสมาธิ เพื่อปรับสมดุลสภาวะอารมณ์');

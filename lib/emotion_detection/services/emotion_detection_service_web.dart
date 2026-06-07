@@ -56,7 +56,6 @@ class EmotionDetectionService {
   Future<Map<String, EmotionResult>> detectFromEEG(Map<String, double> eegData) async {
     final fallback = _fallbackDetection(eegData);
     return {
-      'pytorch': fallback,
       'tflite': fallback,
     };
   }

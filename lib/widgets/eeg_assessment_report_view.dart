@@ -64,7 +64,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
   }
 
   Future<void> _checkAndPredictMentalState() async {
-    if (_localSummary['predictedMentalStateLabel'] == null || _localSummary['tfliteMentalStateLabel'] == null) {
+    if (_localSummary['tfliteMentalStateLabel'] == null) {
       try {
         final service = EmotionDetectionService();
         await service.loadModel();
@@ -76,15 +76,9 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
           'gamma': (_localSummary['avgGamma'] as num? ?? 0.0).toDouble(),
         };
         final results = await service.detectFromEEG(sessionEegData);
-        final pytorchResult = results['pytorch'];
         final tfliteResult = results['tflite'];
         if (mounted) {
           setState(() {
-            if (pytorchResult != null) {
-              _localSummary['predictedMentalState'] = pytorchResult.emotionType;
-              _localSummary['predictedMentalStateLabel'] = EmotionType.fromString(pytorchResult.emotionType).label;
-              _localSummary['predictedMentalStateConfidence'] = pytorchResult.confidence;
-            }
             if (tfliteResult != null) {
               _localSummary['tfliteMentalState'] = tfliteResult.emotionType;
               _localSummary['tfliteMentalStateLabel'] = EmotionType.fromString(tfliteResult.emotionType).label;
@@ -609,10 +603,6 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
 
   // === Clinical / Observations / Recommendations ===
   Widget _clinicalSection() {
-    final mentalStateLabel = _localSummary['predictedMentalStateLabel'] as String?;
-    final confidence = _localSummary['predictedMentalStateConfidence'] as double?;
-    final confidencePercent = confidence != null ? ' (${(confidence * 100).toStringAsFixed(0)}%)' : '';
-
     final tfliteLabel = _localSummary['tfliteMentalStateLabel'] as String?;
     final tfliteConf = _localSummary['tfliteMentalStateConfidence'] as double?;
     final tfliteConfPercent = tfliteConf != null ? ' (${(tfliteConf * 100).toStringAsFixed(0)}%)' : '';
@@ -621,33 +611,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionTitle(Icons.medical_information_rounded, 'สรุปความหมายเชิงคลินิก'),
         const SizedBox(height: 12),
-        if (mentalStateLabel != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: AppTheme.glassDecoration(
-              color: const Color(0xFF667eea),
-              opacity: 0.08,
-              borderColor: const Color(0xFF667eea).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.emoji_emotions_rounded, color: Color(0xFF667eea), size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'การประเมินสภาวะจิตใจ (Mental State):',
-                  style: _body.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF667eea), fontSize: 11),
-                ),
-                const Spacer(),
-                Text(
-                  '$mentalStateLabel$confidencePercent',
-                  style: _body.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
+
         if (tfliteLabel != null) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
