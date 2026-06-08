@@ -12,7 +12,7 @@ import '../models/emotion_type.dart';
 /// - Input: [1, 988, 1] (988 PSD features)
 /// - Trained on TSception architecture
 class EmotionDetectionService {
-  // --- Model: Original TFLite (3-class: Relaxed/Neutral/Concentrating) ---
+  // --- Model 1: Original TFLite (3-class: Relaxed/Neutral/Concentrating) ---
   Interpreter? _tfliteInterpreter;
 
   List<double>? _scalerMean;
@@ -21,6 +21,15 @@ class EmotionDetectionService {
   // --- TFLite labels (Relaxed / Neutral / Concentrating) ---
   List<String>? _tfliteLabels;
   Map<String, String>? _tfliteIndexToLabel;
+
+  // --- Model 2: New Tsception TFLite (4-class: Angry/Fear / Happy / Relaxed / Sad) ---
+  Interpreter? _tsceptionInterpreter;
+
+  List<double>? _tsceptionScalerMean;
+  List<double>? _tsceptionScalerScale;
+
+  List<String>? _tsceptionLabels;
+  Map<String, String>? _tsceptionIndexToLabel;
 
   bool _isModelLoaded = false;
   String? _lastError;
@@ -41,13 +50,24 @@ class EmotionDetectionService {
         debugPrint('⚠️ Original TFLite model load failed: $e');
       }
 
+      // --- Load new Tsception TFLite model ---
+      try {
+        _tsceptionInterpreter =
+            await Interpreter.fromAsset('models/Tsception.tflite');
+        debugPrint('✅ New Tsception TFLite model loaded successfully');
+      } catch (e) {
+        debugPrint('⚠️ New Tsception TFLite model load failed: $e');
+      }
+
       await _loadScalerParams();
       await _loadTfliteLabels();
+      await _loadTsceptionScalerParams();
+      await _loadTsceptionLabels();
 
-      _isModelLoaded = _tfliteInterpreter != null;
+      _isModelLoaded = _tfliteInterpreter != null || _tsceptionInterpreter != null;
       _lastError = null;
       debugPrint(
-          '✅ Emotion Detection Service ready (Original-TFLite: ${_tfliteInterpreter != null})');
+          '✅ Emotion Detection Service ready (Original-TFLite: ${_tfliteInterpreter != null}, Tsception-TFLite: ${_tsceptionInterpreter != null})');
     } catch (e) {
       _lastError = 'โหลด model ไม่สำเร็จ: $e';
       debugPrint('❌ $_lastError');
@@ -84,6 +104,40 @@ class EmotionDetectionService {
     } catch (e) {
       debugPrint('⚠️ TFLite labels load failed: $e');
       _tfliteLabels = ['Relaxed', 'Neutral', 'Concentrating'];
+    }
+  }
+
+  Future<void> _loadTsceptionScalerParams() async {
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/models/scaler_params_tsception.json');
+      final data = json.decode(jsonStr);
+
+      _tsceptionScalerMean =
+          List<double>.from(data['mean'].map((e) => (e as num).toDouble()));
+      _tsceptionScalerScale =
+          List<double>.from(data['scale'].map((e) => (e as num).toDouble()));
+
+      debugPrint('✅ Tsception Scaler loaded (${_tsceptionScalerMean!.length} features)');
+    } catch (e) {
+      debugPrint('⚠️ Tsception Scaler load failed: $e');
+      _tsceptionScalerMean = _scalerMean;
+      _tsceptionScalerScale = _scalerScale;
+    }
+  }
+
+  Future<void> _loadTsceptionLabels() async {
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/models/emotion_labels_tsception.json');
+      final data = json.decode(jsonStr);
+      _tsceptionLabels = List<String>.from(data['classes']);
+      _tsceptionIndexToLabel =
+          Map<String, String>.from(data['index_to_label']);
+      debugPrint('✅ Tsception labels loaded: $_tsceptionLabels');
+    } catch (e) {
+      debugPrint('⚠️ Tsception labels load failed: $e');
+      _tsceptionLabels = ['Angry/Fear', 'Happy', 'Relaxed', 'Sad'];
     }
   }
 
@@ -167,7 +221,9 @@ class EmotionDetectionService {
   Future<Map<String, EmotionResult>> detectFromEEG(
       Map<String, double> eegData) async {
     EmotionResult tfliteResult;
+    EmotionResult tsceptionResult;
 
+    // Model 1: Original TFLite (3-class)
     try {
       if (_tfliteInterpreter != null) {
         tfliteResult = _predictWithTFLite(eegData);
@@ -179,8 +235,21 @@ class EmotionDetectionService {
       tfliteResult = _fallbackTfliteDetection(eegData);
     }
 
+    // Model 2: New Tsception TFLite (4-class)
+    try {
+      if (_tsceptionInterpreter != null) {
+        tsceptionResult = _predictWithTsception(eegData);
+      } else {
+        tsceptionResult = _fallbackTsceptionDetection(eegData);
+      }
+    } catch (e) {
+      debugPrint('❌ Tsception prediction error: $e');
+      tsceptionResult = _fallbackTsceptionDetection(eegData);
+    }
+
     return {
       'tflite': tfliteResult,
+      'tsception': tsceptionResult,
     };
   }
 
@@ -349,6 +418,144 @@ class EmotionDetectionService {
     );
   }
 
+  // --- Model 2: Tsception prediction (Input shape dynamic: [1, 988, 1] or [1, 988]) ---
+  List<double> _scaleTsceptionFeatures(List<double> features) {
+    if (_tsceptionScalerMean == null || _tsceptionScalerScale == null) return features;
+
+    List<double> scaled = List.filled(features.length, 0.0);
+    for (int i = 0; i < features.length && i < _tsceptionScalerMean!.length; i++) {
+      double scale = _tsceptionScalerScale![i];
+      if (scale == 0) scale = 1.0;
+      scaled[i] = (features[i] - _tsceptionScalerMean![i]) / scale;
+    }
+    return scaled;
+  }
+
+  EmotionResult _predictWithTsception(Map<String, double> eegData) {
+    List<double> features = _generateFeatures(eegData);
+    List<double> scaledFeatures = _scaleTsceptionFeatures(features);
+
+    var inputTensor = _tsceptionInterpreter!.getInputTensors()[0];
+    var inputShape = inputTensor.shape;
+    var input;
+
+    if (inputShape.length == 3) {
+      input = List.generate(
+        1,
+        (_) => List.generate(
+          _numFeatures,
+          (i) => [scaledFeatures[i].isNaN ? 0.0 : scaledFeatures[i]],
+        ),
+      );
+    } else {
+      input = List.generate(
+        1,
+        (_) => List.generate(
+          _numFeatures,
+          (i) => scaledFeatures[i].isNaN ? 0.0 : scaledFeatures[i],
+        ),
+      );
+    }
+
+    var outputTensor = _tsceptionInterpreter!.getOutputTensors()[0];
+    var numClasses = outputTensor.shape[1];
+    var output = List.generate(1, (_) => List.filled(numClasses, 0.0));
+
+    _tsceptionInterpreter!.run(input, output);
+
+    List<double> scores =
+        output[0].map((e) => (e as num).toDouble()).toList();
+
+    // Softmax
+    double sumExp = 0;
+    List<double> expScores = [];
+    for (var s in scores) {
+      double e = _exp(s);
+      expScores.add(e);
+      sumExp += e;
+    }
+    if (sumExp > 0) {
+      scores = expScores.map((e) => e / sumExp).toList();
+    }
+
+    int bestIdx = 0;
+    double bestScore = scores[0];
+    for (int i = 1; i < scores.length; i++) {
+      if (scores[i] > bestScore) {
+        bestScore = scores[i];
+        bestIdx = i;
+      }
+    }
+
+    String emotionLabel = _tsceptionIndexToLabel?[bestIdx.toString()] ??
+        (_tsceptionLabels != null && bestIdx < _tsceptionLabels!.length
+            ? _tsceptionLabels![bestIdx]
+            : 'neutral');
+
+    String mappedEmotion = _mapModelLabel(emotionLabel);
+
+    Map<String, double> allScores = {};
+    for (int i = 0; i < scores.length; i++) {
+      String label = _tsceptionIndexToLabel?[i.toString()] ??
+          (_tsceptionLabels != null && i < _tsceptionLabels!.length
+              ? _tsceptionLabels![i]
+              : 'class_$i');
+      String mapped = _mapModelLabel(label);
+      allScores[mapped] = double.parse(scores[i].toStringAsFixed(4));
+    }
+
+    return EmotionResult(
+      emotionType: mappedEmotion,
+      confidence: bestScore,
+      timestamp: DateTime.now(),
+      allScores: allScores,
+    );
+  }
+
+  EmotionResult _fallbackTsceptionDetection(Map<String, double> eegData) {
+    double alpha = eegData['alpha'] ?? 0;
+    double beta = eegData['beta'] ?? 0;
+    double theta = eegData['theta'] ?? 0;
+    double delta = eegData['delta'] ?? 0;
+    double gamma = eegData['gamma'] ?? 0;
+
+    double total = alpha + beta + theta + delta + gamma;
+    if (total == 0) total = 1;
+
+    double aPct = alpha / total;
+    double bPct = beta / total;
+    double tPct = theta / total;
+    double dPct = delta / total;
+    double gPct = gamma / total;
+
+    Map<String, double> scores = {};
+
+    // Angry/Fear -> Stressed
+    scores['stressed'] = (bPct * 1.0 + gPct * 0.8).clamp(0.0, 1.0);
+    // Happy
+    scores['happy'] = (aPct * 1.2 + tPct * 0.4).clamp(0.0, 1.0);
+    // Relaxed -> Calm
+    scores['calm'] = (aPct * 1.5 + (1 - bPct) * 0.5).clamp(0.0, 1.0);
+    // Sad
+    scores['sad'] = (tPct * 1.0 + dPct * 0.8).clamp(0.0, 1.0);
+
+    double maxScore = scores.values.reduce((a, b) => a > b ? a : b);
+    if (maxScore > 0) {
+      scores = scores.map((k, v) =>
+          MapEntry(k, double.parse((v / maxScore).toStringAsFixed(4))));
+    }
+
+    String emotionType =
+        scores.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+
+    return EmotionResult(
+      emotionType: emotionType,
+      confidence: scores[emotionType] ?? 0.0,
+      timestamp: DateTime.now(),
+      allScores: scores,
+    );
+  }
+
   Future<EmotionResult> detectFromFace(dynamic imageData) async {
     return EmotionResult(
       emotionType: EmotionType.neutral.name,
@@ -370,6 +577,8 @@ class EmotionDetectionService {
   void dispose() {
     _tfliteInterpreter?.close();
     _tfliteInterpreter = null;
+    _tsceptionInterpreter?.close();
+    _tsceptionInterpreter = null;
     _isModelLoaded = false;
   }
 }

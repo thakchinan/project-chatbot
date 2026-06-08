@@ -77,12 +77,18 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
         };
         final results = await service.detectFromEEG(sessionEegData);
         final tfliteResult = results['tflite'];
+        final tsceptionResult = results['tsception'];
         if (mounted) {
           setState(() {
             if (tfliteResult != null) {
               _localSummary['tfliteMentalState'] = tfliteResult.emotionType;
               _localSummary['tfliteMentalStateLabel'] = EmotionType.fromString(tfliteResult.emotionType).label;
               _localSummary['tfliteMentalStateConfidence'] = tfliteResult.confidence;
+            }
+            if (tsceptionResult != null) {
+              _localSummary['tsceptionMentalState'] = tsceptionResult.emotionType;
+              _localSummary['tsceptionMentalStateLabel'] = EmotionType.fromString(tsceptionResult.emotionType).label;
+              _localSummary['tsceptionMentalStateConfidence'] = tsceptionResult.confidence;
             }
           });
         }
@@ -626,12 +632,39 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
                 const Icon(Icons.psychology_rounded, color: Color(0xFF0D47A1), size: 18),
                 const SizedBox(width: 8),
                 Text(
-                  'การประเมินสภาวะอารมณ์ (Emotion State):',
+                  'โมเดลที่ 1 (3 คลาส):',
                   style: _body.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF0D47A1), fontSize: 11),
                 ),
                 const Spacer(),
                 Text(
                   '$tfliteLabel$tfliteConfPercent',
+                  style: _body.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (_localSummary['tsceptionMentalStateLabel'] != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: AppTheme.glassDecoration(
+              color: const Color(0xFF4F46E5),
+              opacity: 0.08,
+              borderColor: const Color(0xFF4F46E5).withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.psychology_rounded, color: Color(0xFF4F46E5), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'โมเดลที่ 2 (4 คลาส):',
+                  style: _body.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF4F46E5), fontSize: 11),
+                ),
+                const Spacer(),
+                Text(
+                  '${_localSummary['tsceptionMentalStateLabel']}${_localSummary['tsceptionMentalStateConfidence'] != null ? ' (${((_localSummary['tsceptionMentalStateConfidence'] as double) * 100).toStringAsFixed(0)}%)' : ''}',
                   style: _body.copyWith(fontWeight: FontWeight.bold, color: AppColors.textDark, fontSize: 11),
                 ),
               ],

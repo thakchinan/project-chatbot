@@ -31,6 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isVideoLoaded = false;
 
   EmotionResult? _tfliteEmotion;
+  EmotionResult? _tsceptionEmotion;
+  String _selectedModel = 'tflite'; // 'tflite' (Model 1) or 'tsception' (Model 2)
   bool _isDetectingEmotion = false;
   Timer? _emotionDetectionTimer;
   bool _isLoading = false;
@@ -206,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _tfliteEmotion = results['tflite'];
+          _tsceptionEmotion = results['tsception'];
         });
 
         final mainResult = results['tflite'];
@@ -215,6 +218,16 @@ class _HomeScreenState extends State<HomeScreen> {
             emotionType: mainResult.emotionType,
             triggerEvent: 'eeg_brainwave',
             intensity: (mainResult.confidence * 10).round(),
+          );
+        }
+
+        final secondResult = results['tsception'];
+        if (secondResult != null && secondResult.confidence >= EmotionConstants.confidenceThreshold) {
+          ApiService.saveEmotionLog(
+            userId: widget.user.id,
+            emotionType: secondResult.emotionType,
+            triggerEvent: 'eeg_brainwave_tsception',
+            intensity: (secondResult.confidence * 10).round(),
           );
         }
       }
@@ -327,6 +340,12 @@ class _HomeScreenState extends State<HomeScreen> {
         summary['tfliteMentalState'] = tfliteResult.emotionType;
         summary['tfliteMentalStateLabel'] = EmotionType.fromString(tfliteResult.emotionType).label;
         summary['tfliteMentalStateConfidence'] = tfliteResult.confidence;
+      }
+      final tsceptionResult = results['tsception'];
+      if (tsceptionResult != null) {
+        summary['tsceptionMentalState'] = tsceptionResult.emotionType;
+        summary['tsceptionMentalStateLabel'] = EmotionType.fromString(tsceptionResult.emotionType).label;
+        summary['tsceptionMentalStateConfidence'] = tsceptionResult.confidence;
       }
     } catch (e) {
       debugPrint('❌ Failed to run session mental state prediction: $e');
@@ -1662,6 +1681,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF667eea)),
               ),
               const Spacer(),
+              // Model Selection Menu
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.tune_rounded, color: Color(0xFF667eea), size: 20),
+                tooltip: 'เลือกโมเดลตรวจจับ',
+                onSelected: (String modelType) {
+                  setState(() {
+                    _selectedModel = modelType;
+                  });
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'tflite',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_rounded,
+                          color: _selectedModel == 'tflite' ? const Color(0xFF667eea) : Colors.transparent,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('โมเดล 3 คลาส (หลัก)', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'tsception',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_rounded,
+                          color: _selectedModel == 'tsception' ? const Color(0xFF667eea) : Colors.transparent,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('โมเดล 4 คลาส (รอง)', style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
               if (_isDetectingEmotion)
                 const SizedBox(
                   width: 16,
@@ -1675,11 +1735,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-          _buildModelPredictionSubcard(
-            title: 'วิเคราะห์สภาวะอารมณ์',
-            emotion: _tfliteEmotion,
-            isPyTorch: false,
-          ),
+          const SizedBox(height: 12),
+          if (_selectedModel == 'tflite')
+            _buildModelPredictionSubcard(
+              title: 'โมเดลที่ 1 (3 คลาส): สงบ / ปกติ / มีสมาธิ',
+              emotion: _tfliteEmotion,
+              isPyTorch: false,
+            )
+          else
+            _buildModelPredictionSubcard(
+              title: 'โมเดลที่ 2 (4 คลาส): โกรธ-กลัว / สุข / สงบ / เศร้า',
+              emotion: _tsceptionEmotion,
+              isPyTorch: true,
+            ),
         ],
       ),
     );

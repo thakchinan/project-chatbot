@@ -57,6 +57,7 @@ class EmotionDetectionService {
     final fallback = _fallbackDetection(eegData);
     return {
       'tflite': fallback,
+      'tsception': fallback,
     };
   }
 
