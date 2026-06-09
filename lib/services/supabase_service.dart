@@ -1266,7 +1266,10 @@ class SupabaseService {
 
       await client.from('activities').delete().eq('user_id', userId);
 
-      await client.from('schedules').delete().eq('user_id', userId);
+      try {
+        await client.from('schedules').delete().eq('user_id', userId);
+      } catch (_) {}
+
 
       final chatMessages = await client
           .from('chat_messages')
