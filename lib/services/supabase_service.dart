@@ -1318,20 +1318,26 @@ class SupabaseService {
     required Map<String, dynamic> reportData,
   }) async {
     try {
-      final eegIndex = (reportData['eegIndex'] as num?)?.toDouble() ?? 0;
-      // Store in eeg_sessions with session_type = 'qeeg_assessment'
-      // Report JSON data goes into 'notes' column
+      final eegIndex = (reportData['eegIndex'] as num?)?.toDouble() ?? 0.0;
+      final riskLevel = reportData['riskLevel'] as String? ?? 'ไม่มีข้อมูล';
+      final riskLevelEn = reportData['riskLevelEn'] as String? ?? 'No Data';
+      final durationSeconds = (reportData['durationSeconds'] as num?)?.toInt() ?? 90;
+      final samplesCollected = (reportData['samplesCollected'] as num?)?.toInt() ?? 0;
+
+      // Clean up report data from non-serializable fields
+      final cleanReportData = Map<String, dynamic>.from(reportData);
+      cleanReportData.remove('riskColor');
+
       final response = await client
-          .from('eeg_sessions')
+          .from('eeg_assessment_reports')
           .insert({
             'user_id': userId,
-            'session_type': 'qeeg_assessment',
-            'duration_seconds': reportData['durationSeconds'] ?? 90,
-            'avg_attention_score': eegIndex,
-            'avg_relaxation_score': (reportData['avgAlpha'] as num?)?.toDouble(),
-            'avg_stress_score': (reportData['avgBeta'] as num?)?.toDouble(),
-            'data_quality_grade': _riskCode(reportData['riskLevelEn'] as String?),
-            'notes': _encodeReportJson(reportData),
+            'eeg_index': eegIndex,
+            'risk_level': riskLevel,
+            'risk_level_en': riskLevelEn,
+            'samples_collected': samplesCollected,
+            'duration_seconds': durationSeconds,
+            'report_data': cleanReportData,
           })
           .select()
           .single();
@@ -1355,23 +1361,23 @@ class SupabaseService {
   }) async {
     try {
       final response = await client
-          .from('eeg_sessions')
+          .from('eeg_assessment_reports')
           .select()
           .eq('user_id', userId)
-          .eq('session_type', 'qeeg_assessment')
-          .order('started_at', ascending: false)
+          .order('recorded_at', ascending: false)
           .limit(limit);
 
-      // Transform to expected format
       final reports = (response as List).map((row) {
-        final reportData = _decodeReportJson(row['notes'] as String?);
         return {
-          ...row,
-          'id': row['session_id'],
-          'eeg_index': row['avg_attention_score'],
-          'risk_level': row['data_quality_grade'],
-          'recorded_at': row['started_at'],
-          'report_data': reportData,
+          'id': row['id'],
+          'user_id': row['user_id'],
+          'eeg_index': row['eeg_index'],
+          'risk_level': row['risk_level'],
+          'risk_level_en': row['risk_level_en'],
+          'samples_collected': row['samples_collected'],
+          'duration_seconds': row['duration_seconds'],
+          'recorded_at': row['recorded_at'],
+          'report_data': row['report_data'],
         };
       }).toList();
 
@@ -1379,7 +1385,7 @@ class SupabaseService {
     } catch (e) {
       return {
         'success': false,
-        'message': 'ไม่สามารถโหลดประวัติใบสรุปได้',
+        'message': 'ไม่สามารถโหลดประวัติใบสรุปได้: $e',
       };
     }
   }
@@ -1387,27 +1393,29 @@ class SupabaseService {
   static Future<Map<String, dynamic>> getEegAssessmentReport(int reportId) async {
     try {
       final response = await client
-          .from('eeg_sessions')
+          .from('eeg_assessment_reports')
           .select()
-          .eq('session_id', reportId)
+          .eq('id', reportId)
           .single();
 
-      final reportData = _decodeReportJson(response['notes'] as String?);
       return {
         'success': true,
         'report': {
-          ...response,
-          'id': response['session_id'],
-          'eeg_index': response['avg_attention_score'],
-          'risk_level': response['data_quality_grade'],
-          'recorded_at': response['started_at'],
-          'report_data': reportData,
+          'id': response['id'],
+          'user_id': response['user_id'],
+          'eeg_index': response['eeg_index'],
+          'risk_level': response['risk_level'],
+          'risk_level_en': response['risk_level_en'],
+          'samples_collected': response['samples_collected'],
+          'duration_seconds': response['duration_seconds'],
+          'recorded_at': response['recorded_at'],
+          'report_data': response['report_data'],
         },
       };
     } catch (e) {
       return {
         'success': false,
-        'message': 'ไม่พบใบสรุป',
+        'message': 'ไม่พบใบสรุป: $e',
       };
     }
   }

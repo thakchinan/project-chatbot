@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/quality_metrics.dart';
+import '../../theme/app_theme.dart';
 
 /// Quality Meter Widget — แสดงคุณภาพสัญญาณ EEG
 ///
@@ -19,17 +20,7 @@ class QualityMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppTheme.glassDecoration(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +33,7 @@ class QualityMeter extends StatelessWidget {
               Text(
                 'Signal Quality',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textDark,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -126,10 +117,10 @@ class QualityMeter extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Research Score',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: AppColors.textGray,
                     fontSize: 11,
                   ),
                 ),
@@ -148,7 +139,7 @@ class QualityMeter extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: score / 100,
-                    backgroundColor: Colors.white.withOpacity(0.05),
+                    backgroundColor: Colors.black.withValues(alpha: 0.03),
                     valueColor: AlwaysStoppedAnimation(level.color),
                     minHeight: 4,
                   ),
@@ -193,15 +184,15 @@ class QualityMeter extends StatelessWidget {
             Text(
               name,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.textDark,
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
               ),
             ),
             Text(
               channelLabels[i],
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
+              style: const TextStyle(
+                color: AppColors.textGray,
                 fontSize: 7,
               ),
             ),
@@ -218,10 +209,10 @@ class QualityMeter extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
+            const Text(
               'SNR',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
+                color: AppColors.textDark,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
@@ -229,8 +220,8 @@ class QualityMeter extends StatelessWidget {
             const Spacer(),
             Text(
               'Avg: ${quality.avgSnrDb.toStringAsFixed(1)} dB',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
+              style: const TextStyle(
+                color: AppColors.textGray,
                 fontSize: 9,
               ),
             ),
@@ -262,7 +253,7 @@ class QualityMeter extends StatelessWidget {
                     borderRadius: BorderRadius.circular(3),
                     child: LinearProgressIndicator(
                       value: (snr / 20).clamp(0, 1),
-                      backgroundColor: Colors.white.withOpacity(0.05),
+                      backgroundColor: Colors.black.withValues(alpha: 0.03),
                       valueColor: AlwaysStoppedAnimation(level.color),
                       minHeight: 5,
                     ),
@@ -274,8 +265,8 @@ class QualityMeter extends StatelessWidget {
                   child: Text(
                     snr.toStringAsFixed(1),
                     textAlign: TextAlign.right,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
+                    style: const TextStyle(
+                      color: AppColors.textGray,
                       fontSize: 9,
                     ),
                   ),
@@ -304,10 +295,10 @@ class QualityMeter extends StatelessWidget {
 
     return Row(
       children: [
-        Text(
+        const Text(
           'Artifact',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: AppColors.textDark,
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
@@ -318,7 +309,7 @@ class QualityMeter extends StatelessWidget {
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
               value: rate.clamp(0, 1),
-              backgroundColor: Colors.white.withOpacity(0.05),
+              backgroundColor: Colors.black.withValues(alpha: 0.03),
               valueColor: AlwaysStoppedAnimation(barColor),
               minHeight: 5,
             ),
@@ -351,10 +342,10 @@ class QualityMeter extends StatelessWidget {
 
     return Row(
       children: [
-        Text(
+        const Text(
           'PSD Stability',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: AppColors.textDark,
             fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
@@ -365,7 +356,7 @@ class QualityMeter extends StatelessWidget {
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
               value: (stability / 100).clamp(0, 1),
-              backgroundColor: Colors.white.withOpacity(0.05),
+              backgroundColor: Colors.black.withValues(alpha: 0.03),
               valueColor: AlwaysStoppedAnimation(color),
               minHeight: 5,
             ),

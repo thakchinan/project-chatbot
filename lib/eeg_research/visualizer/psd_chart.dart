@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
+import '../../theme/app_theme.dart';
 
 /// Power Spectral Density (PSD) Chart
 ///
@@ -47,17 +48,7 @@ class PsdChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppTheme.glassDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -71,7 +62,7 @@ class PsdChart extends StatelessWidget {
                 const Text(
                   'Power Spectrum (PSD)',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textDark,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -126,10 +117,10 @@ class PsdChart extends StatelessWidget {
 
   Widget _buildChart() {
     if (psdCurve.isEmpty) {
-      return Center(
+      return const Center(
         child: Text(
           'รอข้อมูล...',
-          style: TextStyle(color: Colors.white.withOpacity(0.3)),
+          style: TextStyle(color: AppColors.textLight),
         ),
       );
     }
@@ -202,11 +193,11 @@ class PsdChart extends StatelessWidget {
           horizontalInterval: null,
           verticalInterval: 100,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.04),
             strokeWidth: 0.5,
           ),
           getDrawingVerticalLine: (value) => FlLine(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.04),
             strokeWidth: 0.5,
           ),
         ),
@@ -215,7 +206,7 @@ class PsdChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             axisNameWidget: const Text(
               'Hz',
-              style: TextStyle(color: Colors.white38, fontSize: 10),
+              style: TextStyle(color: AppColors.textGray, fontSize: 10),
             ),
             sideTitles: SideTitles(
               showTitles: true,
@@ -228,7 +219,7 @@ class PsdChart extends StatelessWidget {
                     child: Text(
                       '${freq.toInt()}',
                       style: const TextStyle(
-                        color: Colors.white38,
+                        color: AppColors.textGray,
                         fontSize: 9,
                       ),
                     ),
@@ -251,8 +242,8 @@ class PsdChart extends StatelessWidget {
         borderData: FlBorderData(
           show: true,
           border: Border(
-            bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
-            left: BorderSide(color: Colors.white.withOpacity(0.1)),
+            bottom: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
+            left: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
           ),
         ),
         barTouchData: BarTouchData(enabled: false),

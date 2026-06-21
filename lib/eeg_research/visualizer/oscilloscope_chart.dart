@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
+import '../../theme/app_theme.dart';
 
 /// Real-time scrolling oscilloscope สำหรับ EEG time-domain
 ///
@@ -37,17 +38,7 @@ class OscilloscopeChart extends StatelessWidget {
     final channelNames = ['TP9', 'AF7', 'AF8', 'TP10'];
 
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppTheme.glassDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -56,12 +47,12 @@ class OscilloscopeChart extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
               children: [
-                const Icon(Icons.show_chart, color: Color(0xFF00D4AA), size: 18),
+                const Icon(Icons.show_chart, color: AppColors.primaryGreen, size: 18),
                 const SizedBox(width: 8),
                 const Text(
                   'EEG Oscilloscope',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textDark,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -70,13 +61,13 @@ class OscilloscopeChart extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00D4AA).withOpacity(0.15),
+                    color: AppColors.primaryGreen.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '${windowSeconds.toStringAsFixed(0)}s window',
                     style: const TextStyle(
-                      color: Color(0xFF00D4AA),
+                      color: AppColors.primaryGreen,
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                     ),
@@ -158,7 +149,7 @@ class OscilloscopeChart extends StatelessWidget {
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                       ),
                     ),
                   ),
@@ -166,7 +157,7 @@ class OscilloscopeChart extends StatelessWidget {
                     child: Text(
                       'ไม่มีข้อมูล',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.textLight,
                         fontSize: 9,
                       ),
                     ),
@@ -179,7 +170,7 @@ class OscilloscopeChart extends StatelessWidget {
                       drawVerticalLine: false,
                       horizontalInterval: (maxVal - minVal) / 3,
                       getDrawingHorizontalLine: (value) => FlLine(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.04),
                         strokeWidth: 0.5,
                       ),
                     ),
@@ -188,7 +179,7 @@ class OscilloscopeChart extends StatelessWidget {
                       show: true,
                       border: Border(
                         bottom: BorderSide(
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.black.withValues(alpha: 0.06),
                         ),
                       ),
                     ),

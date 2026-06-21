@@ -28,10 +28,10 @@ class EegAssessmentReportView extends StatefulWidget {
   });
 
   @override
-  State<EegAssessmentReportView> createState() => _EegAssessmentReportViewState();
+  State<EegAssessmentReportView> createState() => EegAssessmentReportViewState();
 }
 
-class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
+class EegAssessmentReportViewState extends State<EegAssessmentReportView> {
   final GlobalKey _topoKey = GlobalKey();
   late Map<String, dynamic> _localSummary;
 
@@ -115,7 +115,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
     }
   }
 
-  Future<void> _handlePdfExport(bool isShare) async {
+  Future<void> handlePdfExport(bool isShare) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -761,7 +761,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
     return Row(children: [
       Expanded(
         child: ElevatedButton.icon(
-          onPressed: () => _handlePdfExport(true),
+          onPressed: () => handlePdfExport(true),
           icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 18),
           label: Text('ดาวน์โหลด PDF', style: _body.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
           style: ElevatedButton.styleFrom(
@@ -775,7 +775,7 @@ class _EegAssessmentReportViewState extends State<EegAssessmentReportView> {
       const SizedBox(width: 12),
       Expanded(
         child: ElevatedButton.icon(
-          onPressed: () => _handlePdfExport(false),
+          onPressed: () => handlePdfExport(false),
           icon: const Icon(Icons.print_rounded, color: Colors.white, size: 18),
           label: Text('พิมพ์รายงาน', style: _body.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
           style: ElevatedButton.styleFrom(

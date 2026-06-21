@@ -186,20 +186,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
     _totalGamma += data.gamma;
     _samplesCollected++;
 
-    ApiService.saveMuseBrainwave(
-      userId: widget.user.id,
-      alphaWave: data.alpha,
-      betaWave: data.beta,
-      thetaWave: data.theta,
-      deltaWave: data.delta,
-      gammaWave: data.gamma,
-      attentionScore: data.attention,
-      meditationScore: data.meditation,
-      deviceName: widget.museService.deviceName ?? 'Muse 2',
-      emotionLabel: session['emotion'],
-      activityType: session['activity'],
-      sessionPhase: 'stimulation',
-    );
+
 
     if (mounted) setState(() {});
   }

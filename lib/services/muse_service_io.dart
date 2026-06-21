@@ -18,6 +18,9 @@ class MuseService extends ChangeNotifier {
   StreamSubscription? _connectionSubscription;
   final List<StreamSubscription> _dataSubscriptions = [];
 
+  // Broadcast stream controller for raw EEG channel samples
+  final StreamController<Map<String, List<double>>> _rawEegController = StreamController<Map<String, List<double>>>.broadcast();
+
   bool _isScanning = false;
   bool _isConnected = false;
   bool _isConnecting = false;
@@ -87,6 +90,9 @@ class MuseService extends ChangeNotifier {
   String get status => _status;
   String? get deviceName => _deviceName;
   bool get isMuse2 => _isMuse2;
+
+  // Stream of raw EEG channel samples
+  Stream<Map<String, List<double>>> get rawEegStream => _rawEegController.stream;
 
   String get detectedDeviceType => _isMuse2 ? 'Muse 2' : 'Muse S';
   BrainwaveData? get latestData => _latestData;
@@ -452,12 +458,16 @@ class MuseService extends ChangeNotifier {
 
        if (lowerUuid.contains('273e0003')) {
          _addToWindow(_tp9Window, samples);
+         _rawEegController.add({'TP9': samples});
        } else if (lowerUuid.contains('273e0004')) {
          _addToWindow(_af7Window, samples);
+         _rawEegController.add({'AF7': samples});
        } else if (lowerUuid.contains('273e0005')) {
          _addToWindow(_af8Window, samples);
+         _rawEegController.add({'AF8': samples});
        } else if (lowerUuid.contains('273e0006')) {
          _addToWindow(_tp10Window, samples);
+         _rawEegController.add({'TP10': samples});
        }
 
        _scheduleFFT();
@@ -775,6 +785,7 @@ class MuseService extends ChangeNotifier {
 
     _isDisposed = true;
 
+    _rawEegController.close();
     _fftDelayTimer?.cancel();
     _dataWatchdog?.cancel();
     _scanSubscription?.cancel();

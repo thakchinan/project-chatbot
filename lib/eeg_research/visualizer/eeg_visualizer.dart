@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
 import '../models/quality_metrics.dart';
 import 'oscilloscope_chart.dart';
 import 'psd_chart.dart';
@@ -131,17 +132,7 @@ class EegVisualizer extends StatelessWidget {
 
   Widget _buildCoherenceCard() {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppTheme.glassDecoration(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,7 +144,7 @@ class EegVisualizer extends StatelessWidget {
               Text(
                 'Channel Coherence',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textDark,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -198,7 +189,7 @@ class EegVisualizer extends StatelessWidget {
                     Text(
                       value.toStringAsFixed(2),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textDark,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),

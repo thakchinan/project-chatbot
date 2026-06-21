@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -39,35 +40,39 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFE8F4FD), Colors.white], // Light blue to white gradient
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppGradients.glassBackgroundGradient,
         ),
         child: SafeArea(
           child: FadeTransition(
             opacity: _animation,
             child: Column(
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 60),
 
+                // Clinical App Logo & Header
                 Column(
                   children: [
-                    Text(
-                      'Smart',
-                      style: AppTextStyles.heroTitle.copyWith(
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.15), width: 1.5),
+                      ),
+                      child: Icon(
+                        Icons.psychology_rounded,
+                        size: 52,
                         color: AppColors.primaryBlue,
-                        fontSize: 48,
-                        height: 1.0,
                       ),
                     ),
+                    const SizedBox(height: 18),
                     Text(
-                      'Brain',
+                      'SmartBrain Care',
                       style: AppTextStyles.heroTitle.copyWith(
                         color: AppColors.primaryBlue,
-                        fontSize: 48,
-                        height: 1.0,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
                       ),
                     ),
                   ],
@@ -76,51 +81,61 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                 const SizedBox(height: 8),
 
                 Text(
-                  'Smart Brain Center',
-                  style: AppTextStyles.heroSubtitle.copyWith(
-                    color: AppColors.primaryBlue,
+                  'ระบบติดตามและวิเคราะห์คลื่นสมองส่วนบุคคล',
+                  style: GoogleFonts.prompt(
+                    color: AppColors.textGray,
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 Expanded(
                   flex: 3,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Image.asset(
                       'assets/images/app_icon.png',
                       fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(
+                            Icons.analytics_rounded,
+                            size: 120,
+                            color: AppColors.primaryBlue.withValues(alpha: 0.25),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
-                    'แอปพลิเคชันนี้ช่วยให้ผู้สูงอายุสามารถดูแลสุขภาพสมองและสุข\nภาวะทางอารมณ์ได้โดยสามารถติดตามและตรวจสอบสภาพของ\nตนเองได้อย่างง่ายดาย',
+                    'แอปพลิเคชันช่วยเหลือการวิเคราะห์คลื่นสมองจริง (EEG Telemetry) และประเมินสภาวะทางอารมณ์รายบุคคลอย่างละเอียด เพื่อการมีสุขภาวะทางสมองที่ดีขึ้น',
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.cardSubtitle.copyWith(
+                    style: GoogleFonts.prompt(
                       color: AppColors.textGray,
-                      fontSize: 13,
+                      fontSize: 12.5,
                       height: 1.6,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Column(
                     children: [
-
                       SizedBox(
                         width: double.infinity,
+                        height: 52,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.push(
@@ -131,24 +146,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryBlue,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            elevation: 5, // Added elevation for a subtle shadow
-                            shadowColor: AppColors.primaryBlue.withOpacity(0.3),
                           ),
-                          child: Text(
+                          child: const Text(
                             'เข้าสู่ระบบ',
-                            style: AppTextStyles.buttonText,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.3,
+                            ),
                           ),
                         ),
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
                       SizedBox(
                         width: double.infinity,
+                        height: 52,
                         child: OutlinedButton(
                           onPressed: () {
                             Navigator.push(
@@ -158,15 +176,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primaryBlue,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: AppColors.primaryBlue, width: 2),
+                            side: const BorderSide(color: AppColors.primaryBlue, width: 1.5),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: Text(
-                            'สมัครบัญชี',
-                            style: AppTextStyles.buttonText.copyWith(color: AppColors.primaryBlue),
+                          child: const Text(
+                            'สมัครบัญชีใช้งาน',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.3,
+                            ),
                           ),
                         ),
                       ),

@@ -6,7 +6,7 @@ import 'eeg_report_history_screen.dart';
 import '../../theme/app_theme.dart';
 
 /// แสดงใบสรุป qEEG แบบเต็มหน้าจอ (หลังวัด 90 วินาที หรือจากประวัติ)
-class EegAssessmentReportScreen extends StatelessWidget {
+class EegAssessmentReportScreen extends StatefulWidget {
   final User user;
   final Map<String, dynamic> summary;
   final String? recordedAt;
@@ -21,48 +21,63 @@ class EegAssessmentReportScreen extends StatelessWidget {
   });
 
   @override
+  State<EegAssessmentReportScreen> createState() => _EegAssessmentReportScreenState();
+}
+
+class _EegAssessmentReportScreenState extends State<EegAssessmentReportScreen> {
+  final GlobalKey<EegAssessmentReportViewState> _reportViewKey = GlobalKey<EegAssessmentReportViewState>();
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'ใบสรุปประเมินความเครียด',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history_rounded, color: AppColors.primaryBlue),
-            tooltip: 'ประวัติใบสรุป',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => EegReportHistoryScreen(user: user),
-                ),
-              );
-            },
-          ),
-        ],
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppGradients.glassBackgroundGradient,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppGradients.glassBackgroundGradient,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.primaryBlue),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            'ใบสรุปประเมินความเครียด',
+            style: TextStyle(
+              color: AppColors.textDark,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+          ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.error),
+              tooltip: 'ดาวน์โหลด PDF',
+              onPressed: () {
+                _reportViewKey.currentState?.handlePdfExport(true);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.history_rounded, color: AppColors.primaryBlue),
+              tooltip: 'ประวัติใบสรุป',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EegReportHistoryScreen(user: widget.user),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
-        child: EegAssessmentReportView(
-          summary: summary,
-          user: user,
-          recordedAtOverride: recordedAt,
+        body: EegAssessmentReportView(
+          key: _reportViewKey,
+          summary: widget.summary,
+          user: widget.user,
+          recordedAtOverride: widget.recordedAt,
         ),
       ),
     );

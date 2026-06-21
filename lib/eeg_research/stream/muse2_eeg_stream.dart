@@ -53,6 +53,9 @@ class Muse2EegStream extends ChangeNotifier {
   // Listener callback reference for MuseService
   VoidCallback? _museListener;
 
+  // Subscription to raw EEG channel data
+  StreamSubscription? _rawEegSub;
+
   Muse2EegStream(this._museService);
 
   // ═══════════════════════════════════════════════════════════════
@@ -120,15 +123,54 @@ class Muse2EegStream extends ChangeNotifier {
     _museListener = _onMuseServiceUpdate;
     _museService.addListener(_museListener!);
 
+    // Subscribe to raw EEG stream from MuseService
+    _rawEegSub?.cancel();
+    _rawEegSub = _museService.rawEegStream.listen((channelData) {
+      if (!_isRunning) return;
+
+      channelData.forEach((channel, samples) {
+        List<double> buffer;
+        switch (channel) {
+          case 'TP9':
+            buffer = _tp9Buffer;
+            if (samples.isNotEmpty) _lastTP9 = samples.last;
+            break;
+          case 'AF7':
+            buffer = _af7Buffer;
+            if (samples.isNotEmpty) _lastAF7 = samples.last;
+            break;
+          case 'AF8':
+            buffer = _af8Buffer;
+            if (samples.isNotEmpty) _lastAF8 = samples.last;
+            break;
+          case 'TP10':
+            buffer = _tp10Buffer;
+            if (samples.isNotEmpty) _lastTP10 = samples.last;
+            break;
+          default:
+            return;
+        }
+
+        for (final val in samples) {
+          _addToBuffer(buffer, val);
+          _totalSamplesReceived++;
+        }
+      });
+
+      notifyListeners();
+    });
+
     _connectionController.add(ConnectionState.listening);
     notifyListeners();
-    debugPrint('🔬 Muse2EegStream: Started listening');
+    debugPrint('🔬 Muse2EegStream: Started listening and subscribed to raw EEG stream');
   }
 
   /// หยุดรับข้อมูล
   void stopListening() {
     _isRunning = false;
     _reconnectTimer?.cancel();
+    _rawEegSub?.cancel();
+    _rawEegSub = null;
 
     if (_museListener != null) {
       _museService.removeListener(_museListener!);
@@ -178,6 +220,12 @@ class Muse2EegStream extends ChangeNotifier {
     if (_museService.isConnected) {
       _reconnectAttempt = 0;
       _reconnectTimer?.cancel();
+    }
+
+    // If connected to a real device (not simulating), we rely on rawEegStream
+    // to populate the raw buffers. We only use _processBrainwaveData for simulation.
+    if (!_museService.isSimulating) {
+      return;
     }
 
     // Extract latest data from MuseService
@@ -361,6 +409,7 @@ class Muse2EegStream extends ChangeNotifier {
   void dispose() {
     stopListening();
     stopSimulation();
+    _rawEegSub?.cancel();
     _sampleController.close();
     _connectionController.close();
     _reconnectTimer?.cancel();

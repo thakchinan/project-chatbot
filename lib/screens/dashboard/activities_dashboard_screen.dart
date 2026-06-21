@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/muse_service.dart';
@@ -65,17 +66,22 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'เลือกกิจกรรม',
-                        style: TextStyle(
+                        'เลือกกิจกรรมประเมิน',
+                        style: GoogleFonts.prompt(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.textDark,
+                          letterSpacing: -0.2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'กิจกรรมช่วยคลายเครียดและดูแลสุขภาพจิต',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                        'กิจกรรมจำลองและฝึกบริหารสภาวะจิตเชิงรุก',
+                        style: GoogleFonts.prompt(
+                          fontSize: 12.5,
+                          color: AppColors.textGray,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
                     ],
                   ),
@@ -137,11 +143,12 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'เคล็ดลับสุขภาพจิต',
-                            style: TextStyle(
+                            'คำแนะนำสุขภาพจิต',
+                            style: GoogleFonts.prompt(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textDark,
+                              letterSpacing: -0.2,
                             ),
                           ),
                         ],
@@ -182,48 +189,44 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
       child: Row(
         children: [
+          // Activity Hexagon badge
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primaryBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+            padding: const EdgeInsets.all(12),
+            decoration: AppTheme.glassDecoration(
+              color: AppColors.primaryBlue,
+              opacity: 0.1,
+              borderColor: AppColors.primaryBlue.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: const Icon(
               Icons.grid_view_rounded,
               color: AppColors.primaryBlue,
-              size: 24,
+              size: 26,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'กิจกรรม',
-                  style: TextStyle(
+                Text(
+                  'ศูนย์รวมกิจกรรม',
+                  style: GoogleFonts.prompt(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textDark,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.3,
                   ),
                 ),
                 Text(
-                  'คุณ${widget.user.fullName ?? widget.user.username} • ดูแลสุขภาพจิตกันเถอะ!',
-                  style: const TextStyle(
+                  'คุณ${widget.user.fullName ?? widget.user.username} • บริหารสมองและการควบคุมอารมณ์',
+                  style: GoogleFonts.prompt(
                     fontSize: 12,
                     color: AppColors.textGray,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -240,6 +243,8 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
               padding: const EdgeInsets.all(10),
               decoration: AppTheme.glassDecoration(
                 borderRadius: BorderRadius.circular(20),
+                color: Colors.white,
+                opacity: 0.8,
               ),
               child: const Icon(
                 Icons.settings_outlined,
@@ -262,84 +267,102 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
     required int delay,
     required VoidCallback onTap,
   }) {
+    final cardColor = gradient.colors[0];
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: Duration(milliseconds: 600 + (delay * 150)),
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
         return Transform.scale(
-          scale: 0.8 + (0.2 * value),
+          scale: 0.85 + (0.15 * value),
           child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
         );
       },
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          height: 160,
+          height: 150,
           decoration: AppTheme.glassDecoration(
-            color: gradient.colors[0],
+            color: cardColor,
             opacity: 0.12,
-            borderColor: gradient.colors[0].withValues(alpha: 0.25),
+            borderColor: cardColor.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Stack(
             children: [
-              Positioned(
-                top: -20,
-                right: -20,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: gradient.colors[0].withValues(alpha: 0.05),
-                  ),
+              // Subtle Medical Grid Pattern overlay (Visual effect)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _GridPatternPainter(color: cardColor.withValues(alpha: 0.05)),
                 ),
               ),
               Positioned(
-                bottom: -30,
-                left: -10,
+                top: -15,
+                right: -15,
                 child: Container(
-                  width: 60,
-                  height: 60,
+                  width: 75,
+                  height: 75,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: gradient.colors[0].withValues(alpha: 0.03),
+                    color: cardColor.withValues(alpha: 0.05),
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: gradient.colors[0].withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(icon, color: gradient.colors[0], size: 26),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: cardColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: cardColor.withValues(alpha: 0.3), width: 1),
+                          ),
+                          child: Icon(icon, color: cardColor, size: 24),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: cardColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'TRAINING',
+                            style: GoogleFonts.prompt(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: cardColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           label,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: gradient.colors[0],
+                          style: GoogleFonts.prompt(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w700,
+                            color: cardColor,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           subtitle,
-                          style: const TextStyle(
-                            fontSize: 11,
+                          style: GoogleFonts.prompt(
+                            fontSize: 12,
                             color: AppColors.textGray,
+                            fontWeight: FontWeight.w400,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -355,6 +378,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
       ),
     );
   }
+
   Widget _buildFeaturedEegSessionCard() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
@@ -380,7 +404,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         },
         child: Container(
           width: double.infinity,
-          height: 120,
+          height: 125,
           decoration: AppTheme.glassDecoration(
             color: AppColors.primaryBlue,
             opacity: 0.15,
@@ -389,10 +413,15 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
           ),
           child: Stack(
             children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _GridPatternPainter(color: AppColors.primaryBlue.withValues(alpha: 0.04)),
+                ),
+              ),
               Positioned(
-                right: -10, top: -10,
+                right: -15, top: -15,
                 child: Container(
-                  width: 100, height: 100,
+                  width: 90, height: 90,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.primaryBlue.withValues(alpha: 0.05),
@@ -404,40 +433,64 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                 child: Row(
                   children: [
                     Container(
-                      width: 56, height: 56,
+                      width: 58, height: 58,
                       decoration: BoxDecoration(
                         color: AppColors.primaryBlue.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.25)),
                       ),
-                      child: const Icon(Icons.psychology_rounded, color: AppColors.primaryBlue, size: 30),
+                      child: const Icon(Icons.psychology_rounded, color: AppColors.primaryBlue, size: 28),
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'เก็บข้อมูลอารมณ์',
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                          Row(
+                            children: [
+                              Text(
+                                'บันทึกข้อมูลอารมณ์',
+                                style: GoogleFonts.prompt(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.neonGreen,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'บันทึก EEG พร้อมกระตุ้นอารมณ์ 6 แบบ เพื่อวิเคราะห์สุขภาพจิต',
-                            style: TextStyle(fontSize: 12, color: AppColors.textGray, height: 1.3),
-                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            'เชื่อมต่อเซนเซอร์ EEG เพื่อเริ่มทำการบันทึกและประเมินจิตวิทยาคลินิก',
+                            style: GoogleFonts.prompt(
+                              fontSize: 12,
+                              color: AppColors.textGray,
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryBlue.withValues(alpha: 0.15),
+                      padding: const EdgeInsets.all(10),
+                      decoration: AppTheme.glassDecoration(
                         borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        opacity: 0.8,
                       ),
-                      child: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primaryBlue, size: 16),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primaryBlue, size: 14),
                     ),
                   ],
                 ),
@@ -450,6 +503,7 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
   }
 
   Widget _buildFeaturedNutritionCard() {
+    const nutritionColor = Color(0xFFE27455);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 900),
@@ -469,36 +523,29 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
         },
         child: Container(
           width: double.infinity,
-          height: 120,
+          height: 125,
           decoration: AppTheme.glassDecoration(
-            color: const Color(0xFFFFAE96),
-            opacity: 0.15,
-            borderColor: const Color(0xFFFFAE96).withValues(alpha: 0.3),
+            color: nutritionColor,
+            opacity: 0.12,
+            borderColor: nutritionColor.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Stack(
             children: [
-              Positioned(
-                right: -10,
-                top: -10,
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFFFAE96).withValues(alpha: 0.05),
-                  ),
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _GridPatternPainter(color: nutritionColor.withValues(alpha: 0.04)),
                 ),
               ),
               Positioned(
-                right: 20,
-                bottom: -20,
+                right: -15,
+                top: -15,
                 child: Container(
-                  width: 60,
-                  height: 60,
+                  width: 90,
+                  height: 90,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFFFAE96).withValues(alpha: 0.03),
+                    color: nutritionColor.withValues(alpha: 0.05),
                   ),
                 ),
               ),
@@ -507,32 +554,33 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                 child: Row(
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
+                      width: 58,
+                      height: 58,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFAE96).withValues(alpha: 0.15),
+                        color: nutritionColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: nutritionColor.withValues(alpha: 0.25)),
                       ),
-                      child: const Icon(Icons.restaurant_rounded, color: Color(0xFFFFAE96), size: 30),
+                      child: const Icon(Icons.restaurant_rounded, color: nutritionColor, size: 28),
                     ),
                     const SizedBox(width: 16),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             'โภชนาการคลายเครียด',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
+                            style: GoogleFonts.prompt(
+                              fontSize: 16.5,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textDark,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'อาหารและสารอาหารที่ช่วยลดความเครียด พร้อมสรรพคุณ',
-                            style: TextStyle(
+                            'เลือกรับประทานอาหารที่อุดมสารอาหารบำรุงระบบประสาท',
+                            style: GoogleFonts.prompt(
                               fontSize: 12,
                               color: AppColors.textGray,
                               height: 1.3,
@@ -545,12 +593,13 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFAE96).withValues(alpha: 0.15),
+                      padding: const EdgeInsets.all(10),
+                      decoration: AppTheme.glassDecoration(
                         borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        opacity: 0.8,
                       ),
-                      child: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFFAE96), size: 16),
+                      child: const Icon(Icons.arrow_forward_ios_rounded, color: nutritionColor, size: 14),
                     ),
                   ],
                 ),
@@ -572,21 +621,31 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: AppTheme.glassDecoration(
-        color: color,
-        opacity: 0.08,
-        borderColor: color.withValues(alpha: 0.25),
+        color: Colors.white,
+        opacity: 0.9,
+        borderColor: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         children: [
+          // Left visual indicator tag line
           Container(
-            width: 46,
-            height: 46,
+            width: 4,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -595,18 +654,18 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: GoogleFonts.prompt(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.textDark,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   description,
-                  style: TextStyle(
+                  style: GoogleFonts.prompt(
                     fontSize: 12,
-                    color: Colors.grey[500],
+                    color: AppColors.textGray,
                     height: 1.4,
                   ),
                 ),
@@ -617,4 +676,29 @@ class _ActivitiesDashboardScreenState extends State<ActivitiesDashboardScreen>
       ),
     );
   }
+}
+
+// Simple Painter for medical-grade grid pattern overlay
+class _GridPatternPainter extends CustomPainter {
+  final Color color;
+  _GridPatternPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    const spacing = 15.0;
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

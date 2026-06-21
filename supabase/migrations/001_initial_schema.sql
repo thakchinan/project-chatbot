@@ -170,12 +170,25 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Allow all operations for now (ปรับตามความต้องการ)
 -- สำหรับ development: อนุญาตทุก operations ผ่าน anon key
+DROP POLICY IF EXISTS "Allow all for users" ON users;
 CREATE POLICY "Allow all for users" ON users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for user_settings" ON user_settings;
 CREATE POLICY "Allow all for user_settings" ON user_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for brainwave_data" ON brainwave_data;
 CREATE POLICY "Allow all for brainwave_data" ON brainwave_data FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for test_results" ON test_results;
 CREATE POLICY "Allow all for test_results" ON test_results FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for activities" ON activities;
 CREATE POLICY "Allow all for activities" ON activities FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for schedules" ON schedules;
 CREATE POLICY "Allow all for schedules" ON schedules FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for chat_messages" ON chat_messages;
 CREATE POLICY "Allow all for chat_messages" ON chat_messages FOR ALL USING (true) WITH CHECK (true);
 
 -- ===========================================

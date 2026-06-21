@@ -8,6 +8,7 @@ import 'spectral/eeg_fft_engine.dart';
 import 'quality/eeg_quality_monitor.dart';
 import 'virtual/virtual_channel.dart';
 import 'models/quality_metrics.dart';
+import '../theme/app_theme.dart';
 import 'visualizer/eeg_visualizer.dart';
 
 /// Research Mode Screen — หน้าจอหลักสำหรับ research-grade EEG
@@ -66,7 +67,8 @@ class _EegResearchScreenState extends State<EegResearchScreen>
     _tabController = TabController(length: 3, vsync: this);
 
     // Initialize components
-    _stream = Muse2EegStream(MuseService());
+    final museService = MuseService();
+    _stream = Muse2EegStream(museService);
     _preprocessor = EegPreprocessor(
       notchFrequency: _notchFreq,
     );
@@ -78,6 +80,13 @@ class _EegResearchScreenState extends State<EegResearchScreen>
 
     // Listen to stream updates
     _stream.addListener(_onStreamUpdate);
+
+    // If real device is connected, auto-start listening
+    if (museService.isConnected && !museService.isSimulating) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _startListeningReal();
+      });
+    }
   }
 
   @override
@@ -211,6 +220,22 @@ class _EegResearchScreenState extends State<EegResearchScreen>
     setState(() => _isSimulating = false);
   }
 
+  void _startListeningReal() {
+    _stream.startListening();
+    _updateTimer?.cancel();
+    _updateTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => _onStreamUpdate(),
+    );
+    if (mounted) setState(() {});
+  }
+
+  void _stopListeningReal() {
+    _stream.stopListening();
+    _updateTimer?.cancel();
+    if (mounted) setState(() {});
+  }
+
   void _clearData() {
     _stream.clearBuffers();
     _qualityMonitor.reset();
@@ -226,51 +251,75 @@ class _EegResearchScreenState extends State<EegResearchScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          // Control bar
-          _buildControlBar(),
-          // Tab bar
-          Container(
-            color: const Color(0xFF0D1B2A),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: const Color(0xFF00D4AA),
-              labelColor: const Color(0xFF00D4AA),
-              unselectedLabelColor: Colors.white38,
-              labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              tabs: const [
-                Tab(text: '📊 Dashboard'),
-                Tab(text: '⚙️ Settings'),
-                Tab(text: 'ℹ️ Info'),
-              ],
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppGradients.glassBackgroundGradient,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: _buildAppBar(),
+        body: Column(
+          children: [
+            // Control bar
+            _buildControlBar(),
+            // Tab bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                decoration: AppTheme.glassDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: AppColors.primaryBlue,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicatorPadding: const EdgeInsets.all(3),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: AppColors.textGray,
+                  labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+                  dividerHeight: 0,
+                  tabs: const [
+                    Tab(text: '📊 Dashboard'),
+                    Tab(text: '⚙️ Settings'),
+                    Tab(text: 'ℹ️ Info'),
+                  ],
+                ),
+              ),
             ),
-          ),
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDashboardTab(),
-                _buildSettingsTab(),
-                _buildInfoTab(),
-              ],
+            // Tab content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildDashboardTab(),
+                  _buildSettingsTab(),
+                  _buildInfoTab(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
+        icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textDark, size: 20),
         onPressed: () {
           if (_isSimulating) _stopSimulation();
           Navigator.pop(context);
@@ -295,7 +344,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
               Text(
                 'Research Mode',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textDark,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -303,7 +352,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
               Text(
                 'EEG Research-Grade Pipeline',
                 style: TextStyle(
-                  color: Colors.white38,
+                  color: AppColors.textGray,
                   fontSize: 10,
                 ),
               ),
@@ -349,26 +398,35 @@ class _EegResearchScreenState extends State<EegResearchScreen>
   }
 
   Widget _buildControlBar() {
+    final museService = MuseService();
+    final bool isRealConnected = museService.isConnected && !museService.isSimulating;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: const Color(0xFF0D1B2A),
+      color: Colors.transparent,
       child: Row(
         children: [
           // Start/Stop button
           ElevatedButton.icon(
-            onPressed: _isSimulating ? _stopSimulation : _startSimulation,
+            onPressed: isRealConnected
+                ? (_stream.isRunning ? _stopListeningReal : _startListeningReal)
+                : (_isSimulating ? _stopSimulation : _startSimulation),
             icon: Icon(
-              _isSimulating ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              isRealConnected
+                  ? (_stream.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded)
+                  : (_isSimulating ? Icons.stop_rounded : Icons.play_arrow_rounded),
               size: 18,
             ),
             label: Text(
-              _isSimulating ? 'Stop' : 'Start Simulation',
+              isRealConnected
+                  ? (_stream.isRunning ? 'Pause Real Feed' : 'Resume Real Feed')
+                  : (_isSimulating ? 'Stop' : 'Start Simulation'),
               style: const TextStyle(fontSize: 12),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isSimulating
-                  ? const Color(0xFFE74C3C)
-                  : const Color(0xFF00D4AA),
+              backgroundColor: isRealConnected
+                  ? (_stream.isRunning ? AppColors.warning : AppColors.primaryGreen)
+                  : (_isSimulating ? AppColors.error : AppColors.primaryGreen),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
@@ -384,8 +442,8 @@ class _EegResearchScreenState extends State<EegResearchScreen>
             icon: const Icon(Icons.delete_sweep, size: 16),
             label: const Text('Clear', style: TextStyle(fontSize: 11)),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white38,
-              side: const BorderSide(color: Colors.white12),
+              foregroundColor: AppColors.textDark,
+              side: BorderSide(color: AppColors.textLight.withValues(alpha: 0.5)),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -396,11 +454,11 @@ class _EegResearchScreenState extends State<EegResearchScreen>
           const Spacer(),
 
           // Status indicator
-          if (_isSimulating)
+          if (_isSimulating || (_stream.isRunning && isRealConnected))
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF00D4AA).withOpacity(0.1),
+                color: (isRealConnected ? AppColors.primaryBlue : AppColors.primaryGreen).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -409,16 +467,18 @@ class _EegResearchScreenState extends State<EegResearchScreen>
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00D4AA),
+                    decoration: BoxDecoration(
+                      color: isRealConnected ? AppColors.primaryBlue : AppColors.primaryGreen,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${_stream.totalSamples} samples',
-                    style: const TextStyle(
-                      color: Color(0xFF00D4AA),
+                    isRealConnected
+                        ? 'Live: ${_stream.totalSamples} samples'
+                        : 'Sim: ${_stream.totalSamples} samples',
+                    style: TextStyle(
+                      color: isRealConnected ? AppColors.primaryBlue : AppColors.primaryGreen,
                       fontSize: 10,
                     ),
                   ),
@@ -533,10 +593,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
 
   Widget _buildSettingSection(String title, List<Widget> children) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: AppTheme.glassDecoration(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,7 +601,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textDark,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
@@ -565,19 +622,20 @@ class _EegResearchScreenState extends State<EegResearchScreen>
         children: [
           Text(
             label,
-            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+            style: const TextStyle(color: AppColors.textGray, fontSize: 12),
           ),
           const Spacer(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButton<double>(
               value: value,
-              dropdownColor: const Color(0xFF1A2332),
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+              dropdownColor: Colors.white,
+              iconEnabledColor: AppColors.textDark,
+              style: const TextStyle(color: AppColors.textDark, fontSize: 12),
               underline: const SizedBox(),
               isDense: true,
               items: options.map((v) {
@@ -606,8 +664,8 @@ class _EegResearchScreenState extends State<EegResearchScreen>
             width: 100,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
+              style: const TextStyle(
+                color: AppColors.textLight,
                 fontSize: 11,
               ),
             ),
@@ -615,8 +673,8 @@ class _EegResearchScreenState extends State<EegResearchScreen>
           Expanded(
             child: Text(
               value,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+              style: const TextStyle(
+                color: AppColors.textDark,
                 fontSize: 11,
               ),
             ),
@@ -629,10 +687,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
   Widget _buildInfoCard(String title, String content) {
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: AppTheme.glassDecoration(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -640,7 +695,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textDark,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
@@ -648,8 +703,8 @@ class _EegResearchScreenState extends State<EegResearchScreen>
           const SizedBox(height: 8),
           Text(
             content,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+            style: const TextStyle(
+              color: AppColors.textGray,
               fontSize: 12,
               height: 1.6,
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_theme.dart';
 
 /// Band Power Meter — แสดง 5 แถบ band power พร้อมสีและ features
 ///
@@ -82,17 +83,7 @@ class BandPowerMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: AppTheme.glassDecoration(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +96,7 @@ class BandPowerMeter extends StatelessWidget {
               Text(
                 'Band Power',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textDark,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -118,7 +109,7 @@ class BandPowerMeter extends StatelessWidget {
           ..._bandDefs.map((def) => _buildBar(def)),
 
           const SizedBox(height: 12),
-          Divider(color: Colors.white.withOpacity(0.08)),
+          Divider(color: Colors.black.withValues(alpha: 0.06)),
           const SizedBox(height: 8),
 
           // Feature indicators
@@ -157,8 +148,8 @@ class BandPowerMeter extends StatelessWidget {
               ),
               Text(
                 range,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
+                style: const TextStyle(
+                  color: AppColors.textLight,
                   fontSize: 9,
                 ),
               ),
@@ -166,7 +157,7 @@ class BandPowerMeter extends StatelessWidget {
               Text(
                 '${percent.toStringAsFixed(1)}%',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textDark,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -262,7 +253,7 @@ class BandPowerMeter extends StatelessWidget {
           Text(
             '${value.toStringAsFixed(2)}$unit',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textDark,
               fontSize: 10,
               fontWeight: FontWeight.w500,
             ),

@@ -22,6 +22,9 @@ class MuseService extends ChangeNotifier {
   bool _isSimulating = false;
   bool _isDisposed = false;
 
+  // Broadcast stream controller for raw EEG channel samples
+  final StreamController<Map<String, List<double>>> _rawEegController = StreamController<Map<String, List<double>>>.broadcast();
+
   bool get isScanning => _isScanning;
   bool get isConnected => _isConnected;
   bool get isConnecting => _isConnecting;
@@ -29,6 +32,9 @@ class MuseService extends ChangeNotifier {
   String get status => _status;
   String? get deviceName => _deviceName;
   bool get isMuse2 => false;
+
+  // Stream of raw EEG channel samples
+  Stream<Map<String, List<double>>> get rawEegStream => _rawEegController.stream;
 
   String get detectedDeviceType => 'Simulation';
   BrainwaveData? get latestData => _latestData;
@@ -117,6 +123,7 @@ class MuseService extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    _rawEegController.close();
     _simulationTimer?.cancel();
     super.dispose();
   }

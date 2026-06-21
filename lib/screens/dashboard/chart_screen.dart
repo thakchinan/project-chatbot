@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
@@ -57,19 +58,20 @@ class _ChartScreenState extends State<ChartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: AppColors.primaryBlue),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'แผนภูมิ',
-          style: TextStyle(
-            color: AppColors.primaryBlue,
-            fontWeight: FontWeight.w600,
+          'รายงานระดับความเครียด',
+          style: GoogleFonts.prompt(
+            color: AppColors.textDark,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
@@ -83,153 +85,245 @@ class _ChartScreenState extends State<ChartScreen> {
                 );
               }
             },
-            icon: Icon(Icons.settings, color: AppColors.primaryBlue),
+            icon: Icon(Icons.settings_outlined, color: AppColors.textDark),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.primaryBlue.withOpacity(0.2),
+      body: Container(
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: AppGradients.glassBackgroundGradient,
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Main Chart Box
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: AppTheme.glassDecoration(
+                        color: Colors.white,
+                        opacity: 0.75,
+                        borderColor: AppColors.primaryBlue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 250,
-                          child: BarChart(
-                            BarChartData(
-                              alignment: BarChartAlignment.spaceAround,
-                              maxY: 100,
-                              barTouchData: BarTouchData(enabled: false),
-                              titlesData: FlTitlesData(
-                                show: true,
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    getTitlesWidget: (value, meta) {
-                                      const labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-                                      if (value.toInt() < labels.length) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(top: 8),
-                                          child: Text(
-                                            labels[value.toInt()],
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: 10,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                      return const SizedBox();
-                                    },
-                                    reservedSize: 30,
-                                  ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryBlue.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
-                                ),
-                                rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false),
+                                child: Icon(Icons.bar_chart_rounded, color: AppColors.primaryBlue, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'แนวโน้มระดับความเครียดสะสม',
+                                style: GoogleFonts.prompt(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textDark,
                                 ),
                               ),
-                              borderData: FlBorderData(show: false),
-                              gridData: FlGridData(show: false),
-                              barGroups: [
-                                _buildBarGroup(0, _weeklyData.isNotEmpty ? _weeklyData[0] : 0, Colors.blue),
-                                _buildBarGroup(1, _weeklyData.length > 1 ? _weeklyData[1] : 0, Colors.red),
-                                _buildBarGroup(2, _weeklyData.length > 2 ? _weeklyData[2] : 0, Colors.green),
-                                _buildBarGroup(3, _weeklyData.length > 3 ? _weeklyData[3] : 0, Colors.orange),
-                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            height: 240,
+                            child: BarChart(
+                              BarChartData(
+                                alignment: BarChartAlignment.spaceAround,
+                                maxY: 100,
+                                barTouchData: BarTouchData(
+                                  touchTooltipData: BarTouchTooltipData(
+                                    getTooltipColor: (group) => AppColors.textDark.withValues(alpha: 0.95),
+                                    tooltipRoundedRadius: 8,
+                                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                      return BarTooltipItem(
+                                        '${rod.toY.round()}%',
+                                        GoogleFonts.prompt(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                titlesData: FlTitlesData(
+                                  show: true,
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      getTitlesWidget: (value, meta) {
+                                        const labels = ['สัปดาห์ 1', 'สัปดาห์ 2', 'สัปดาห์ 3', 'สัปดาห์ 4'];
+                                        if (value.toInt() < labels.length) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(top: 8),
+                                            child: Text(
+                                              labels[value.toInt()],
+                                              style: GoogleFonts.prompt(
+                                                color: AppColors.textGray,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                        return const SizedBox();
+                                      },
+                                      reservedSize: 26,
+                                    ),
+                                  ),
+                                  leftTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      interval: 20,
+                                      getTitlesWidget: (value, meta) {
+                                        return Text(
+                                          '${value.toInt()}%',
+                                          style: GoogleFonts.prompt(
+                                            color: AppColors.textLight,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        );
+                                      },
+                                      reservedSize: 32,
+                                    ),
+                                  ),
+                                  topTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  rightTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                ),
+                                borderData: FlBorderData(show: false),
+                                gridData: FlGridData(
+                                  show: true,
+                                  drawVerticalLine: false,
+                                  horizontalInterval: 20,
+                                  getDrawingHorizontalLine: (value) => FlLine(
+                                    color: AppColors.textLight.withValues(alpha: 0.1),
+                                    strokeWidth: 0.8,
+                                    dashArray: [4, 4],
+                                  ),
+                                ),
+                                barGroups: [
+                                  _buildBarGroup(0, _weeklyData.isNotEmpty ? _weeklyData[0] : 0, const Color(0xFF046BD2), const Color(0xFF045CB4)),
+                                  _buildBarGroup(1, _weeklyData.length > 1 ? _weeklyData[1] : 0, const Color(0xFF00A79D), const Color(0xFF33D9C9)),
+                                  _buildBarGroup(2, _weeklyData.length > 2 ? _weeklyData[2] : 0, const Color(0xFF9B59B6), const Color(0xFFC39BD3)),
+                                  _buildBarGroup(3, _weeklyData.length > 3 ? _weeklyData[3] : 0, const Color(0xFFE67E22), const Color(0xFFF5B041)),
+                                ],
+                              ),
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Colors Legend
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: AppTheme.glassDecoration(
+                        color: Colors.white,
+                        opacity: 0.6,
+                        borderColor: Colors.black.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Wrap(
+                        spacing: 16,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _buildLegend('สัปดาห์ 1', const Color(0xFF046BD2)),
+                          _buildLegend('สัปดาห์ 2', const Color(0xFF00A79D)),
+                          _buildLegend('สัปดาห์ 3', const Color(0xFF9B59B6)),
+                          _buildLegend('สัปดาห์ 4', const Color(0xFFE67E22)),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Weekly stats header
+                    Text(
+                      'สรุปเกณฑ์ดัชนีสุขภาพสมอง',
+                      style: GoogleFonts.prompt(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'ค่าเฉลี่ย',
+                            '${_weeklyData.isNotEmpty ? (_weeklyData.reduce((a, b) => a + b) / _weeklyData.length).round() : 0}%',
+                            const Color(0xFF046BD2),
+                            Icons.trending_up_rounded,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildStatCard(
+                            'สูงสุด',
+                            '${_weeklyData.isNotEmpty ? _weeklyData.reduce((a, b) => a > b ? a : b).round() : 0}%',
+                            const Color(0xFF00A79D),
+                            Icons.arrow_upward_rounded,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildStatCard(
+                            'ต่ำสุด',
+                            '${_weeklyData.isNotEmpty ? _weeklyData.reduce((a, b) => a < b ? a : b).round() : 0}%',
+                            const Color(0xFFE67E22),
+                            Icons.arrow_downward_rounded,
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      _buildLegend('Alpha', Colors.blue),
-                      _buildLegend('Beta', Colors.red),
-                      _buildLegend('Theta', Colors.green),
-                      _buildLegend('Delta', Colors.orange),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  Text(
-                    'สรุปผลรายสัปดาห์',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'ค่าเฉลี่ย',
-                          '${_weeklyData.isNotEmpty ? (_weeklyData.reduce((a, b) => a + b) / _weeklyData.length).round() : 0}%',
-                          Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'สูงสุด',
-                          '${_weeklyData.isNotEmpty ? _weeklyData.reduce((a, b) => a > b ? a : b).round() : 0}%',
-                          Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'ต่ำสุด',
-                          '${_weeklyData.isNotEmpty ? _weeklyData.reduce((a, b) => a < b ? a : b).round() : 0}%',
-                          Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
-  BarChartGroupData _buildBarGroup(int x, double y, Color color) {
+  BarChartGroupData _buildBarGroup(int x, double y, Color color1, Color color2) {
     return BarChartGroupData(
       x: x,
       barRods: [
         BarChartRodData(
           toY: y,
-          color: color,
-          width: 30,
+          gradient: LinearGradient(
+            colors: [color1, color2],
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+          ),
+          width: 24,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(8),
+            topLeft: Radius.circular(6),
+            topRight: Radius.circular(6),
+          ),
+          backDrawRodData: BackgroundBarChartRodData(
+            show: true,
+            toY: 100,
+            color: Colors.black.withValues(alpha: 0.03),
           ),
         ),
       ],
@@ -241,8 +335,8 @@ class _ChartScreenState extends State<ChartScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(3),
@@ -251,38 +345,60 @@ class _ChartScreenState extends State<ChartScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[700],
+          style: GoogleFonts.prompt(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textGray,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color) {
+  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: AppTheme.glassDecoration(
+        color: Colors.white,
+        opacity: 0.75,
+        borderColor: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 14),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.prompt(
+                    fontSize: 10.5,
+                    color: AppColors.textGray,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
+            style: GoogleFonts.prompt(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textDark,
             ),
           ),
         ],

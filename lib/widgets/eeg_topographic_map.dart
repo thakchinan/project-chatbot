@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 /// แผนที่ Topographic แบบหลายช่องสัญญาณ (Multi-channel) โดยใช้สมการ IDW
 class EegTopographicMap extends StatelessWidget {
@@ -33,8 +34,8 @@ class EegTopographicMap extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.notoSansThai(
-              fontSize: 9,
+            style: GoogleFonts.prompt(
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF37474F),
             ),
@@ -82,9 +83,9 @@ class EegTopographicMap extends StatelessWidget {
     return Column(
       children: [
         Container(
-          height: 10,
+          height: 6,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
             gradient: const LinearGradient(
               colors: [
                 Color(0xFF0D47A1),
@@ -125,7 +126,7 @@ class EegTopographicMap extends StatelessWidget {
           children: List.generate(7, (i) {
             return Expanded(
               child: Container(
-                height: 10,
+                height: 6,
                 color: colors[i],
               ),
             );
@@ -142,9 +143,9 @@ class EegTopographicMap extends StatelessWidget {
     );
   }
 
-  TextStyle _legendStyle() => GoogleFonts.notoSansThai(
-        fontSize: 7,
-        color: Colors.grey[800],
+  TextStyle _legendStyle() => GoogleFonts.prompt(
+        fontSize: 8.5,
+        color: AppColors.textGray,
         fontWeight: FontWeight.w500,
       );
 }
@@ -167,20 +168,34 @@ class _TopoPainter extends CustomPainter {
   Color _heatColor(double t) {
     t = t.clamp(0.0, 1.0);
     if (isZScore) {
-      if (t < 0.17) return const Color(0xFF0D47A1);
-      if (t < 0.33) return const Color(0xFF1976D2);
-      if (t < 0.5) return const Color(0xFF4DD0E1);
-      if (t < 0.67) return const Color(0xFF66BB6A);
-      if (t < 0.83) return const Color(0xFFFFEE58);
-      if (t < 0.92) return const Color(0xFFFF9800);
-      return const Color(0xFFD32F2F);
+      const colors = [
+        Color(0xFF0D47A1),
+        Color(0xFF1976D2),
+        Color(0xFF4DD0E1),
+        Color(0xFF66BB6A),
+        Color(0xFFFFEE58),
+        Color(0xFFFF9800),
+        Color(0xFFD32F2F),
+      ];
+      final double scaledT = t * (colors.length - 1);
+      final int index = scaledT.floor();
+      final double localT = scaledT - index;
+      if (index >= colors.length - 1) return colors.last;
+      return Color.lerp(colors[index], colors[index + 1], localT)!;
     }
-    if (t < 0.2) return const Color(0xFF0D47A1);
-    if (t < 0.4) return const Color(0xFF29B6F6);
-    if (t < 0.55) return const Color(0xFF66BB6A);
-    if (t < 0.7) return const Color(0xFFFFEE58);
-    if (t < 0.85) return const Color(0xFFFF9800);
-    return const Color(0xFFD32F2F);
+    const colors = [
+      Color(0xFF0D47A1),
+      Color(0xFF29B6F6),
+      Color(0xFF66BB6A),
+      Color(0xFFFFEE58),
+      Color(0xFFFF9800),
+      Color(0xFFD32F2F),
+    ];
+    final double scaledT = t * (colors.length - 1);
+    final int index = scaledT.floor();
+    final double localT = scaledT - index;
+    if (index >= colors.length - 1) return colors.last;
+    return Color.lerp(colors[index], colors[index + 1], localT)!;
   }
 
   double _normalize(double val) {
@@ -266,8 +281,8 @@ class _TopoPainter extends CustomPainter {
        canvas.drawCircle(hotspot, headR * 1.15, paint);
     } else {
        // โหมดใหม่ (IDW Interpolation Map)
-       // สร้างเป็นตารางพิกเซลเพื่อวาดแผนที่ความร้อน
-       const int resolution = 40; // ความละเอียดของแผนที่
+       // สร้างเป็นตารางพิกเซลเพื่อวาดแผนที่ความร้อนด้วยความละเอียดสูงขึ้น (120)
+       const int resolution = 120;
        final double step = (headR * 2) / resolution;
        
        for (int y = 0; y < resolution; y++) {
@@ -276,11 +291,12 @@ class _TopoPainter extends CustomPainter {
            double py = center.dy - headR + (y * step);
            Offset pt = Offset(px, py);
            
-           if ((pt - center).distance <= headR) {
-              final color = _idwColor(pt, sensors, headR);
-              final paint = Paint()..color = color..style = PaintingStyle.fill;
-              canvas.drawRect(Rect.fromLTWH(px - 1, py - 1, step + 2, step + 2), paint);
-           }
+           // ให้ clipPath เป็นตัวตัดขอบวงกลมที่สมบูรณ์แบบโดยตรง
+           final color = _idwColor(pt, sensors, headR);
+           final paint = Paint()
+             ..color = color
+             ..style = PaintingStyle.fill;
+           canvas.drawRect(Rect.fromLTWH(px - 0.5, py - 0.5, step + 1.0, step + 1.0), paint);
          }
        }
     }
@@ -306,54 +322,65 @@ class _TopoPainter extends CustomPainter {
         Rect.fromCircle(center: center, radius: headR),
         Paint()
           ..style = PaintingStyle.stroke
-          ..color = Colors.grey.shade600
-          ..strokeWidth = 1.2,
+          ..color = Colors.blueGrey.shade300
+          ..strokeWidth = 1.5,
       );
 
-      // จมูก (ชี้ขึ้น)
-      final nose = Path()
-        ..moveTo(center.dx, center.dy - headR - 2)
-        ..lineTo(center.dx - 6, center.dy - headR + 10)
-        ..lineTo(center.dx + 6, center.dy - headR + 10)
-        ..close();
+      // จมูก (แบบเส้นเวกเตอร์เรียบหรูสไตล์เครื่องมือแพทย์)
+      final nosePath = Path()
+        ..moveTo(center.dx - 6, center.dy - headR + 4)
+        ..quadraticBezierTo(center.dx, center.dy - headR - 10, center.dx, center.dy - headR - 10)
+        ..quadraticBezierTo(center.dx, center.dy - headR - 10, center.dx + 6, center.dy - headR + 4);
       canvas.drawPath(
-        nose,
+        nosePath,
         Paint()
-          ..color = Colors.grey.shade700
-          ..style = PaintingStyle.fill,
+          ..color = Colors.blueGrey.shade400
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..strokeCap = StrokeCap.round,
       );
 
       // หูซ้ายขวา
       for (final side in [-1.0, 1.0]) {
         canvas.drawArc(
           Rect.fromCenter(
-            center: Offset(center.dx + side * headR * 1.05, center.dy),
-            width: headR * 0.35,
-            height: headR * 0.5,
+            center: Offset(center.dx + side * headR * 1.04, center.dy),
+            width: headR * 0.3,
+            height: headR * 0.45,
           ),
           side > 0 ? math.pi * 0.5 : -math.pi * 0.5,
           math.pi,
           false,
           Paint()
-            ..color = Colors.grey.shade600
+            ..color = Colors.blueGrey.shade300
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1,
+            ..strokeWidth = 1.2,
         );
       }
     }
 
-    // จุดเซนเซอร์ยังคงวาดไว้เพื่อให้เห็นตำแหน่งชัดเจน
+    // จุดเซนเซอร์แบบ Glowing Nodes ดูสวยงามและล้ำสมัยขึ้น
     if (sensors.isNotEmpty) {
       for (var s in sensors) {
+        // วงรัศมีเรืองแสงภายนอก
         canvas.drawCircle(
           s['pos'] as Offset,
-          3.0,
-          Paint()..color = Colors.white..style = PaintingStyle.fill,
+          6.0,
+          Paint()..color = Colors.white.withValues(alpha: 0.8)..style = PaintingStyle.fill,
         );
         canvas.drawCircle(
           s['pos'] as Offset,
-          3.0,
-          Paint()..color = Colors.black87..style = PaintingStyle.stroke..strokeWidth = 1.5,
+          6.0,
+          Paint()
+            ..color = AppColors.primaryBlue.withValues(alpha: 0.4)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2,
+        );
+        // แกนเซนเซอร์จริงสีเข้ม/น้ำเงิน
+        canvas.drawCircle(
+          s['pos'] as Offset,
+          2.5,
+          Paint()..color = AppColors.primaryBlue..style = PaintingStyle.fill,
         );
       }
     } else if (drawOutline) {

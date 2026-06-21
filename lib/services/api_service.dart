@@ -228,35 +228,7 @@ class ApiService {
     );
   }
 
-  static Future<Map<String, dynamic>> saveMuseBrainwave({
-    required int userId,
-    required double alphaWave,
-    required double betaWave,
-    required double thetaWave,
-    required double deltaWave,
-    required double gammaWave,
-    double attentionScore = 0,
-    double meditationScore = 0,
-    String deviceName = 'Muse 2',
-    String? emotionLabel,
-    String? activityType,
-    String? sessionPhase,
-  }) async {
-    return SupabaseService.saveBrainwaveData(
-      userId: userId,
-      alphaWave: alphaWave,
-      betaWave: betaWave,
-      thetaWave: thetaWave,
-      deltaWave: deltaWave,
-      gammaWave: gammaWave,
-      attentionScore: attentionScore,
-      meditationScore: meditationScore,
-      deviceName: deviceName,
-      emotionLabel: emotionLabel,
-      activityType: activityType,
-      sessionPhase: sessionPhase,
-    );
-  }
+
 
   static Future<Map<String, dynamic>> saveEmotionSession({
     required int userId,

@@ -39,6 +39,12 @@ class AppColors {
   static const Color gameTeal = Color(0xFF76D7C4);
   static const Color gameYellow = Color(0xFFF9E79F);
   static const Color gameMint = Color(0xFFA2D9CE);
+
+  // Premium Telemetry Colors
+  static const Color deepSpaceBlue = Color(0xFF090D1A);
+  static const Color electricCyan = Color(0xFF00E5FF);
+  static const Color neonGreen = Color(0xFF00E676);
+  static const Color neonPurple = Color(0xFFD500F9);
 }
 
 class AppGradients {
@@ -284,23 +290,28 @@ class AppTheme {
   static List<BoxShadow> get glassShadow => [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.03),
-      blurRadius: 20,
-      offset: const Offset(0, 6),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.01),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
     ),
   ];
 
   static BoxDecoration glassDecoration({
     BorderRadiusGeometry? borderRadius,
     Color? color,
-    double opacity = 0.55,
+    double opacity = 0.65,
     Color? borderColor,
   }) {
     return BoxDecoration(
       color: (color ?? Colors.white).withValues(alpha: opacity),
       borderRadius: borderRadius ?? BorderRadius.circular(24),
       border: Border.all(
-        color: (borderColor ?? Colors.white).withValues(alpha: 0.65),
-        width: 1.5,
+        color: (borderColor ?? Colors.white).withValues(alpha: 0.35),
+        width: 1.2,
       ),
       boxShadow: glassShadow,
     );
