@@ -10,7 +10,7 @@ class EegPipelineVisualizer extends StatefulWidget {
   final Map<String, List<double>> channels;
   final bool hasData;
 
-  // Global static state to persist settings across parent rebuilds, screen transitions, and connection status changes
+  // สถานะทางโครงสร้างคลาสแบบ Static เพื่อเก็บค่าข้ามการเรนเดอร์ใหม่ของ Parent Widget และการเปลี่ยนหน้า
   static String selectedChannel = 'AF7';
   static bool isExpanded = true;
 
@@ -25,10 +25,10 @@ class EegPipelineVisualizer extends StatefulWidget {
 }
 
 class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
-  // Throttling state for numeric stats display (updates 2 times per second for visual stability)
+  // ตัวแปรกำหนดความเร็วการอัปเดตสถิติ (หน่วงเวลาให้อัปเดต 2 ครั้งต่อวินาที เพื่อความนิ่งทางสายตา)
   DateTime _lastStatsUpdateTime = DateTime.fromMillisecondsSinceEpoch(0);
   
-  // Cached stats for Step 0, 1, 2, 3
+  // ค่าสถิติที่แคชไว้สำหรับขั้นตอนที่ 0, 1, 2, 3
   double _mean0 = 0, _std0 = 0, _latest0 = 0;
   double _mean1 = 0, _std1 = 0, _latest1 = 0;
   double _mean2 = 0, _std2 = 0, _latest2 = 0;
@@ -45,33 +45,32 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
       notchFrequency: notchFreq,
     );
     
-    // Generate simulated raw data with offset, drift, and noise if data is available
+    // สร้างคลื่นจำลองที่ปนเปื้อนสัญญาณรบกวนในกรณีที่มีข้อมูลเข้ามา
     List<double> rawSignal = [];
     List<double> step1Signal = [];
     List<double> step2Signal = [];
     List<double> step3Signal = [];
 
     if (channelData.isNotEmpty && widget.hasData) {
-      // Limit to last 150 points for detailed step-by-step pipeline view
+      // จำกัดข้อมูลเพียง 150 จุดล่าสุดเพื่อให้เห็นการไหลของสัญญาณแบบละเอียด
       final int len = math.min(150, channelData.length);
       final rawSlice = channelData.sublist(channelData.length - len);
 
-      // Inject DC offset, drift, and notch noise to show the filtration process clearly
+      // ใส่ค่า DC offset, drift และสัญญาณรบกวน 50/60 Hz เพื่อจำลองให้เห็นขั้นตอนการกรองชัดเจน
       rawSignal = List<double>.generate(rawSlice.length, (i) {
         final t = i / 256.0;
         final original = rawSlice[i];
         
-        // 1. Massive DC offset (800.0)
+        // 1. ค่า DC offset ขนาดใหญ่ (800.0)
         const double dcOffset = 800.0;
-        // 2. Slow baseline drift (50.0 µV at 0.25 Hz)
+        // 2. การเบี่ยงเบนของเส้นเบสไลน์ความถี่ต่ำ (Drift 70.0 µV ที่ 0.25 Hz)
         final double drift = 70.0 * math.sin(2 * math.pi * 0.25 * t);
-        // 3. Powerline interference (15.0 µV at notchFreq Hz)
+        // 3. สัญญาณรบกวนจากกระแสไฟฟ้าบ้าน (Powerline Noise 12.0 µV)
         final double powerlineNoise = 12.0 * math.sin(2 * math.pi * notchFreq * t);
-        // 4. White noise (random)
+        // 4. สัญญาณรบกวนพื้นหลัง (White noise)
         final double whiteNoise = (math.Random(i).nextDouble() - 0.5) * 4.0;
 
-        // If the original data is already centered (like simulator), we add offset+drift+noise
-        // If original data already has offset (real device), we just ensure it is properly messy
+        // หากข้อมูลเดิมมีขนาดใหญ่ (เชื่อมอุปกรณ์จริง) จะไม่บวกออฟเซ็ตจำลองเพิ่ม
         final isAlreadyOffset = original.abs() > 400.0;
         if (isAlreadyOffset) {
           return original + powerlineNoise + whiteNoise;
@@ -80,17 +79,17 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
         }
       });
 
-      // Apply the pipeline steps sequentially using EegPreprocessor
-      // Step 1: DC Offset & Linear Detrend Removal
+      // ประมวลผลสัญญาณคลื่นสมองเป็นลำดับขั้นตอนผ่าน EegPreprocessor
+      // ขั้นตอนที่ 1: กำจัดค่า DC Offset & ลบแนวโน้มเชิงเส้น (Linear Detrend)
       step1Signal = preprocessor.removeDCOffset(rawSignal, linearDetrend: true);
 
-      // Step 2: 4th-order Butterworth Band-pass Filter (1-45 Hz)
+      // ขั้นตอนที่ 2: กรองช่วงความถี่ผ่าน Band-pass Filter (1-45 Hz) ด้วยฟิลเตอร์ Butterworth
       step2Signal = preprocessor.bandpassFilter(step1Signal);
 
-      // Step 3: Notch Filter (50 Hz or 60 Hz)
+      // ขั้นตอนที่ 3: กรองกำจัดสัญญาณรบกวนระบบไฟฟ้าด้วย Notch Filter (50 Hz หรือ 60 Hz)
       step3Signal = preprocessor.notchFilter(step2Signal);
 
-      // Throttle numeric stats update to 500ms (2 Hz) for visual stability
+      // จำกัดรอบการแสดงผลข้อมูลสถิติที่ 500 มิลลิวินาทีเพื่อไม่ให้ตัวเลขกะพริบเร็วเกินไป
       final now = DateTime.now();
       if (now.difference(_lastStatsUpdateTime) > const Duration(milliseconds: 500) || _mean0 == 0) {
         _lastStatsUpdateTime = now;
@@ -131,7 +130,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
         border: Border.all(color: const Color(0xFFBDBDBD), width: 0.8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           )
@@ -140,9 +139,9 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner Header (Collapsible with Material InkWell ripple feedback)
+          // ส่วนหัวของแบนเนอร์ (เปิดปิดแบบยุบได้ด้วยการคลิก มีเอฟเฟกต์ InkWell)
           Material(
-            color: const Color(0xFF1E3A8A), // Slate blue / dark navy
+            color: const Color(0xFF1E3A8A), // สีน้ำเงินเนวี่ / น้ำเงินเข้มพรีเมียม
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(13),
               topRight: const Radius.circular(13),
@@ -169,7 +168,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'EEG Signal Preprocessing Pipeline',
+                        'EEG Preprocessing Pipeline (การเตรียมสัญญาณ)',
                         style: GoogleFonts.prompt(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -178,20 +177,20 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
                         ),
                       ),
                     ),
-                    // Expand / Collapse icon
+                    // ไอคอนสัญลักษณ์เปิดหรือปิดแท็บพับเก็บ
                     Icon(
                       EegPipelineVisualizer.isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                       color: Colors.white70,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
-                    // Channel Selector (wrapped in GestureDetector to prevent collapsing panel when clicked)
+                    // ตัวเลือกช่องสัญญาณคลื่นสมอง (ครอบด้วย GestureDetector เพื่อกันปัญหาการขัดแย้งการคลิกกับแถบยุบขยาย)
                     GestureDetector(
-                      onTap: () {}, // Blocks tap propagation
+                      onTap: () {}, // บล็อกไม่ให้เกิดการ Tap Propagation ไปยังตัว Parent
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: DropdownButtonHideUnderline(
@@ -231,7 +230,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Overview banner
+                      // แบนเนอร์อธิบายรายละเอียดภาพรวม
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
@@ -268,7 +267,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
                           padding: const EdgeInsets.all(14),
                           child: Column(
                             children: [
-                              // Step 0: Messy Raw Signal Input
+                              // ขั้นตอนที่ 0: แสดงค่าสัญญาณดิบที่รับเข้ามาจากเซนเซอร์ของฮาร์ดแวร์
                               _buildPipelineStep(
                                 stepNum: '0',
                                 titleTh: 'สัญญาณดิบจากเซนเซอร์ (Messy Raw EEG Input)',
@@ -286,7 +285,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
 
                               _buildConnectorLine(),
 
-                              // Step 1: DC Offset Removal
+                              // ขั้นตอนที่ 1: การกำจัดค่า DC Offset ออกจากตัวสัญญาณ
                               _buildPipelineStep(
                                 stepNum: '1',
                                 titleTh: 'ลบแรงดันไฟฟ้าไฟตรง (DC Offset & Linear Detrend)',
@@ -304,7 +303,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
 
                               _buildConnectorLine(),
 
-                              // Step 2: Bandpass Filter
+                              // ขั้นตอนที่ 2: การกรองช่วงคลื่นความถี่หลักของสมอง
                               _buildPipelineStep(
                                 stepNum: '2',
                                 titleTh: 'กรองช่วงความถี่สมอง (Butterworth Band-pass 1-45 Hz)',
@@ -322,7 +321,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
 
                               _buildConnectorLine(),
 
-                              // Step 3: Notch Filter
+                              // ขั้นตอนที่ 3: การกำจัดความถี่กระแสไฟฟ้าบ้านด้วย Notch Filter
                               _buildPipelineStep(
                                 stepNum: '3',
                                 titleTh: 'กรองคลื่นไฟฟ้ารบกวนอาคาร (IIR Notch Filter ${notchFreq.toInt()} Hz)',
@@ -372,12 +371,12 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: highlight
-            ? (highlightColor?.withOpacity(0.08) ?? const Color(0xFFEFF6FF))
+            ? (highlightColor?.withValues(alpha: 0.08) ?? const Color(0xFFEFF6FF))
             : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: highlight
-              ? (highlightColor?.withOpacity(0.3) ?? const Color(0xFFBFDBFE))
+              ? (highlightColor?.withValues(alpha: 0.3) ?? const Color(0xFFBFDBFE))
               : const Color(0xFFE2E8F0),
           width: 0.5,
         ),
@@ -394,7 +393,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
             ),
           ),
           SizedBox(
-            width: 58, // Fixed width for values to prevent text jittering / shifting
+            width: 58, // กำหนดความกว้างคงที่ของค่าเพื่อป้องกันข้อความสั่นไหว/เลื่อนขณะอัปเดตแบบเรียลไทม์
             child: Text(
               value,
               textAlign: TextAlign.right,
@@ -436,7 +435,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Step title
+          // หัวข้อของขั้นตอนประมวลผล
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -481,7 +480,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
           ),
           const SizedBox(height: 8),
 
-          // Mathematical formula display
+          // ส่วนแสดงสูตรทางคณิตศาสตร์ที่ใช้ประมวลผลสัญญาณ
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -504,7 +503,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
           ),
           const SizedBox(height: 8),
 
-          // Real-time signal values row
+          // แถวแสดงผลค่าสถิติสัญญาณแบบเรียลไทม์ (Mean, Std, Current)
           if (data.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -519,10 +518,10 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
             const SizedBox(height: 6),
           ],
 
-          // Plot
+          // ส่วนวาดกราฟคลื่นสัญญาณ
           Row(
             children: [
-              // Y-axis Labels
+              // ป้ายกำกับแกนแนวตั้ง Y
               Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -534,7 +533,7 @@ class _EegPipelineVisualizerState extends State<EegPipelineVisualizer> {
                 ],
               ),
               const SizedBox(width: 8),
-              // Wave canvas
+              // บอร์ดวาดเส้นคลื่นสมอง
               Expanded(
                 child: Container(
                   height: 60,
@@ -577,18 +576,20 @@ class EegPipelineStepPainter extends CustomPainter {
 
     final double yCenter = size.height / 2;
 
-    // Draw baseline
+    // วาดเส้นแกนนอนตรงกลาง (Baseline)
     final baselinePaint = Paint()
       ..color = Colors.grey.shade200
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
     canvas.drawLine(Offset(0, yCenter), Offset(size.width, yCenter), baselinePaint);
 
-    // Calculate scaling
+    // คำนวณอัตราส่วนการขยายสัญญาณ (Scaling)
     double mean = 0;
     if (!isZeroCentered) {
       double sum = 0;
-      for (final v in data) sum += v;
+      for (final v in data) {
+        sum += v;
+      }
       mean = sum / data.length;
     }
 
@@ -597,7 +598,7 @@ class EegPipelineStepPainter extends CustomPainter {
       final dev = (v - mean).abs();
       if (dev > maxDev) maxDev = dev;
     }
-    maxDev *= 1.1; // Add 10% headroom
+    maxDev *= 1.1; // เพิ่มระยะขอบบนล่าง 10% กันยอดกราฟตกขอบ
 
     final double xStep = size.width / (data.length <= 1 ? 1 : data.length - 1);
     final wavePaint = Paint()
@@ -610,7 +611,7 @@ class EegPipelineStepPainter extends CustomPainter {
     for (int i = 0; i < data.length; i++) {
       final double x = i * xStep;
       final double normalizedY = (data[i] - mean) / maxDev;
-      // Invert Y because canvas coordinates start at top-left
+      // สลับทิศทางแกน Y เนื่องจากระบบพิกัดของ Canvas บน Flutter บนซ้ายคือจุด (0,0)
       final double y = yCenter - (normalizedY * (size.height / 2) * 0.85);
 
       if (i == 0) {

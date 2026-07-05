@@ -1,6 +1,9 @@
 import 'package:flutter_tts/flutter_tts.dart';
 
+/// TTSService จัดการการแปลงตัวอักษรข้อความเป็นเสียงพูดภาษาไทย (Text-to-Speech)
+/// ใช้สนับสนุนการอ่านออกเสียงคำตอบของสมาร์ทเบรน AI อัตโนมัติ เพื่ออำนวยความสะดวกแก่ผู้ใช้งานสูงอายุ
 class TTSService {
+  // Singleton instance เพื่อลงทะเบียนตัวอ่านออกเสียงตัวเดียวกัน
   static final TTSService _instance = TTSService._internal();
   factory TTSService() => _instance;
   TTSService._internal();

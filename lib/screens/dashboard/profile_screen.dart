@@ -9,6 +9,8 @@ import 'help_screen.dart';
 import 'settings_screen.dart';
 import 'weekly_report_screen.dart';
 
+/// ProfileScreen คือหน้าจอโปรไฟล์ผู้ใช้งานสำหรับการแสดงระเบียนและข้อมูลส่วนบุคคล
+/// ดึงข้อมูลโปรไฟล์แบบเรียลไทม์ผ่าน API และลิงก์ไปยังการตั้งค่า แก้ไขข้อมูล รายงาน AI และการออกจากระบบ
 class ProfileScreen extends StatefulWidget {
   final User user;
   final Function(User)? onUserUpdated;
@@ -20,8 +22,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late User _currentUser;
-  bool _isLoading = true;
+  late User _currentUser; // ตัวแปรสำหรับจัดเก็บโปรไฟล์ผู้ใช้งานปัจจุบัน
+  bool _isLoading = true;  // ใช้ตรวจสอบสถานะการดึงข้อมูลจากหลังบ้าน (Supabase)
 
   @override
   void initState() {
@@ -93,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                   children: [
 
-                    // Premium Patient Profile Header
+                    // ส่วนหัวข้อมูลผู้ป่วยพรีเมียม (Premium Patient Profile Header)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
                       child: Row(
@@ -163,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Centered User Bio HUD Card
+                    // การ์ดประวัติผู้ป่วย HUD ตรงกลาง (Centered User Bio HUD Card)
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       padding: const EdgeInsets.all(22),
@@ -180,7 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
-                                // Glowing Avatar Ring
+                                // วงแหวนล้อมรอบรูปภาพรูปโปรไฟล์เรืองแสง (Glowing Avatar Ring)
                                 Container(
                                   width: 102,
                                   height: 102,
@@ -217,7 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ? const Icon(Icons.person_rounded, size: 45, color: AppColors.primaryBlue)
                                       : null,
                                 ),
-                                // Pulse Status Badge on Avatar
+                                // ป้ายสถานะสีเขียวแสดงการเชื่อมต่อออนไลน์ (Pulse Status Badge on Avatar)
                                 Positioned(
                                   right: 4,
                                   bottom: 4,
@@ -260,7 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Premium Hospital ID Tag
+                          // แท็กไอดีแสดงผลรหัสผู้ป่วย (Premium Hospital ID Tag)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
@@ -377,7 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: Colors.red,
                             onTap: () => _showLogoutConfirmation(context),
                           ),
-                          const SizedBox(height: 100), // Spacing for floating navigation bar
+                          const SizedBox(height: 100), // เพิ่มระยะเว้นช่องว่างสำหรับแถบเมนูล่างแบบลอยตัว (Floating Navigation Bar)
                         ],
                       ),
                     ),
@@ -517,8 +519,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(dialogContext);
+              
+              // ล้างเซสชันการเข้าสู่ระบบทั้งหมด (Supabase Auth + Google Sign-In)
+              await ApiService.signOut();
+              
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Navigator.pushAndRemoveUntil(
                   parentContext,

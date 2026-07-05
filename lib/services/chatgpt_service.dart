@@ -5,12 +5,17 @@ import 'package:http/http.dart' as http;
 import 'rag_service.dart';
 import 'supabase_service.dart';
 
+/// ChatGPTService จัดการการส่งคำถามไปยัง OpenAI ChatGPT API (gpt-4o-mini)
+/// ทำหน้าที่เป็นสมองส่วนปัญญาประดิษฐ์ของแอปพลิเคชัน ในการตอบคำถามผู้ใช้งานเรื่องสุขภาพจิตและคลื่นสมอง
+/// โดยรองรับการพ่วง RAG Context ข้อมูลความรู้และประวัติสุขภาพสมองย้อนหลังของผู้ใช้เข้าไปในคำถามอัตโนมัติ
 class ChatGPTService {
 
+  // ดึงรหัส API Key ของ OpenAI จากไฟล์สภาพแวดล้อม (.env)
   static String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-4o-mini';
 
+  // สถานะเปิดใช้งาน RAG (ดึงความรู้เสริม) ร่วมกับการตอบคำถามของบอท
   static bool _useRAG = true;
   static int? _currentUserId;
 

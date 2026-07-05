@@ -3,6 +3,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// NotificationSettingsScreen คือหน้าจอสำหรับการตั้งค่าระบบสั่น เสียง และสิทธิ์การส่งพุชแจ้งเตือนของแอปพลิเคชัน
+/// แสดงปุ่มเปิด/ปิด (Switch) สำหรับอัปเดตค่าความต้องการส่งการแจ้งเตือนต่างๆ ของผู้ใช้งานบันทึกลงใน API หลังบ้าน
 class NotificationSettingsScreen extends StatefulWidget {
   final User? user;
 
@@ -138,7 +140,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             value: value,
             onChanged: onChanged,
             activeTrackColor: AppColors.primaryBlue.withValues(alpha: 0.5),
-            activeColor: AppColors.primaryBlue,
+            activeThumbColor: AppColors.primaryBlue,
           ),
         ],
       ),

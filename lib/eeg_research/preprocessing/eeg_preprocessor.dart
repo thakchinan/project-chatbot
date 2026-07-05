@@ -141,7 +141,9 @@ class EegPreprocessor {
     if (!linearDetrend) {
       // Simple mean subtraction
       double sum = 0;
-      for (final v in data) sum += v;
+      for (final v in data) {
+        sum += v;
+      }
       final mean = sum / n;
       return List.generate(n, (i) => data[i] - mean);
     }
@@ -426,10 +428,14 @@ class EegPreprocessor {
 
       // Find nearest clean samples on both sides
       int left = i - 1;
-      while (left >= 0 && mask[left]) left--;
+      while (left >= 0 && mask[left]) {
+        left--;
+      }
 
       int right = i + 1;
-      while (right < n && mask[right]) right++;
+      while (right < n && mask[right]) {
+        right++;
+      }
 
       if (left >= 0 && right < n) {
         // Linear interpolation
@@ -464,7 +470,9 @@ class EegPreprocessor {
     int start = 0;
     while (start < n) {
       // Find start of clean region
-      while (start < n && mask[start]) start++;
+      while (start < n && mask[start]) {
+        start++;
+      }
       if (start >= n) break;
 
       // Find end of clean region

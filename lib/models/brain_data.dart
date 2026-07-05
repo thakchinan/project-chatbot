@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// TestResult เก็บผลสรุปคะแนนประเมินภาวะเครียดและซึมเศร้าในโปรไฟล์
 class TestResult {
   final int stressScore;
   final int depressionScore;
@@ -16,8 +17,10 @@ class TestResult {
   });
 }
 
+/// ระดับความรุนแรงของภาวะความเครียด/ซึมเศร้า (ปกติ, เล็กน้อย, ปานกลาง, สูง)
 enum StressLevel { normal, mild, moderate, high }
 
+/// BrainwaveData (ดั้งเดิม) ใช้สำหรับจัดเก็บความแรงสัมพัทธ์ของคลื่นสมอง Alpha, Beta, Theta และสถานะโฟกัส/ความสงบ
 class BrainwaveData {
   final int alpha;
   final int beta;

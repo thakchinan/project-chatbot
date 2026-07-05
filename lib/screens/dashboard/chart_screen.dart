@@ -6,6 +6,8 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import 'settings_screen.dart';
 
+/// ChartScreen เป็นหน้าจอสำหรับแสดงแนวโน้มสถิติกราฟรายงานระดับความเครียดสะสมของผู้ใช้
+/// ดึงสถิติย้อนหลังจากแบบทดสอบ PHQ-9 ล่าสุด 4 ครั้งมาแปลงเป็นเปอร์เซ็นต์และแสดงผลกราฟแท่ง (Bar Chart)
 class ChartScreen extends StatefulWidget {
   final User? user;
 
@@ -16,8 +18,8 @@ class ChartScreen extends StatefulWidget {
 }
 
 class _ChartScreenState extends State<ChartScreen> {
-  List<double> _weeklyData = [45, 70, 85, 60];
-  bool _isLoading = true;
+  List<double> _weeklyData = [45, 70, 85, 60]; // ข้อมูลคะแนนความเครียดเริ่มต้นสำหรับพล็อตกราฟแท่งรายสัปดาห์
+  bool _isLoading = true;                       // ตัวบ่งชี้สถานะการโหลดข้อมูลประวัติจากฐานข้อมูล
 
   @override
   void initState() {
@@ -101,7 +103,7 @@ class _ChartScreenState extends State<ChartScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Main Chart Box
+                    // กล่องกราฟแท่งหลักแสดงผลคะแนนเปอร์เซ็นต์ความเครียด
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: AppTheme.glassDecoration(
@@ -232,7 +234,7 @@ class _ChartScreenState extends State<ChartScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Colors Legend
+                    // กล่องคำอธิบายแถบสีแสดงผลของแต่ละสัปดาห์
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: AppTheme.glassDecoration(
@@ -256,7 +258,7 @@ class _ChartScreenState extends State<ChartScreen> {
 
                     const SizedBox(height: 30),
 
-                    // Weekly stats header
+                    // ส่วนหัวข้อแสดงสถิติความเครียดรายสัปดาห์ (สถิติรวม)
                     Text(
                       'สรุปเกณฑ์ดัชนีสุขภาพสมอง',
                       style: GoogleFonts.prompt(

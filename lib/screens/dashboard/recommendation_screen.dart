@@ -11,6 +11,9 @@ import 'test_screen.dart';
 import 'nutrition_screen.dart';
 import 'weekly_report_screen.dart';
 
+/// RecommendationScreen เป็นหน้าจอให้คำปรึกษา แชทบอท และข้อเสนอแนะอัจฉริยะ (สมาร์ทเบรน AI)
+/// รองรับการพูดโต้ตอบด้วยเสียง (Speech-to-Text & Text-to-Speech)
+/// มีระบบคำถามลัด คำถามเจาะลึก แนะนำกิจกรรม นำทางหน้าเมนูอัตโนมัติ และ RAG Context
 class RecommendationScreen extends StatefulWidget {
   final User? user;
 

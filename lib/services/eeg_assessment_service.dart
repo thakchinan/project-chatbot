@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
-/// คำนวณและจัดการข้อมูลใบสรุป qEEG (90 วินาที — DEAP Protocol 60s + 30s margin)
+/// EegAssessmentService จัดการวิเคราะห์ผลการตรวจสัญญาณคลื่นสมอง qEEG
+/// คำนวณและประเมินสภาวะจิตใจ (90 วินาที — DEAP Protocol 60s + 30s margin)
+/// นำค่าคลื่นสมอง Alpha, Beta, Theta, Delta, Gamma มาจัดกลุ่ม วิเคราะห์ Z-Score 
+/// และคำนวณดัชนีระดับความเสี่ยงเพื่อจัดทําคำแนะนำในการฟื้นฟูสุขภาพจิต
 class EegAssessmentService {
+  
+  /// ประเมินสัญญาณคลื่นสมองจากลิสต์ของ Samples ทั้งหมดที่เก็บรวบรวมได้
   static Map<String, dynamic> computeFromSamples(List<Map<String, double>> samples) {
     if (samples.isEmpty) {
-      return _defaultSummary();
+      return _defaultSummary(); // ส่งค่าผลลัพธ์ว่างกลับไปหากยังไม่มีสัญญาณสะสม
     }
 
     final n = samples.length;
@@ -52,21 +57,21 @@ class EegAssessmentService {
     final alphaAsymmetry = (avgAlpha - avgBeta) / (avgAlpha + avgBeta + 0.01);
     final betaThetaRatio = avgBeta / (avgTheta + 0.01);
 
-    // Adjusted baseline and formulas for Frontal Muse EEG resting state (softer thresholds)
+    // ปรับค่าเกณฑ์มาตรฐานและสูตรสำหรับ Frontal Muse EEG ขณะพัก (เกณฑ์ยืดหยุ่นขึ้น)
     // ใช้ Baseline เริ่มต้นที่ 20.0 (ความเสี่ยงต่ำ) เพื่อให้เหมาะกับการเป็นดัชนีตรวจคัดกรองทั่วไป
     double eegIndex = 20.0;
     eegIndex += (thetaZScore * 3.0).clamp(-7.5, 7.5);
     eegIndex += (deltaZScore * 2.5).clamp(-5.0, 5.0);
     eegIndex -= (alphaZScore * 3.5).clamp(-8.5, 8.5);
 
-    // Frontal Alpha-Beta balance offset (resting offset is ~ -0.45)
+    // ค่าความเบี่ยงเบนของคลื่นสมองสมมาตร Frontal Alpha-Beta (ค่า Offset ปกติขณะพักคือ ~ -0.45)
     // อ้างอิงจากงานวิจัยภาวะ Frontal Alpha Asymmetry (Thibodeau et al., 2006)
     // ในภาวะผ่อนคลายปกติของตำแหน่งหน้าผาก คลื่น Beta จะสูงกว่า Alpha เล็กน้อยทำให้ได้ค่าติดลบเฉลี่ย -0.45
     // การบวกชดเชย +0.45 เป็นการ Calibrate สภาวะเริ่มต้นให้เข้าสู่ศูนย์กลางทางสถิติ
     final adjustedAsymmetry = alphaAsymmetry + 0.45;
     eegIndex += (adjustedAsymmetry * -10.0).clamp(-5.0, 5.0);
 
-    // Frontal Beta/Theta ratio threshold is higher (normal resting is ~ 2.2)
+    // เกณฑ์สัดส่วนของคลื่นความร้อน Beta/Theta สูงขึ้น (ขณะพักปกติคือ ~ 2.2)
     // อ้างอิงเกณฑ์ประเมิน Neurofeedback ของหน้าผาก ปรับระดับจาก 1.5 เป็น 2.2 
     // เพื่อคัดกรองสัญญาณรบกวนทางกายภาพ (Ocular/Muscular Artifacts) ในชีวิตประจำวัน
     eegIndex += ((betaThetaRatio - 2.2) * 3.0).clamp(-5.0, 5.0);
@@ -116,6 +121,7 @@ class EegAssessmentService {
     };
   }
 
+  /// ส่งค่าผลสรุปเริ่มต้นกรณีไม่มีตัวอย่างข้อมูลสัญญาณสะสม
   static Map<String, dynamic> _defaultSummary() {
     return {
       'avgAlpha': 0.0,
@@ -142,10 +148,12 @@ class EegAssessmentService {
     };
   }
 
+  /// คำนวณค่า Z-Score จากค่าเฉลี่ยและค่าเบี่ยงเบนมาตรฐานประชากรกลุ่มเปรียบเทียบ
   static double _zScore(double value, double mean, double stdDev) {
     return (value - mean) / (stdDev == 0 ? 1 : stdDev);
   }
 
+  /// ดึงข้อมูลชุดสีสำหรับแบ่งระดับความเสี่ยงกลับมาในรูปของ Color ของ Flutter
   static Color riskColor(Map<String, dynamic> s) {
     return Color(s['riskColorValue'] as int? ?? 0xFF9E9E9E);
   }

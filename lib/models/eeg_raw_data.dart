@@ -1,4 +1,6 @@
 
+/// EEGRawData เป็นคลาสโมเดลบันทึกข้อมูลคลื่นสมองระดับแพ็กเกตข้อมูลย่อย (Raw Signal Samples)
+/// จัดเก็บรายละเอียดค่าเฉลี่ยคลื่นรายวินาที แยกตามย่านความถี่ (Alpha, Beta, Theta, Delta, Gamma) พร้อมตัวบ่งชี้เซสชัน
 class EEGRawData {
   final int? id;
   final int userId;

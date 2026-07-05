@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
+/// SavedItemsScreen คือหน้าจอรายการบทความและข้อมูลการดูแลสมองที่ผู้ใช้เลือกบันทึกเก็บไว้
+/// ทำงานแสดงผลการ์ดแนะนำสุขภาพจิต โภชนาการ และการผ่อนคลายที่บันทึกไว้ในบุ๊กมาร์ก (Bookmarked Articles)
 class SavedItemsScreen extends StatelessWidget {
   const SavedItemsScreen({super.key});
 

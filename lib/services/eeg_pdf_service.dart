@@ -6,7 +6,12 @@ import 'dart:typed_data';
 import '../models/user.dart';
 import 'eeg_assessment_service.dart';
 
+/// EegPdfService จัดการสร้างรายงานสรุปผลการวิเคราะห์คลื่นสมอง (qEEG Report) ในรูปแบบไฟล์ PDF
+/// โดยออกแบบหัวกระดาษ ข้อมูลผู้ประเมิน ตารางระดับความเบี่ยงเบน Z-Score ค่าความสมดุลซีกซ้ายขวา
+/// แผนภูมิภาพจำลองตำแหน่งเซนเซอร์บนหัว และแปลงไฟล์ PDF เป็นไบต์ข้อมูล (Uint8List) สำหรับพิมพ์หรือส่งออก
 class EegPdfService {
+  
+  /// ฟังก์ชันสำหรับสังเคราะห์เนื้อหาและวาดโครงร่างเอกสาร PDF รายงานผล 2 หน้า
   static Future<Uint8List> generateReport(
     Map<String, dynamic> s, 
     User user, {

@@ -168,7 +168,7 @@ class PsdChart extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: max(0, displayVal),
-              color: barColor.withOpacity(0.8),
+              color: barColor.withValues(alpha: 0.8),
               width: max(2, 200 / maxBin * step),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(2),
@@ -176,7 +176,7 @@ class PsdChart extends StatelessWidget {
               ),
               backDrawRodData: BackgroundBarChartRodData(
                 show: true,
-                color: barColor.withOpacity(0.05),
+                color: barColor.withValues(alpha: 0.05),
               ),
             ),
           ],

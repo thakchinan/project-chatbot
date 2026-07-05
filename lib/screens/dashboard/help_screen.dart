@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 
+/// HelpScreen เป็นหน้าจอสำหรับแสดงคู่มือช่วยเหลือแนะนำการใช้แอปพลิเคชัน
+/// อธิบายวิธีการใช้งานหน้าฟังก์ชันหลัก รวมถึงช่องทางการติดต่อขอรับความช่วยเหลือด่วน
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
 

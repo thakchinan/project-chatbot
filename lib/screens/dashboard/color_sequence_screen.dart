@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// ColorSequenceScreen คือหน้าจอมินิเกมฝึกความจำสีตามลำดับ (Color Sequence Memory Game)
+/// ระบบจะแสดงลำดับสีทีละสีให้ผู้ใช้ดู แล้วให้กดตามลำดับที่ถูกต้องเพื่อพัฒนาทักษะความจำระดับสมอง
 class ColorSequenceScreen extends StatefulWidget {
   final User? user;
 
@@ -14,14 +16,14 @@ class ColorSequenceScreen extends StatefulWidget {
 }
 
 class _ColorSequenceScreenState extends State<ColorSequenceScreen> {
-  final List<Color> colors = [Colors.red, Colors.blue, Colors.green, Colors.yellow];
-  List<int> sequence = [];
-  List<int> playerInput = [];
-  int level = 1;
-  bool isShowingSequence = false;
-  int currentShowIndex = -1;
-  bool gameOver = false;
-  DateTime? _startTime;
+  final List<Color> colors = [Colors.red, Colors.blue, Colors.green, Colors.yellow]; // กลุ่มสีมาตรฐานที่นำมาใช้ทดสอบ
+  List<int> sequence = [];           // ลำดับดัชนีสีที่ระบบสุ่มขึ้นมาทีละเลเวล
+  List<int> playerInput = [];        // ลำดับดัชนีสีที่ผู้เล่นป้อนเข้ามาจริง
+  int level = 1;                     // ระดับเลเวลความยากปัจจุบัน
+  bool isShowingSequence = false;    // บอกว่าระบบกำลังเล่นลำดับสีแสงไฟให้ดูอยู่หรือไม่
+  int currentShowIndex = -1;         // ดัชนีปุ่มไฟสีที่กำลังแสดงเอฟเฟกต์กระพริบ
+  bool gameOver = false;             // ตรวจสอบว่าแพ้หรือจบเกมการเล่นไปแล้วหรือยัง
+  DateTime? _startTime;              // บันทึกเวลาที่เริ่มต้นเล่นเกมเพื่อสรุปผลเวลารวม
 
   @override
   void initState() {

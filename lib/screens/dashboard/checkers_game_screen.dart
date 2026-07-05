@@ -3,6 +3,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// CheckersGameScreen คือหน้าจอมินิเกมหมากฮอส (Checkers Game Screen)
+/// ใช้สำหรับจัดบอร์ดตาราง 8x8 และรองรับตรรกะการเดินหมาก การกินหมากสลับเทิร์นผู้เล่น และจัดเก็บกิจกรรมการเล่นลงฐานข้อมูล
 class CheckersGameScreen extends StatefulWidget {
   final User? user;
 

@@ -10,21 +10,23 @@ class FFTCalculator {
       throw Exception("Input size must be power of 2");
     }
 
-    // DC Offset Removal
+    // ขจัดค่า DC Offset ออกจากตัวสัญญาณ
     double sum = 0;
-    for (double val in input) sum += val;
+    for (double val in input) {
+      sum += val;
+    }
     double mean = sum / n;
 
     List<double> real = List.filled(n, 0.0);
     List<double> imag = List.filled(n, 0.0);
 
-    // Hanning Window + DC Removal
+    // ทำหน้าต่างวงกลม Hanning Window ร่วมกับลบค่า DC Offset
     for (int i = 0; i < n; i++) {
       double w = 0.5 * (1 - cos(2 * pi * i / (n - 1)));
       real[i] = (input[i] - mean) * w;
     }
 
-    // Cooley-Tukey FFT (in-place, radix-2)
+    // ประมวลผลคลื่นสมองโดยวิธี Cooley-Tukey FFT (คำนวณในหน่วยความจำเดิม Radix-2)
     int j = 0;
     for (int i = 0; i < n - 1; i++) {
       if (i < j) {
@@ -68,9 +70,11 @@ class FFTCalculator {
   static Map<String, double> welchPSD(List<double> data, int samplingRate,
       {int segmentSize = 256, double overlap = 0.5}) {
     if (data.length < segmentSize) {
-      // Fall back to single segment
+      // หากข้อมูลสั้นกว่าขนาดเซกเมนต์ ให้ใช้เซกเมนต์เดี่ยวพร้อมขยายความยาว (Zero-Padding)
       List<double> padded = List.from(data);
-      while (padded.length < segmentSize) padded.add(0.0);
+      while (padded.length < segmentSize) {
+        padded.add(0.0);
+      }
       var mags = computeMagnitudes(padded);
       return calculateBandPowers(mags, samplingRate, segmentSize);
     }
@@ -79,7 +83,7 @@ class FFTCalculator {
     int numSegments = ((data.length - segmentSize) / stepSize).floor() + 1;
     if (numSegments < 1) numSegments = 1;
 
-    // Accumulate PSD from all segments
+    // รวบรวมค่าสะสมความหนาแน่นพลังงาน (PSD) จากทุกๆ เซกเมนต์ย่อย
     List<double> avgMags = List.filled(segmentSize ~/ 2, 0.0);
 
     for (int seg = 0; seg < numSegments; seg++) {
@@ -90,11 +94,11 @@ class FFTCalculator {
       var mags = computeMagnitudes(segment);
 
       for (int i = 0; i < mags.length; i++) {
-        avgMags[i] += mags[i] * mags[i]; // Power = mag^2
+        avgMags[i] += mags[i] * mags[i]; // คำนวณพลังงานจากค่าแอมพลิจูดกำลังสอง
       }
     }
 
-    // Average across segments
+    // หาค่าเฉลี่ยของทุกเซกเมนต์สะสม
     for (int i = 0; i < avgMags.length; i++) {
       avgMags[i] = sqrt(avgMags[i] / numSegments);
     }
@@ -114,8 +118,9 @@ class FFTCalculator {
       double freq = i * resolution;
       double power = magnitudes[i] * magnitudes[i];
 
-      if (freq >= 0.5 && freq < 4) delta += power;
-      else if (freq >= 4 && freq < 8) theta += power;
+      if (freq >= 0.5 && freq < 4) {
+        delta += power;
+      } else if (freq >= 4 && freq < 8) theta += power;
       else if (freq >= 8 && freq < 13) alpha += power;
       else if (freq >= 13 && freq < 30) beta += power;
       else if (freq >= 30 && freq < 45) gamma += power;
@@ -125,19 +130,21 @@ class FFTCalculator {
   }
 
   // =========================================================
-  //  Signal Conditioning (Pre-processing)
+  //  การปรับสภาพสัญญาณ (Signal Conditioning / Pre-processing)
   // =========================================================
 
-  /// Bandpass Filter (Butterworth-approximation IIR)
+  /// กรองช่วงความถี่ผ่าน Bandpass Filter (ใช้ IIR Butterworth Approximation)
   static List<double> bandpassFilter(List<double> input, int samplingRate,
       {double lowCut = 0.5, double highCut = 50.0}) {
     if (input.length < 6) return List.from(input);
     
-    // IMPORTANT: Remove DC offset (Mean) before filtering!
+    // สำคัญ: ทำการลบค่าเบี่ยงเบนกระแสตรง (DC Offset) ออกก่อนทำการกรองเสมอเพื่อป้องกันภาวะแกว่งคลาดเคลื่อน
     // ถ้าไม่ลบ DC offset ออกก่อน IIR filter จะเกิด Transient ขนาดใหญ่มาก 
     // ทำให้ค่า SD พุ่งทะลุหลอด และ SQI ร่วงลงเหลือ 58% ตลอดเวลา
     double sum = 0;
-    for (var v in input) sum += v;
+    for (var v in input) {
+      sum += v;
+    }
     double mean = sum / input.length;
     
     List<double> zeroMeanInput = List.filled(input.length, 0.0);
@@ -145,7 +152,7 @@ class FFTCalculator {
       zeroMeanInput[i] = input[i] - mean;
     }
 
-    // Forward-backward filter (zero-phase) for better results
+    // กรองสองทิศทางแบบย้อนกลับ (Zero-phase) เพื่อหลีกเลี่ยงเฟสเลื่อนเบี่ยงเบน
     List<double> hp = _butterworthHP(zeroMeanInput, lowCut, samplingRate);
     List<double> lp = _butterworthLP(hp, highCut, samplingRate);
     return lp;
@@ -168,7 +175,7 @@ class FFTCalculator {
     for (int i = 2; i < x.length; i++) {
       y[i] = a0 * x[i] + a1 * x[i-1] + a2 * x[i-2] - b1 * y[i-1] - b2 * y[i-2];
     }
-    // Reverse pass (zero-phase)
+    // การกรองทิศทางย้อนกลับ (Zero-phase)
     List<double> y2 = List.filled(x.length, 0.0);
     y2[x.length-1] = y[x.length-1];
     if (x.length > 1) y2[x.length-2] = y[x.length-2];
@@ -204,11 +211,11 @@ class FFTCalculator {
     return y2;
   }
 
-  /// Notch Filter 50 Hz — กรอง power line interference ของไทย
-  /// อ้างอิง: IIR Notch filter, Q-factor = 30
-  static List<double> notchFilter50Hz(List<double> input, int samplingRate) {
+  /// Notch Filter — กรอง power line interference (50 Hz สำหรับไทย/ยุโรป หรือ 60 Hz สำหรับสหรัฐอเมริกา)
+  /// อ้างอิง: IIR Notch filter, Q-factor = 30. Zero-phase (forward-backward pass) เพื่อไม่ให้เกิด Phase Distortion
+  static List<double> notchFilter(List<double> input, int samplingRate, {double notchFrequency = 50.0}) {
     if (input.length < 3) return List.from(input);
-    double f0 = 50.0;
+    double f0 = notchFrequency;
     double q = 30.0;
     double w0 = 2 * pi * f0 / samplingRate;
     double bw = w0 / q;
@@ -222,47 +229,67 @@ class FFTCalculator {
     double b1 = -2.0 * gb * norm;
     double b2 = (1.0 - beta) * norm;
 
+    // การกรองทิศทางไปข้างหน้า (Forward pass)
     List<double> y = List.filled(input.length, 0.0);
     y[0] = input[0]; if (input.length > 1) y[1] = input[1];
     for (int i = 2; i < input.length; i++) {
       y[i] = a0 * input[i] + a1 * input[i-1] + a2 * input[i-2] - b1 * y[i-1] - b2 * y[i-2];
     }
-    return y;
+
+    // การกรองทิศทางย้อนกลับ (Backward pass แบบ Zero-phase) เพื่อหลีกเลี่ยงความบิดเบี้ยวของเฟสสัญญาณ
+    List<double> y2 = List.filled(input.length, 0.0);
+    y2[input.length-1] = y[input.length-1];
+    if (input.length > 1) y2[input.length-2] = y[input.length-2];
+    for (int i = input.length - 3; i >= 0; i--) {
+      y2[i] = a0 * y[i] + a1 * y[i+1] + a2 * y[i+2] - b1 * y2[i+1] - b2 * y2[i+2];
+    }
+    return y2;
+  }
+
+  /// Notch Filter 50 Hz — กรอง power line interference ของไทย (Backward compatible)
+  static List<double> notchFilter50Hz(List<double> input, int samplingRate) {
+    return notchFilter(input, samplingRate, notchFrequency: 50.0);
   }
 
   // =========================================================
-  //  Artifact Detection & Rejection
+  //  การคัดกรองและการตรวจจับสัญญาณรบกวน (Artifact Detection & Rejection)
   // =========================================================
 
-  /// Advanced artifact rejection:
-  /// 1. Amplitude threshold (IFCN: ±75 µV for consumer-grade)
-  /// 2. Derivative-based eye blink detection (sharp transients)
-  /// 3. Flatline detection (electrode disconnection)
+  /// ระบบวิเคราะห์แยกแยะสัญญาณรบกวนขั้นสูง (Advanced Artifact Rejection)
+  /// 1. ขีดจำกัดแอมพลิจูดสัญญาณ (Amplitude threshold มาตรฐาน IFCN: ±75 µV สำหรับเกรดผู้บริโภค)
+  /// 2. การตรวจจับเสียงหรือการกระพริบตาผ่านอนุพันธ์ความแตกต่าง (Derivative-based eye blink detection)
+  /// 3. การตรวจจับสัญญาณนิ่งสนิทผิดปกติ (Flatline detection กรณีหลุดหรือขยับห่าง)
   static List<double> rejectArtifacts(List<double> input, {double threshold = 75.0}) {
     if (input.length < 4) return List.from(input);
 
     double sum = 0;
-    for (var v in input) sum += v;
+    for (var v in input) {
+      sum += v;
+    }
     double mean = sum / input.length;
 
     double sdSum = 0;
-    for (var v in input) sdSum += (v - mean) * (v - mean);
+    for (var v in input) {
+      sdSum += (v - mean) * (v - mean);
+    }
     double sd = sqrt(sdSum / input.length);
 
-    // Adaptive threshold: 3 SD or absolute, whichever is stricter
+    // เกณฑ์จำลองแบบปรับตัวอัตโนมัติ: 3 SD หรือขีดจำกัดสัมบูรณ์ โดยเลือกเกณฑ์ที่เข้มงวดกว่า
     double adaptiveThreshold = 3 * sd;
     double actualThreshold = min(adaptiveThreshold, threshold);
-    if (actualThreshold < 5) actualThreshold = 5; // floor
+    if (actualThreshold < 5) actualThreshold = 5; // ขีดจำกัดล่างสุด
 
-    // Derivative for blink detection
+    // การคำนวณอนุพันธ์ (Derivative) สำหรับคัดกรองการกระพริบตา (Blink detection)
     List<double> derivative = List.filled(input.length, 0.0);
     for (int i = 1; i < input.length; i++) {
       derivative[i] = (input[i] - input[i-1]).abs();
     }
     double derivMean = 0;
-    for (var d in derivative) derivMean += d;
+    for (var d in derivative) {
+      derivMean += d;
+    }
     derivMean /= input.length;
-    double derivThreshold = derivMean * 4; // Blinks have 4x avg derivative
+    double derivThreshold = derivMean * 4; // การกระพริบตามีค่าอนุพันธ์สูงกว่าค่าเฉลี่ยปกติ 4 เท่า
 
     List<double> cleaned = List.from(input);
     int artifactCount = 0;
@@ -270,13 +297,13 @@ class FFTCalculator {
     for (int i = 0; i < cleaned.length; i++) {
       bool isArtifact = false;
 
-      // Check 1: Amplitude out of range
+      // ตรวจสอบที่ 1: แอมพลิจูดอยู่นอกช่วงขอบเขตความปลอดภัย
       if ((cleaned[i] - mean).abs() > actualThreshold) isArtifact = true;
 
-      // Check 2: Sharp transient (eye blink)
+      // ตรวจสอบที่ 2: ความต่างระหว่างข้อมูลที่กระชั้นชิดเกินไป (การกะพริบตากระทันหัน)
       if (i > 0 && derivative[i] > derivThreshold) isArtifact = true;
 
-      // Check 3: Flatline (electrode off) — 10+ identical values
+      // ตรวจสอบที่ 3: สัญญาณเป็นศูนย์หรือนิ่งเรียบเป็นเส้นตรง (Flatline/ขั้วหลุด) - ค่าคงเดิมติดต่อกัน 10 จุด
       if (i >= 10) {
         bool flat = true;
         for (int k = 1; k <= 10; k++) {
@@ -286,7 +313,7 @@ class FFTCalculator {
       }
 
       if (isArtifact) {
-        // Interpolate: use average of neighbors
+        // ประมาณค่าทดแทนจากจุดข้างเคียง (Interpolation)
         double left = (i > 0) ? cleaned[i - 1] : mean;
         double right = (i < cleaned.length - 1) ? input[i + 1] : mean;
         cleaned[i] = (left + right) / 2;
@@ -298,15 +325,15 @@ class FFTCalculator {
   }
 
   // =========================================================
-  //  Signal Quality — Optimized for Muse 2 (12-bit ADC)
+  //  ดัชนีคุณภาพสัญญาณ (Signal Quality) — ปรับแต่งให้เหมาะสมกับ Muse 2 (12-bit ADC)
   // =========================================================
 
-  /// Signal Quality Index (0-100)
+  /// คำนวณค่าดัชนีชี้วัดคุณภาพสัญญาณคลื่นสมอง (Signal Quality Index - SQI) ตั้งแต่ 0 - 100
   ///
-  /// Muse 2 specs:
-  ///   ADC: 12-bit → 4096 levels → range 0-1682 µV
-  ///   Quantization step: 1682/4095 = 0.41 µV
-  ///   Sampling: 256 Hz, 4 channels (TP9, AF7, AF8, TP10)
+  /// รายละเอียดสเปกฮาร์ดแวร์หน้ากาก Muse 2:
+  ///   ADC: 12-bit → 4096 ระดับ → ช่วงครอบคลุม 0 - 1682 µV
+  ///   ขั้นตอนความกว้างระดับขั้นควอนไทซ์: 1682/4095 = 0.41 µV
+  ///   สุ่มตัวอย่าง: 256 Hz, 4 ช่องสัญญาณประสาท (TP9, AF7, AF8, TP10)
   ///
   /// SQI ประกอบด้วย 3 metrics หลักที่เชื่อถือได้:
   ///   1. Signal Variability (SD) — 40%
@@ -320,7 +347,9 @@ class FFTCalculator {
 
     // === Step 0: Remove DC offset ===
     double rawSum = 0;
-    for (var v in input) rawSum += v;
+    for (var v in input) {
+      rawSum += v;
+    }
     double rawMean = rawSum / input.length;
 
     List<double> centered = List.filled(input.length, 0.0);
@@ -422,12 +451,12 @@ class FFTCalculator {
   }
 
   // =========================================================
-  //  Temporal Smoothing
+  //  การปรับความสมูทเรียบเนียนของค่าตามกรอบเวลา (Temporal Smoothing)
   // =========================================================
 
-  /// Exponential Moving Average for band power smoothing
-  /// ลดการกระโดดของค่าระหว่าง frame
-  /// alpha = 0.3 → smooth แต่ responsive, 0.1 → very smooth
+  /// การหาค่าเฉลี่ยเคลื่อนที่แบบเอ็กซ์โพเนนเชียล (Exponential Moving Average - EMA) เพื่อเกลี่ยพลังงานย่านความถี่ให้เรียบเนียนขึ้น
+  /// ลดการกระโดดกระชากของค่าสัญญาณระหว่างเฟรม
+  /// ค่าสัมประสิทธิ์ alpha = 0.3 → สมูทพอดีและยังตอบสนองได้เร็ว, 0.1 → สมูทเนียนมากเป็นพิเศษ
   static Map<String, double> smoothBandPowers(
       Map<String, double> current, Map<String, double>? previous, {double alpha = 0.3}) {
     if (previous == null || previous.isEmpty) return current;

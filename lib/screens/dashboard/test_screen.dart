@@ -4,6 +4,8 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import 'settings_screen.dart';
 
+/// TestScreen คือหน้าจอทำแบบทดสอบคัดกรองภาวะความเครียดและซึมเศร้ามาตรฐานสากล (PHQ-9)
+/// แสดงผลแบบสอบถามทีละข้อจำนวน 9 ข้อ คำนวณคะแนนรวม แปลความหมายระดับผลลัพธ์ และบันทึกลง API
 class TestScreen extends StatefulWidget {
   final User? user;
 
@@ -253,7 +255,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               gradient: LinearGradient(
                 colors: [
                   AppColors.primaryBlue,
-                  AppColors.primaryBlue.withOpacity(0.8),
+                  AppColors.primaryBlue.withValues(alpha: 0.8),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -261,7 +263,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryBlue.withOpacity(0.3),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -272,7 +274,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -296,7 +298,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                   'Patient Health Questionnaire-9',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -304,7 +306,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                   'แบบประเมินภาวะความเครียดมาตรฐานสากล',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -400,7 +402,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                   borderRadius: BorderRadius.circular(30),
                 ),
                 elevation: 4,
-                shadowColor: AppColors.primaryBlue.withOpacity(0.4),
+                shadowColor: AppColors.primaryBlue.withValues(alpha: 0.4),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -552,10 +554,10 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.primaryBlue.withOpacity(0.05),
+                color: AppColors.primaryBlue.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.primaryBlue.withOpacity(0.15),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.15),
                 ),
               ),
               child: Column(
@@ -594,7 +596,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Material(
                   color: isSelected
-                    ? AppColors.primaryBlue.withOpacity(0.1)
+                    ? AppColors.primaryBlue.withValues(alpha: 0.1)
                     : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                   child: InkWell(
@@ -715,7 +717,7 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: resultColor.withOpacity(0.1),
+                color: resultColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(resultIcon, size: 50, color: resultColor),
@@ -797,9 +799,9 @@ class _TestScreenState extends State<TestScreen> with SingleTickerProviderStateM
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: resultColor.withOpacity(0.05),
+                color: resultColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: resultColor.withOpacity(0.2)),
+                border: Border.all(color: resultColor.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -437,7 +437,7 @@ class EmotionDetectionService {
 
     var inputTensor = _tsceptionInterpreter!.getInputTensors()[0];
     var inputShape = inputTensor.shape;
-    var input;
+    List<dynamic> input;
 
     if (inputShape.length == 3) {
       input = List.generate(

@@ -5,7 +5,7 @@ import 'dashboard/home_screen.dart';
 import 'dashboard/phq9_tab_screen.dart';
 import 'dashboard/recommendation_screen.dart';
 import 'dashboard/profile_screen.dart';
-import 'dashboard/activities_dashboard_screen.dart';
+// ลบ ActivitiesDashboardScreen ออกตามความต้องการของผู้ใช้ที่ให้เอาหน้ากิจกรรมออก
 import '../theme/app_theme.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -31,16 +31,20 @@ class _MainNavigationState extends State<MainNavigation> {
     setState(() => _currentUser = updatedUser);
   }
 
+  // ลิสต์ของหน้าจอหลักแต่ละแท็บที่เปิดใช้งานในแถบเมนูด้านล่าง (ถอดหน้ากิจกรรมออก เหลือ 4 หน้า)
   List<Widget> get _screens => [
+    // หน้าแรก (Home Screen) สำหรับแสดงข้อมูลทั่วไป ค่าสถานะการเชื่อมต่อ และปุ่มบันทึกข้อมูลอารมณ์
     HomeScreen(
       user: _currentUser,
       onTabSelected: (index) {
         setState(() => _currentIndex = index);
       },
     ),
+    // หน้าแบบประเมินสุขภาพจิต PHQ-9
     Phq9TabScreen(user: _currentUser),
+    // หน้าคำแนะนำสุขภาพจิตและแนวทางดูแลสมอง
     RecommendationScreen(user: _currentUser),
-    ActivitiesDashboardScreen(user: _currentUser),
+    // หน้าข้อมูลส่วนตัวและการตั้งค่าโปรไฟล์ผู้ใช้งาน
     ProfileScreen(user: _currentUser, onUserUpdated: _onUserUpdated),
   ];
 
@@ -58,7 +62,7 @@ class _MainNavigationState extends State<MainNavigation> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primaryBlue.withOpacity(0.3),
+              color: AppColors.primaryBlue.withValues(alpha: 0.3),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -72,14 +76,14 @@ class _MainNavigationState extends State<MainNavigation> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.primaryBlue.withOpacity(0.85),
-                    AppColors.accentBlue.withOpacity(0.85),
+                    AppColors.primaryBlue.withValues(alpha: 0.85),
+                    AppColors.accentBlue.withValues(alpha: 0.85),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -91,11 +95,14 @@ class _MainNavigationState extends State<MainNavigation> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
+                      // สร้างปุ่มนำทางสำหรับหน้าแรก (ดัชนี 0)
                       _buildNavItem(0, Icons.home_rounded, 'หน้าแรก'),
+                      // สร้างปุ่มนำทางสำหรับหน้า PHQ-9 (ดัชนี 1)
                       _buildNavItem(1, Icons.quiz_rounded, 'PHQ-9'),
+                      // สร้างปุ่มนำทางสำหรับหน้าคำแนะนำ (ดัชนี 2)
                       _buildNavItem(2, Icons.chat_bubble_rounded, 'คำแนะนำ'),
-                      _buildNavItem(3, Icons.grid_view_rounded, 'กิจกรรม'),
-                      _buildNavItem(4, Icons.person_rounded, 'โปรไฟล์'),
+                      // สร้างปุ่มนำทางสำหรับหน้าโปรไฟล์ (ดัชนี 3) - เปลี่ยนจาก 4 เป็น 3 เนื่องจากถอดเมนูกิจกรรมออก
+                      _buildNavItem(3, Icons.person_rounded, 'โปรไฟล์'),
                     ],
                   ),
                 ),
@@ -122,7 +129,7 @@ class _MainNavigationState extends State<MainNavigation> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white.withOpacity(0.25) : Colors.transparent,
+          color: isActive ? Colors.white.withValues(alpha: 0.25) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(

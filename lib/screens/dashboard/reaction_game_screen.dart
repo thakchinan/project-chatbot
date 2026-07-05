@@ -5,6 +5,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// ReactionGameScreen คือหน้าจอมินิเกมทดสอบปฏิกิริยาการตอบสนอง (Reaction Time Game)
+/// สุ่มสีของหน้าจอให้เปลี่ยนเป็นสีเขียว แล้ววัดความเร็วหน่วยมิลลิวินาที (ms) ที่ผู้เล่นกดแตะตอบสนองความเร็วปฏิกิริยาของสมอง
 class ReactionGameScreen extends StatefulWidget {
   final User? user;
 

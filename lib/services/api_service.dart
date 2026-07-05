@@ -1,13 +1,75 @@
 import 'dart:io';
 import 'supabase_service.dart';
 import 'chatgpt_service.dart';
+import 'auth_service.dart';
 
+/// ApiService เป็น Facade Class สำหรับรวบรวมฟังก์ชันการเรียกใช้งาน API ทั้งหมดในจุดเดียว
+/// ทำหน้าที่เป็นทางผ่านเชื่อมโยงไปยัง SupabaseService, ChatGPTService, และ AuthService
+/// ช่วยให้ส่วนควบคุมการทำงานด้าน UI เรียกใช้การจัดการข้อมูลหลังบ้านและโมเดลปัญญาประดิษฐ์ได้สะดวกยิ่งขึ้น
 class ApiService {
 
+  // ═══════════════════════════════════════════
+  //  Authentication — ระบบยืนยันตัวตน
+  // ═══════════════════════════════════════════
+
+  /// สมัครสมาชิกด้วย email + password (ผ่าน Supabase Auth)
+  static Future<Map<String, dynamic>> signUpWithEmail({
+    required String email,
+    required String password,
+    String? fullName,
+    String? phone,
+    String? birthDate,
+  }) async {
+    return AuthService.signUpWithEmail(
+      email: email,
+      password: password,
+      fullName: fullName,
+      phone: phone,
+      birthDate: birthDate,
+    );
+  }
+
+  /// เข้าสู่ระบบด้วย email + password
+  static Future<Map<String, dynamic>> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    return AuthService.signInWithEmail(email: email, password: password);
+  }
+
+  /// เข้าสู่ระบบด้วย Google Sign-In
+  static Future<Map<String, dynamic>> signInWithGoogle() async {
+    return AuthService.signInWithGoogle();
+  }
+
+  /// ส่งอีเมลรีเซ็ตรหัสผ่าน (ลืมรหัสผ่าน)
+  static Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
+    return AuthService.sendPasswordResetEmail(email);
+  }
+
+  /// ออกจากระบบ
+  static Future<void> signOut() async {
+    return AuthService.signOut();
+  }
+
+  /// ตรวจสอบว่าผู้ใช้ล็อกอินอยู่หรือไม่
+  static bool get isLoggedIn => AuthService.isLoggedIn;
+
+  /// กู้คืน session เมื่อเปิดแอปซ้ำ (Auto-login)
+  static Future<Map<String, dynamic>> restoreSession() async {
+    return AuthService.restoreSession();
+  }
+
+  // ═══════════════════════════════════════════
+  //  Legacy Login — ล็อกอินแบบเดิม (username/password)
+  // ═══════════════════════════════════════════
+
+  /// เข้าสู่ระบบด้วยชื่อผู้ใช้งานและรหัสผ่าน
   static Future<Map<String, dynamic>> login(String username, String password) async {
     return SupabaseService.login(username, password);
   }
 
+  /// ลงทะเบียนผู้ใช้งานใหม่พร้อมรายละเอียดข้อมูลส่วนตัว
   static Future<Map<String, dynamic>> register({
     required String username,
     required String password,
@@ -26,10 +88,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลโปรไฟล์ของผู้ใช้งานด้วยรหัสไอดีผู้ใช้
   static Future<Map<String, dynamic>> getProfile(int userId) async {
     return SupabaseService.getProfile(userId);
   }
 
+  /// อัปเดตข้อมูลรายละเอียดโปรไฟล์ของผู้ใช้
   static Future<Map<String, dynamic>> updateProfile({
     required int userId,
     String? fullName,
@@ -46,6 +110,7 @@ class ApiService {
     );
   }
 
+  /// อัปโหลดรูปภาพโปรไฟล์ (Avatar) ไปยัง Supabase Storage
   static Future<Map<String, dynamic>> uploadAvatar({
     required int userId,
     required File imageFile,
@@ -56,6 +121,7 @@ class ApiService {
     );
   }
 
+  /// เปลี่ยนรหัสผ่านของผู้ใช้งาน
   static Future<Map<String, dynamic>> changePassword({
     required int userId,
     String? currentPassword,
@@ -68,6 +134,7 @@ class ApiService {
     );
   }
 
+  /// บันทึกผลลัพธ์การทำแบบทดสอบคัดกรองสุขภาพจิต (PHQ-9)
   static Future<Map<String, dynamic>> saveTestResult({
     required int userId,
     required int stressScore,
@@ -82,10 +149,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลประวัติการทำแบบทดสอบทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getTestResults(int userId) async {
     return SupabaseService.getTestResults(userId);
   }
 
+  /// บันทึกข้อมูลวิเคราะห์คลื่นสมองลงฐานข้อมูล
   static Future<Map<String, dynamic>> saveBrainwaveData({
     required int userId,
     required double alphaWave,
@@ -102,10 +171,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลประวัติคลื่นสมองทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getBrainwaveData(int userId) async {
     return SupabaseService.getBrainwaveData(userId);
   }
 
+  /// บันทึกประวัติการทำกิจกรรมหรือเล่นเกม
   static Future<Map<String, dynamic>> saveActivity({
     required int userId,
     required String activityType,
@@ -122,10 +193,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลประวัติกิจกรรมทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getActivities(int userId) async {
     return SupabaseService.getActivities(userId);
   }
 
+  /// ส่งข้อความแชทและจัดเก็บลงในฐานข้อมูล
   static Future<Map<String, dynamic>> sendChatMessage({
     required int userId,
     required String message,
@@ -138,10 +211,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลประวัติการสนทนาทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getChatHistory(int userId) async {
     return SupabaseService.getChatHistory(userId);
   }
 
+  /// ส่งข้อความหาบอทปัญญาประดิษฐ์ (ChatGPT) พร้อมดึง RAG Context และบันทึกคำตอบอัตโนมัติ
   static Future<Map<String, dynamic>> sendChatGPTMessage({
     required int userId,
     required String message,
@@ -179,10 +254,12 @@ class ApiService {
     return result;
   }
 
+  /// ดึงการตั้งค่าแอปพลิเคชันของผู้ใช้
   static Future<Map<String, dynamic>> getSettings(int userId) async {
     return SupabaseService.getSettings(userId);
   }
 
+  /// ปรับปรุงบันทึกการตั้งค่าภายในแอป
   static Future<Map<String, dynamic>> updateSettings({
     required int userId,
     required bool pushNotifications,
@@ -196,10 +273,12 @@ class ApiService {
     );
   }
 
+  /// ดึงรายการกำหนดการแจ้งเตือนทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getSchedules(int userId) async {
     return SupabaseService.getSchedules(userId);
   }
 
+  /// เพิ่มกำหนดการแจ้งเตือนใหม่ในปฏิทิน
   static Future<Map<String, dynamic>> addSchedule({
     required int userId,
     required String title,
@@ -218,6 +297,7 @@ class ApiService {
     );
   }
 
+  /// ลบกำหนดการแจ้งเตือน
   static Future<Map<String, dynamic>> deleteSchedule({
     required int scheduleId,
     required int userId,
@@ -230,6 +310,7 @@ class ApiService {
 
 
 
+  /// บันทึกเซสชันอารมณ์และคลื่นสมองเฉลี่ยที่รวบรวมได้
   static Future<Map<String, dynamic>> saveEmotionSession({
     required int userId,
     required String targetEmotion,
@@ -266,15 +347,18 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลเซสชันอารมณ์และคลื่นสมองทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getEmotionSessions(int userId, {int limit = 20}) async {
     return SupabaseService.getEmotionSessions(userId, limit: limit);
   }
 
 
+  /// ดึงข้อมูลรายชื่อผู้ติดต่อฉุกเฉินทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getEmergencyContacts(int userId) async {
     return SupabaseService.getEmergencyContacts(userId);
   }
 
+  /// เพิ่มผู้ติดต่อฉุกเฉินใหม่
   static Future<Map<String, dynamic>> addEmergencyContact({
     required int userId,
     required String contactName,
@@ -299,6 +383,7 @@ class ApiService {
     );
   }
 
+  /// อัปเดตข้อมูลผู้ติดต่อฉุกเฉินเดิม
   static Future<Map<String, dynamic>> updateEmergencyContact({
     required int contactId,
     String? contactName,
@@ -323,14 +408,17 @@ class ApiService {
     );
   }
 
+  /// ลบผู้ติดต่อฉุกเฉิน
   static Future<Map<String, dynamic>> deleteEmergencyContact(int contactId) async {
     return SupabaseService.deleteEmergencyContact(contactId);
   }
 
+  /// ดึงข้อมูลระเบียนคนไข้/ประวัติผู้สูงอายุ
   static Future<Map<String, dynamic>> getElderlyProfile(int userId) async {
     return SupabaseService.getElderlyProfile(userId);
   }
 
+  /// บันทึกหรือสร้างระเบียนประวัติผู้สูงอายุ/คนไข้ใหม่
   static Future<Map<String, dynamic>> saveElderlyProfile({
     required int userId,
     String? firstName,
@@ -373,6 +461,7 @@ class ApiService {
     );
   }
 
+  /// บันทึกข้อมูลและเมทาดาต้าของไฟล์เสียงพูด
   static Future<Map<String, dynamic>> saveVoiceMetadata({
     int? messageId,
     String? detectedLanguage,
@@ -401,10 +490,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลเมทาดาต้าเสียงตามรหัสข้อความ
   static Future<Map<String, dynamic>> getVoiceMetadata(int messageId) async {
     return SupabaseService.getVoiceMetadata(messageId);
   }
 
+  /// ลงทะเบียนและเชื่อมโยงอุปกรณ์ EEG แถบคาดศีรษะเครื่องใหม่กับผู้ใช้
   static Future<Map<String, dynamic>> registerEEGDevice({
     required int userId,
     required String deviceName,
@@ -423,10 +514,12 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลแถบตรวจคลื่นสมองทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getEEGDevices(int userId) async {
     return SupabaseService.getEEGDevices(userId);
   }
 
+  /// อัปเดตสถานะและระดับแบตเตอรี่ของฮาร์ดแวร์แถบวัดคลื่นสมอง
   static Future<Map<String, dynamic>> updateDeviceStatus({
     required int deviceId,
     String? status,
@@ -441,6 +534,7 @@ class ApiService {
     );
   }
 
+  /// เริ่มต้นเซสชันบันทึกข้อมูลคลื่นสมอง EEG ตัวใหม่
   static Future<Map<String, dynamic>> startEEGSession({
     required int userId,
     int? deviceId,
@@ -455,6 +549,7 @@ class ApiService {
     );
   }
 
+  /// สิ้นสุดเซสชันการบันทึกคลื่นสมองพร้อมคำนวณสรุปผลและระดับความเสถียรของสัญญาณ
   static Future<Map<String, dynamic>> endEEGSession({
     required int sessionId,
     double? avgAttentionScore,
@@ -471,14 +566,17 @@ class ApiService {
     );
   }
 
+  /// ดึงประวัติรายงานคลื่นสมองทั้งหมดของผู้ใช้
   static Future<Map<String, dynamic>> getEEGSessions(int userId, {int limit = 20}) async {
     return SupabaseService.getEEGSessions(userId, limit: limit);
   }
 
+  /// เริ่มต้นเซสชันเปิดสนทนาแชทใหม่
   static Future<Map<String, dynamic>> startConversation(int userId) async {
     return SupabaseService.startConversation(userId);
   }
 
+  /// สิ้นสุดเซสชันแชทและเขียนบันทึกสรุปประเด็น (Topic Summary)
   static Future<Map<String, dynamic>> endConversation({
     required int conversationId,
     String? topicSummary,
@@ -491,10 +589,12 @@ class ApiService {
     );
   }
 
+  /// ดึงเซสชันสนทนาแชทที่ยังเปิดทำงานอยู่ในปัจจุบัน
   static Future<Map<String, dynamic>> getActiveConversation(int userId) async {
     return SupabaseService.getActiveConversation(userId);
   }
 
+  /// บันทึกอารมณ์รายวันพร้อมเหตุการณ์กระตุ้น
   static Future<Map<String, dynamic>> saveEmotionLog({
     required int userId,
     required String emotionType,
@@ -509,22 +609,27 @@ class ApiService {
     );
   }
 
+  /// ดึงข้อมูลบันทึกประวัติอารมณ์ทั้งหมด
   static Future<Map<String, dynamic>> getEmotionLogs(int userId, {int limit = 50}) async {
     return SupabaseService.getEmotionLogs(userId, limit: limit);
   }
 
+  /// ดึงบันทึกประวัติอารมณ์แยกตามประเภทของอารมณ์
   static Future<Map<String, dynamic>> getEmotionLogsByType(int userId, String emotionType) async {
     return SupabaseService.getEmotionLogsByType(userId, emotionType);
   }
 
+  /// ลบประวัติบันทึกอารมณ์
   static Future<Map<String, dynamic>> deleteEmotionLog(int logId) async {
     return SupabaseService.deleteEmotionLog(logId);
   }
 
+  /// ดึงภาพรวมสถิติอารมณ์เฉลี่ยของผู้ใช้
   static Future<Map<String, dynamic>> getEmotionSummary(int userId) async {
     return SupabaseService.getEmotionSummary(userId);
   }
 
+  /// บันทึกสรุปรายงานผลวิเคราะห์ qEEG
   static Future<Map<String, dynamic>> saveEegAssessmentReport({
     required int userId,
     required Map<String, dynamic> reportData,
@@ -535,6 +640,7 @@ class ApiService {
     );
   }
 
+  /// ดึงรายการประวัติรายงานสรุป qEEG ทั้งหมด
   static Future<Map<String, dynamic>> getEegAssessmentReports(
     int userId, {
     int limit = 50,
@@ -542,6 +648,7 @@ class ApiService {
     return SupabaseService.getEegAssessmentReports(userId, limit: limit);
   }
 
+  /// ดึงรายละเอียดรายงานสรุป qEEG เฉพาะชิ้นตามรหัสรายงาน
   static Future<Map<String, dynamic>> getEegAssessmentReport(int reportId) async {
     return SupabaseService.getEegAssessmentReport(reportId);
   }

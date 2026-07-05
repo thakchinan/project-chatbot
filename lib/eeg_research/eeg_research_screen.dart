@@ -367,10 +367,10 @@ class _EegResearchScreenState extends State<EegResearchScreen>
             margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _quality.researchLevel.color.withOpacity(0.15),
+              color: _quality.researchLevel.color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _quality.researchLevel.color.withOpacity(0.3),
+                color: _quality.researchLevel.color.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -516,6 +516,7 @@ class _EegResearchScreenState extends State<EegResearchScreen>
             _buildDropdown('Frequency', _notchFreq, [50.0, 60.0], (v) {
               setState(() => _notchFreq = v);
               _preprocessor = EegPreprocessor(notchFrequency: v);
+              MuseService().notchFrequency = v;
             }, suffix: 'Hz'),
           ]),
           const SizedBox(height: 16),

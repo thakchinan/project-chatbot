@@ -4,13 +4,19 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'supabase_service.dart';
 
+/// RAGService จัดการระบบ Retrieval-Augmented Generation (RAG) ของแอปพลิเคชัน
+/// ทำหน้าที่สกัดคำค้นหาหลัก (Keywords) สร้างเวกเตอร์คำค้นหาผ่านบริการของ OpenAI Embeddings API
+/// ค้นหาฐานความรู้ใน Supabase Database ทั้งแบบ Vector Similarity Search และ Keyword Search
+/// เพื่อใช้ป้อนเป็นบริบทข้อมูลที่เกี่ยวข้อง (Context) ไปให้กับ AI Chatbot ในการตอบคำถามผู้ใช้งาน
 class RAGService {
 
   static String get _openaiApiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
   static const String _embeddingModel = 'text-embedding-3-small';
   static const String _embeddingUrl = 'https://api.openai.com/v1/embeddings';
 
+  // จำนวนผลลัพธ์ข้อมูลอ้างอิงสูงสุดในการดึงมาใช้
   static const int _maxResults = 5;
+  // เกณฑ์ความคล้ายคลึงของเวกเตอร์ขั้นต่ำ (Cosine Similarity Threshold)
   static const double _matchThreshold = 0.7;
 
   static Future<List<double>?> createEmbedding(String text) async {
@@ -366,7 +372,7 @@ class RAGService {
           .select('id, title, content')
           .isFilter('embedding', null);
 
-      if (response == null || (response as List).isEmpty) {
+      if ((response as List).isEmpty) {
         return {
           'success': true,
           'message': 'ไม่มีความรู้ที่ต้องอัปเดต',

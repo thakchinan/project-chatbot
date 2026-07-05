@@ -11,6 +11,9 @@ import '../../services/api_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/chatgpt_service.dart';
 
+/// WeeklyReportScreen เป็นหน้าจอสรุปสถิติและแนวโน้มสภาวะจิตใจรายสัปดาห์ (AI Weekly Report)
+/// ดึงประวัติการบันทึกอารมณ์ ค่าคลื่นสมอง และคะแนน PHQ-9 ย้อนหลัง 7 วัน
+/// เพื่อให้ AI Chatbot สังเคราะห์บทวิเคราะห์แนวโน้มสุขภาพจิตและส่งออกรายงาน PDF
 class WeeklyReportScreen extends StatefulWidget {
   final User? user;
 

@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// NumberPuzzleScreen คือหน้าจอมินิเกมเลื่อนแผ่นเลขปริศนา (Number Sliding Puzzle Game)
+/// ออกแบบมาเพื่อกระตุ้นสมองด้วยตรรกะคณิตศาสตร์เบื้องต้น โดยการเลื่อนจัดเรียงตัวเลข 1-8 ให้ตรงตามเป้าหมาย
 class NumberPuzzleScreen extends StatefulWidget {
   final User? user;
 

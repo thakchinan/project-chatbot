@@ -7,18 +7,25 @@ import 'package:permission_handler/permission_handler.dart';
 import 'fft_calculator.dart';
 import 'muse_types.dart';
 
+/// MuseService จัดการการสื่อสารกับหน้ากาก/อุปกรณ์วัดคลื่นสมอง Muse (รองรับ Bluetooth Low Energy: BLE)
+/// ทำหน้าที่สแกน ค้นหา เชื่อมต่อ รับส่งข้อมูล คัดกรองและประมวลผลทางคณิตศาสตร์ (FFT/Filters)
+/// เพื่อจัดเก็บและประเมินค่าคลื่นสมองแบบเรียลไทม์ (256Hz) และแบบจำลองสถานการณ์
 class MuseService extends ChangeNotifier {
+  // Singleton instance เพื่อให้เรียกใช้งานได้จากทุกหน้าจอเป็นสถานะเดียวกัน
   static final MuseService _instance = MuseService._internal();
   factory MuseService() => _instance;
   MuseService._internal();
 
+  // อ้างอิงอุปกรณ์ Bluetooth ที่กำลังเชื่อมต่อ
   BluetoothDevice? _connectedDevice;
+  // ผลลัพธ์การค้นหาอุปกรณ์ BLE ล่าสุด
   List<ScanResult> _scanResults = [];
+  // จัดเก็บ Subscription สำหรับการติดตาม BLE Scan/Connection
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionSubscription;
   final List<StreamSubscription> _dataSubscriptions = [];
 
-  // Broadcast stream controller for raw EEG channel samples
+  // ตัวกระจายข้อมูลคลื่นสมองแบบ Raw Data สำหรับกราฟ Oscilloscope ในหน้าแรก
   final StreamController<Map<String, List<double>>> _rawEegController = StreamController<Map<String, List<double>>>.broadcast();
 
   bool _isScanning = false;
@@ -62,7 +69,7 @@ class MuseService extends ChangeNotifier {
 
   // === Horseshoe (Telemetry) ===
   // 1 = Good, 2 = Medium, 4 = Bad
-  Map<String, int> _horseshoe = {
+  final Map<String, int> _horseshoe = {
     'TP9': 4, 'AF7': 4, 'AF8': 4, 'TP10': 4,
   };
   Map<String, int> get horseshoe => Map.unmodifiable(_horseshoe);
@@ -73,6 +80,16 @@ class MuseService extends ChangeNotifier {
   // Negative = Right-dominant = Withdrawal/Sad
   double _frontalAlphaAsymmetry = 0;
   double get frontalAlphaAsymmetry => _frontalAlphaAsymmetry;
+
+  // Powerline interference filter configuration (50 Hz or 60 Hz)
+  double _notchFrequency = 50.0;
+  double get notchFrequency => _notchFrequency;
+  set notchFrequency(double val) {
+    if (val == 50.0 || val == 60.0) {
+      _notchFrequency = val;
+      _safeNotify();
+    }
+  }
 
   // === Data Throughput Monitoring ===
   // ตรวจสอบว่าได้รับข้อมูลครบตามมาตรฐาน 256 Hz หรือไม่
@@ -605,8 +622,8 @@ class MuseService extends ChangeNotifier {
         // Step 1: Bandpass filter (0.5-50 Hz, zero-phase Butterworth)
         List<double> filtered = FFTCalculator.bandpassFilter(buf, 256, lowCut: 0.5, highCut: 50.0);
         
-        // Step 2: Notch filter 50 Hz (power line noise Thailand)
-        filtered = FFTCalculator.notchFilter50Hz(filtered, 256);
+        // Step 2: Notch filter (configurable 50Hz/60Hz)
+        filtered = FFTCalculator.notchFilter(filtered, 256, notchFrequency: _notchFrequency);
         
         // Step 3: Artifact rejection (amplitude + blink + flatline)
         filtered = FFTCalculator.rejectArtifacts(filtered, threshold: 75.0);
@@ -767,8 +784,48 @@ class MuseService extends ChangeNotifier {
      _isConnected = true;
      _status = 'Simulation Mode';
      _safeNotify();
+
+     double alphaVal = 30.0;
+     double betaVal = 25.0;
+     double thetaVal = 20.0;
+     double deltaVal = 18.0;
+     double gammaVal = 7.0;
+     final random = Random();
+
      _simulationTimer = Timer.periodic(const Duration(milliseconds: 500), (t) {
-         _latestData = BrainwaveData(alpha: Random().nextDouble()*100, beta: Random().nextDouble()*100, theta: 20, delta: 10, gamma: 5);
+         // Random walk with small steps for realistic fluctuations
+         alphaVal = (alphaVal + (random.nextDouble() - 0.5) * 5.0).clamp(10.0, 50.0);
+         betaVal = (betaVal + (random.nextDouble() - 0.5) * 4.0).clamp(10.0, 45.0);
+         thetaVal = (thetaVal + (random.nextDouble() - 0.5) * 3.0).clamp(5.0, 35.0);
+         deltaVal = (deltaVal + (random.nextDouble() - 0.5) * 3.0).clamp(5.0, 30.0);
+         gammaVal = (gammaVal + (random.nextDouble() - 0.5) * 2.0).clamp(2.0, 20.0);
+
+         // Normalize so they sum up to exactly 100%
+         final double total = alphaVal + betaVal + thetaVal + deltaVal + gammaVal;
+         final double normAlpha = (alphaVal / total) * 100;
+         final double normBeta = (betaVal / total) * 100;
+         final double normTheta = (thetaVal / total) * 100;
+         final double normDelta = (deltaVal / total) * 100;
+         final double normGamma = (gammaVal / total) * 100;
+
+         // Simulate Attention & Meditation based on ratios
+         // Attention: Beta / (Theta + Alpha)
+         double attentionRatio = normBeta / (normTheta + normAlpha + 0.001);
+         double attention = (attentionRatio * 40 + 30 + (random.nextDouble() - 0.5) * 10).clamp(0.0, 100.0);
+
+         // Meditation: Alpha / (Beta + Gamma)
+         double meditationRatio = normAlpha / (normBeta + normGamma + 0.001);
+         double meditation = (meditationRatio * 40 + 35 + (random.nextDouble() - 0.5) * 10).clamp(0.0, 100.0);
+
+         _latestData = BrainwaveData(
+             alpha: normAlpha,
+             beta: normBeta,
+             theta: normTheta,
+             delta: normDelta,
+             gamma: normGamma,
+             attention: attention,
+             meditation: meditation,
+         );
          _safeNotify();
      });
   }

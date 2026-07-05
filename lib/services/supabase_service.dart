@@ -2,12 +2,18 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// SupabaseService จัดการข้อมูลแบ็คเอนด์ (Backend) และคลาวด์ดาต้าเบสทั้งหมดของแอปพลิเคชัน
+/// ทำหน้าที่เชื่อมต่อ จัดเก็บ ดึงข้อมูลผู้ใช้งาน สถิติคลื่นสมอง รายงานประเมินสุขภาพจิต
+/// ประวัติแชท AI ตารางกำหนดการ และระบบแจ้งเตือนผู้ติดต่อฉุกเฉิน
 class SupabaseService {
+  // ไคลเอนต์หลักสำหรับเชื่อมโยงฐานข้อมูล Supabase
   static SupabaseClient? _client;
 
+  // URL และ Anon Key ของโครงการ Supabase
   static const String supabaseUrl = 'https://ifsvthnxydchqnigvmuw.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlmc3Z0aG54eWRjaHFuaWd2bXV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwNjQ2NDIsImV4cCI6MjA4NDY0MDY0Mn0.HWVTbQ7SwY93EZqdKCljnPCT8rCliJAMMxI1QC5JsR0';
 
+  /// เริ่มต้นการตั้งค่าและเตรียมเชื่อมต่อกับฐานข้อมูล Supabase (เรียกที่ main.dart ตอนเปิดแอป)
   static Future<void> initialize() async {
     await Supabase.initialize(
       url: supabaseUrl,
@@ -16,6 +22,7 @@ class SupabaseService {
     _client = Supabase.instance.client;
   }
 
+  /// ดึงอ้างอิงของไคลเอนต์ Supabase เพื่อเริ่มดึงข้อมูล (จะแจ้งเตือนข้อผิดพลาดหากยังไม่ได้รับการตั้งค่า)
   static SupabaseClient get client {
     if (_client == null) {
       throw Exception('Supabase client not initialized. Call SupabaseService.initialize() first.');
@@ -23,6 +30,7 @@ class SupabaseService {
     return _client!;
   }
 
+  /// ตรวจสอบว่าระบบฐานข้อมูลได้รับการตั้งค่าเริ่มต้นเรียบร้อยหรือยัง
   static bool get isInitialized => _client != null;
 
   static Future<Map<String, dynamic>> login(String username, String password) async {
@@ -1324,7 +1332,7 @@ class SupabaseService {
       final durationSeconds = (reportData['durationSeconds'] as num?)?.toInt() ?? 90;
       final samplesCollected = (reportData['samplesCollected'] as num?)?.toInt() ?? 0;
 
-      // Clean up report data from non-serializable fields
+      // ล้างข้อมูลที่ไม่สามารถแปลงเป็นซีเรียลไลซ์ได้ เช่น วัตถุประเภท Color หรือข้อมูลเชิงภาพ
       final cleanReportData = Map<String, dynamic>.from(reportData);
       cleanReportData.remove('riskColor');
 
@@ -1420,10 +1428,10 @@ class SupabaseService {
     }
   }
 
-  /// Encode report data to JSON string for 'notes' column
+  /// แปลงข้อมูลรายงานเป็นข้อความ JSON string เพื่อจัดเก็บในคอลัมน์ 'notes'
   static String _encodeReportJson(Map<String, dynamic> data) {
     try {
-      // Remove non-serializable values
+      // ลบค่าที่ไม่สามารถจัดเก็บเป็น JSON ได้
       final clean = Map<String, dynamic>.from(data);
       clean.remove('riskColor');
       return clean.entries.map((e) => '${e.key}=${e.value}').join('|');
@@ -1432,7 +1440,7 @@ class SupabaseService {
     }
   }
 
-  /// Decode report data from 'notes' column
+  /// แปลงข้อมูลรายงานที่ได้จากคอลัมน์ 'notes' กลับมาเป็นแผนผังออบเจ็กต์ Map
   static Map<String, dynamic> _decodeReportJson(String? notes) {
     if (notes == null || notes.isEmpty) return {};
     try {
@@ -1442,7 +1450,7 @@ class SupabaseService {
         if (idx > 0) {
           final key = part.substring(0, idx);
           final val = part.substring(idx + 1);
-          // Try to parse as number
+          // พยายามแปลงค่ากลับมาเป็นตัวเลข
           final numVal = double.tryParse(val);
           map[key] = numVal ?? val;
         }
@@ -1453,7 +1461,7 @@ class SupabaseService {
     }
   }
 
-  /// Map risk level to short code (max 10 chars for varchar(10))
+  /// จับคู่ระดับความเสี่ยงเพื่อย่อให้เหมาะสมกับขนาดความยาวฟิลด์ฐานข้อมูล (ไม่เกิน 10 ตัวอักษร)
   static String _riskCode(String? riskLevelEn) {
     if (riskLevelEn == null) return 'unknown';
     final lower = riskLevelEn.toLowerCase();

@@ -171,7 +171,7 @@ class BandPowerMeter extends StatelessWidget {
               Container(
                 height: 8,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -184,7 +184,7 @@ class BandPowerMeter extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   gradient: LinearGradient(
-                    colors: [color.withOpacity(0.6), color],
+                    colors: [color.withValues(alpha: 0.6), color],
                   ),
                 ),
                 // Clip to percentage
@@ -195,11 +195,11 @@ class BandPowerMeter extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
                       gradient: LinearGradient(
-                        colors: [color.withOpacity(0.7), color],
+                        colors: [color.withValues(alpha: 0.7), color],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: color.withOpacity(0.4),
+                          color: color.withValues(alpha: 0.4),
                           blurRadius: 6,
                           offset: const Offset(0, 1),
                         ),
@@ -234,9 +234,9 @@ class BandPowerMeter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

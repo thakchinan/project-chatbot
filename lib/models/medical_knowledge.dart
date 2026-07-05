@@ -1,4 +1,6 @@
 
+/// MedicalKnowledge คือคลาสโมเดลสำหรับจัดเก็บข้อมูลความรู้ทางการแพทย์และสุขภาพจิต (Medical Context / RAG Database)
+/// ใช้เป็นฐานข้อมูลสำหรับ RAG Service เพื่อค้นหาบริบทความรู้มาตอบคำถามและให้คำแนะนำสุขภาพจิตแก่ผู้ใช้
 class MedicalKnowledge {
   final int? knowledgeId;
   final String sourceTitle;

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/supabase_service.dart';
+import '../../services/api_service.dart';
 import '../auth/welcome_screen.dart';
 import 'notification_settings_screen.dart';
 import 'change_password_screen.dart';
 
+/// SettingsScreen หน้าจอการตั้งค่าการแจ้งเตือน รหัสผ่าน และการขอลบบัญชีผู้ใช้งานระบบ
 class SettingsScreen extends StatefulWidget {
   final User user;
 
@@ -16,7 +18,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isDeleting = false;
+  bool _isDeleting = false; // ตัวควบคุมสปินเนอร์ตอนขอลบบัญชีออกจากระบบฐานข้อมูล
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +174,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final result = await SupabaseService.deleteAccount(widget.user.id);
 
                         if (result['success'] == true) {
+                          // ล้างเซสชันผู้ใช้ออกจากระบบเนื่องจากบัญชีถูกลบแล้ว
+                          await ApiService.signOut();
 
                           Navigator.pop(dialogContext);
 

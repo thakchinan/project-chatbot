@@ -141,7 +141,9 @@ class EegIfftEngine {
 
       // DC removal + window
       double sum = 0;
-      for (final v in segment) sum += v;
+      for (final v in segment) {
+        sum += v;
+      }
       final mean = sum / n;
 
       final windowed = List<Complex>.generate(n, (i) {

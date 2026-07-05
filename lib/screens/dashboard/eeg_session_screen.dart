@@ -1,10 +1,15 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/muse_service.dart';
 import '../../services/api_service.dart';
+import '../../widgets/eeg_pipeline_visualizer.dart';
 
+/// EegSessionScreen เป็นหน้าจอสำหรับทดสอบบันทึกข้อมูลอารมณ์และสแกนคลื่นสมอง qEEG เรียลไทม์
+/// มีเป้าหมาย 6 Sessions ย่อย (เช่น Baseline, ผ่อนคลาย, มีความสุข, เครียด, เศร้า, สมาธิสูง)
+/// โดยใช้แบบการทดสอบ DEAP Protocol 60-90 วินาที พร้อมกราฟคลื่นสมอง และการขจัดสัญญาณรบกวน (Visualizer)
 class EegSessionScreen extends StatefulWidget {
   final User user;
   final MuseService museService;
@@ -21,6 +26,7 @@ class EegSessionScreen extends StatefulWidget {
 
 class _EegSessionScreenState extends State<EegSessionScreen>
     with TickerProviderStateMixin {
+  static bool _isResearchWavesExpanded = true;
   bool _isRunning = false;
   int _currentSessionIndex = -1;
   int _elapsedSeconds = 0;
@@ -32,6 +38,69 @@ class _EegSessionScreenState extends State<EegSessionScreen>
   double _totalDelta = 0, _totalGamma = 0;
 
   late AnimationController _pulseController;
+
+  // Real-time scrolling oscilloscope state
+  final Map<String, List<double>> _oscilloscopeBuffers = {
+    'TP9': [],
+    'AF7': [],
+    'AF8': [],
+    'TP10': [],
+  };
+  StreamSubscription? _rawEegSubscription;
+  Timer? _simulationWaveTimer;
+
+  void _startListeningToRawEeg() {
+    _rawEegSubscription?.cancel();
+    _rawEegSubscription = widget.museService.rawEegStream.listen((channelData) {
+      if (!mounted || !_isRunning) return;
+      setState(() {
+        channelData.forEach((channel, samples) {
+          for (final sample in samples) {
+            _addOscilloscopeSample(channel, sample);
+          }
+        });
+      });
+    });
+  }
+
+  void _startSimulationWaves() {
+    _simulationWaveTimer?.cancel();
+    double time = 0;
+    final random = Random();
+    _simulationWaveTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted || !_isRunning) {
+        timer.cancel();
+        return;
+      }
+      time += 0.03;
+      setState(() {
+        // Generate realistic synthetic EEG traces (base frequencies + minor noise)
+        // Alpha: ~10 Hz
+        final tp9Val = 15.0 * sin(2 * pi * 10 * time) + 4.0 * sin(2 * pi * 4 * time) + (random.nextDouble() - 0.5) * 6.0;
+        // Beta: ~20 Hz
+        final af7Val = 8.0 * sin(2 * pi * 20 * time) + 10.0 * sin(2 * pi * 8 * time) + (random.nextDouble() - 0.5) * 8.0;
+        // Beta: ~18 Hz
+        final af8Val = 7.0 * sin(2 * pi * 18 * time) + 9.0 * sin(2 * pi * 9 * time) + (random.nextDouble() - 0.5) * 7.5;
+        // Theta/Delta: ~4 Hz
+        final tp10Val = 10.0 * sin(2 * pi * 6 * time) + 15.0 * sin(2 * pi * 2 * time) + (random.nextDouble() - 0.5) * 5.0;
+
+        _addOscilloscopeSample('TP9', tp9Val);
+        _addOscilloscopeSample('AF7', af7Val);
+        _addOscilloscopeSample('AF8', af8Val);
+        _addOscilloscopeSample('TP10', tp10Val);
+      });
+    });
+  }
+
+  void _addOscilloscopeSample(String channel, double value) {
+    final buffer = _oscilloscopeBuffers[channel];
+    if (buffer != null) {
+      buffer.add(value);
+      if (buffer.length > 500) {
+        buffer.removeAt(0);
+      }
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // Protocol Duration Justification (Research-Backed)
@@ -129,6 +198,8 @@ class _EegSessionScreenState extends State<EegSessionScreen>
   void dispose() {
     _timer?.cancel();
     _sampleTimer?.cancel();
+    _rawEegSubscription?.cancel();
+    _simulationWaveTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -154,6 +225,8 @@ class _EegSessionScreenState extends State<EegSessionScreen>
       _totalTheta = 0;
       _totalDelta = 0;
       _totalGamma = 0;
+      // Clear buffers
+      _oscilloscopeBuffers.forEach((key, value) => value.clear());
     });
 
     _pulseController.repeat(reverse: true);
@@ -171,13 +244,18 @@ class _EegSessionScreenState extends State<EegSessionScreen>
     _sampleTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       _collectSample();
     });
+
+    // Start wave collection/simulation
+    if (widget.museService.isSimulating) {
+      _startSimulationWaves();
+    } else {
+      _startListeningToRawEeg();
+    }
   }
 
   void _collectSample() {
     final data = widget.museService.latestData;
     if (data == null) return;
-
-    final session = _sessions[_currentSessionIndex];
 
     _totalAlpha += data.alpha;
     _totalBeta += data.beta;
@@ -194,6 +272,8 @@ class _EegSessionScreenState extends State<EegSessionScreen>
   Future<void> _stopSession() async {
     _timer?.cancel();
     _sampleTimer?.cancel();
+    _rawEegSubscription?.cancel();
+    _simulationWaveTimer?.cancel();
     _pulseController.stop();
     _pulseController.reset();
 
@@ -207,7 +287,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
   void _showSelfReportDialog() {
     int valence = 5;
     int arousal = 5;
-    bool _isSaving = false;
+    bool isSaving = false;
     final session = _sessions[_currentSessionIndex];
 
     final n = _samplesCollected > 0 ? _samplesCollected : 1;
@@ -249,9 +329,9 @@ class _EegSessionScreenState extends State<EegSessionScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isMatch ? Colors.green.withOpacity(0.08) : Colors.orange.withOpacity(0.08),
+                  color: isMatch ? Colors.green.withValues(alpha: 0.08) : Colors.orange.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isMatch ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3)),
+                  border: Border.all(color: isMatch ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +390,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                     ]
                   ],
                 ),
@@ -391,7 +471,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF3E0),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFFB74D).withOpacity(0.5)),
+                  border: Border.all(color: const Color(0xFFFFB74D).withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   children: [
@@ -416,10 +496,10 @@ class _EegSessionScreenState extends State<EegSessionScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: (!isMatch || _isSaving)
+                onPressed: (!isMatch || isSaving)
                     ? null
                     : () async {
-                        setDialogState(() => _isSaving = true);
+                        setDialogState(() => isSaving = true);
 
                         final n = _samplesCollected > 0 ? _samplesCollected : 1;
                         final result = await ApiService.saveEmotionSession(
@@ -472,7 +552,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                                             '$_samplesCollected samples · Valence: $valence · Arousal: $arousal',
                                             style: TextStyle(
                                               fontSize: 11,
-                                              color: Colors.white.withOpacity(0.85),
+                                              color: Colors.white.withValues(alpha: 0.85),
                                             ),
                                           ),
                                       ],
@@ -493,7 +573,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                           );
                         }
                       },
-                icon: _isSaving
+                icon: isSaving
                     ? const SizedBox(
                         width: 18,
                         height: 18,
@@ -508,7 +588,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                         size: 20,
                       ),
                 label: Text(
-                  _isSaving
+                  isSaving
                       ? 'กำลังบันทึก...'
                       : isMatch
                           ? 'บันทึก'
@@ -684,107 +764,116 @@ class _EegSessionScreenState extends State<EegSessionScreen>
     final remaining = duration - _elapsedSeconds;
     final colors = session['gradient'] as List<Color>;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                final scale = 1.0 + (_pulseController.value * 0.08);
-                return Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: 160,
-                    height: 160,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: colors),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (session['color'] as Color).withOpacity(0.4),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(session['icon'], color: Colors.white, size: 40),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${remaining ~/ 60}:${(remaining % 60).toString().padLeft(2, '0')}',
-                          style: const TextStyle(
-                            color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold,
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final scale = 1.0 + (_pulseController.value * 0.08);
+                  return Transform.scale(
+                    scale: scale,
+                    child: Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: colors),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (session['color'] as Color).withValues(alpha: 0.4),
+                            blurRadius: 30,
+                            spreadRadius: 5,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(session['icon'], color: Colors.white, size: 40),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${remaining ~/ 60}:${(remaining % 60).toString().padLeft(2, '0')}',
+                            style: const TextStyle(
+                              color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 32),
-
-            Text(
-              session['name'],
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: session['color']),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              session['instruction'],
-              style: TextStyle(fontSize: 15, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 24),
-
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: progress.clamp(0.0, 1.0),
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(session['color']),
-                minHeight: 10,
+                  );
+                },
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStatChip(Icons.timeline, '$_samplesCollected samples'),
-                _buildStatChip(Icons.timer, '$_elapsedSeconds s'),
-                _buildStatChip(Icons.label, session['emotion']),
-              ],
-            ),
+              Text(
+                session['name'],
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: session['color']),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                session['instruction'],
+                style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
 
-            if (widget.museService.latestData != null) ...[
               const SizedBox(height: 24),
-              _buildLiveWaveCard(),
-            ],
 
-            const SizedBox(height: 32),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _stopSession,
-                icon: const Icon(Icons.stop_rounded, color: Colors.white),
-                label: const Text('หยุด Session', style: TextStyle(color: Colors.white, fontSize: 16)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: progress.clamp(0.0, 1.0),
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation<Color>(session['color']),
+                  minHeight: 10,
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 16),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildStatChip(Icons.timeline, '$_samplesCollected samples'),
+                  _buildStatChip(Icons.timer, '$_elapsedSeconds s'),
+                  _buildStatChip(Icons.label, session['emotion']),
+                ],
+              ),
+
+              if (widget.museService.latestData != null) ...[
+                const SizedBox(height: 24),
+                _buildLiveWaveCard(),
+                _buildResearchWaveformCard(),
+                const SizedBox(height: 16),
+                EegPipelineVisualizer(
+                  channels: _oscilloscopeBuffers,
+                  hasData: _oscilloscopeBuffers.values.any((b) => b.isNotEmpty),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _stopSession,
+                  icon: const Icon(Icons.stop_rounded, color: Colors.white),
+                  label: const Text('หยุด Session', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -796,7 +885,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8)],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -808,23 +897,50 @@ class _EegSessionScreenState extends State<EegSessionScreen>
       ),
     );
   }
-
   Widget _buildLiveWaveCard() {
     final d = widget.museService.latestData!;
+    final rawVals = [d.delta, d.theta, d.alpha, d.beta, d.gamma];
+    final double sumRaw = rawVals.reduce((a, b) => a + b);
+    final List<double> pctVals = sumRaw > 0
+        ? rawVals.map((v) => (v / sumRaw) * 100.0).toList()
+        : [0.0, 0.0, 0.0, 0.0, 0.0];
+
+    // Apply Largest Remainder Method to get rounded integers that sum to exactly 100
+    final List<int> roundedVals = List.filled(5, 0);
+    if (sumRaw > 0) {
+      final List<int> floors = pctVals.map((v) => v.floor()).toList();
+      final int floorSum = floors.reduce((a, b) => a + b);
+      final int diff = 100 - floorSum;
+
+      final List<MapEntry<int, double>> remainders = List.generate(
+        5,
+        (i) => MapEntry(i, pctVals[i] - floors[i])
+      );
+      remainders.sort((a, b) => b.value.compareTo(a.value));
+
+      for (int i = 0; i < 5; i++) {
+        roundedVals[i] = floors[i];
+      }
+      for (int i = 0; i < diff; i++) {
+        final idx = remainders[i].key;
+        roundedVals[idx]++;
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Column(
         children: [
-          _buildMiniBar('Alpha', d.alpha, Colors.blue),
-          _buildMiniBar('Beta', d.beta, Colors.orange),
-          _buildMiniBar('Theta', d.theta, Colors.green),
-          _buildMiniBar('Delta', d.delta, Colors.purple),
-          _buildMiniBar('Gamma', d.gamma, Colors.red),
+          _buildMiniBar('Delta', roundedVals[0].toDouble(), Colors.purple),
+          _buildMiniBar('Theta', roundedVals[1].toDouble(), Colors.green),
+          _buildMiniBar('Alpha', roundedVals[2].toDouble(), Colors.blue),
+          _buildMiniBar('Beta', roundedVals[3].toDouble(), Colors.orange),
+          _buildMiniBar('Gamma', roundedVals[4].toDouble(), Colors.red),
         ],
       ),
     );
@@ -835,28 +951,27 @@ class _EegSessionScreenState extends State<EegSessionScreen>
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          SizedBox(width: 50, child: Text(label, style: const TextStyle(fontSize: 11))),
+          SizedBox(width: 60, child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: (value / 100).clamp(0.0, 1.0),
-                backgroundColor: color.withOpacity(0.1),
+                backgroundColor: color.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation(color),
                 minHeight: 6,
               ),
             ),
           ),
           SizedBox(
-            width: 45,
-            child: Text('${value.toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 10), textAlign: TextAlign.right),
+            width: 55,
+            child: Text('${value.round()}%',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold), textAlign: TextAlign.right),
           ),
         ],
       ),
     );
   }
-
   Widget _buildSessionList() {
     final isConnected = widget.museService.isConnected;
 
@@ -919,7 +1034,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: (isConnected ? colors.first : Colors.grey).withOpacity(0.3),
+                      color: (isConnected ? colors.first : Colors.grey).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 5),
                     ),
@@ -933,7 +1048,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                         width: 70, height: 70,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.08),
+                          color: Colors.white.withValues(alpha: 0.08),
                         ),
                       ),
                     ),
@@ -944,7 +1059,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                           Container(
                             width: 52, height: 52,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Icon(s['icon'], color: Colors.white, size: 26),
@@ -963,24 +1078,24 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                                 const SizedBox(height: 4),
                                 Text(
                                   s['description'],
-                                  style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85)),
+                                  style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
                                   maxLines: 2, overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
                                 Row(
                                   children: [
-                                    Icon(Icons.timer, size: 12, color: Colors.white.withOpacity(0.7)),
+                                    Icon(Icons.timer, size: 12, color: Colors.white.withValues(alpha: 0.7)),
                                     const SizedBox(width: 4),
                                     Text(
                                       durationStr,
-                                      style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
+                                      style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7)),
                                     ),
                                     const SizedBox(width: 12),
-                                    Icon(Icons.label, size: 12, color: Colors.white.withOpacity(0.7)),
+                                    Icon(Icons.label, size: 12, color: Colors.white.withValues(alpha: 0.7)),
                                     const SizedBox(width: 4),
                                     Text(
                                       s['emotion'],
-                                      style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
+                                      style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7)),
                                     ),
                                   ],
                                 ),
@@ -990,7 +1105,7 @@ class _EegSessionScreenState extends State<EegSessionScreen>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
@@ -1011,14 +1126,14 @@ class _EegSessionScreenState extends State<EegSessionScreen>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12)],
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12)],
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.15),
+                    color: Colors.amber.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.lightbulb_rounded, color: Colors.amber, size: 22),
@@ -1044,4 +1159,707 @@ class _EegSessionScreenState extends State<EegSessionScreen>
       ),
     );
   }
+
+  Widget _buildResearchWaveformCard() {
+    // Calculate real-time statistics for each channel (raw values)
+    final Map<String, Map<String, double>> channelStats = {};
+    for (final entry in _oscilloscopeBuffers.entries) {
+      final data = entry.value;
+      if (data.isNotEmpty) {
+        double sum = 0, sqSum = 0;
+        double minVal = data.first, maxVal = data.first;
+        for (final v in data) {
+          sum += v;
+          sqSum += v * v;
+          if (v < minVal) minVal = v;
+          if (v > maxVal) maxVal = v;
+        }
+        final mean = sum / data.length;
+        final variance = (sqSum / data.length) - mean * mean;
+        final std = sqrt(variance.abs());
+        channelStats[entry.key] = {
+          'mean': mean,
+          'std': std,
+          'min': minVal,
+          'max': maxVal,
+          'pp': maxVal - minVal,
+        };
+      }
+    }
+
+    final bool hasData = _oscilloscopeBuffers.values.any((b) => b.isNotEmpty);
+    final int totalSamples = _oscilloscopeBuffers['TP9']?.length ?? 0;
+    final String sourceLabel = widget.museService.isSimulating
+        ? 'Simulation Mode'
+        : 'Muse 2 (Live)';
+    final now = DateTime.now();
+    final String timestamp =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+
+    const channelColors = {
+      'TP9': Color(0xFF1565C0),
+      'AF7': Color(0xFF2E7D32),
+      'AF8': Color(0xFFE65100),
+      'TP10': Color(0xFF6A1B9A),
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFBDBDBD), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header Banner (Collapsible with Material InkWell ripple feedback) ──
+          Material(
+            color: const Color(0xFF1A237E),
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(13),
+              topRight: const Radius.circular(13),
+              bottomLeft: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+              bottomRight: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(13),
+                topRight: const Radius.circular(13),
+                bottomLeft: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+                bottomRight: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+              ),
+              onTap: () {
+                setState(() {
+                  _isResearchWavesExpanded = !_isResearchWavesExpanded;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.science_outlined, color: Colors.white70, size: 16),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Raw EEG Multi-Channel Traces',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _isResearchWavesExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6, height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: hasData ? const Color(0xFF4CAF50) : Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            hasData ? 'LIVE' : 'IDLE',
+                            style: TextStyle(
+                              color: hasData ? const Color(0xFF81C784) : Colors.white54,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _isResearchWavesExpanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Device Metadata Row ──
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        color: const Color(0xFFF5F5F5),
+                        child: Row(
+                          children: [
+                            _metaChip('Source', sourceLabel),
+                            const SizedBox(width: 12),
+                            _metaChip('Fs', '256 Hz'),
+                            const SizedBox(width: 12),
+                            _metaChip('Ref', 'FPz (Forehead)'),
+                            const Spacer(),
+                            Text(
+                              timestamp,
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 9,
+                                fontFamily: 'Courier',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // ── Montage Info ──
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        color: const Color(0xFFFAFAFA),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Montage: International 10-20 System  •  Channels: 4',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 9.5,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'N = $totalSamples pts',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 9,
+                                fontFamily: 'Courier',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFE0E0E0)),
+
+                      // ── Channel Color Legend ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        child: Row(
+                          children: channelColors.entries.map((e) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 14),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 10, height: 3,
+                                    decoration: BoxDecoration(
+                                      color: e.value,
+                                      borderRadius: BorderRadius.circular(1),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    e.key,
+                                    style: TextStyle(
+                                      color: e.value,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      // ── Waveform Plot ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            color: const Color(0xFFFCFCFC),
+                            height: 220,
+                            child: CustomPaint(
+                              painter: EegResearchTracePainter(
+                                channels: _oscilloscopeBuffers,
+                                channelColors: channelColors,
+                              ),
+                              child: Container(),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ── Scale Bar ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        child: Row(
+                          children: [
+                            // Time scale
+                            Container(
+                              width: 40, height: 2,
+                              color: Colors.black54,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '~${(totalSamples / 33.3).toStringAsFixed(1)}s',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.black54,
+                                fontFamily: 'Courier',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // Amplitude scale
+                            Container(width: 2, height: 12, color: Colors.black54),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Auto µV',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.black54,
+                                fontFamily: 'Courier',
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Filter: 0.5 – 50 Hz  •  Notch: 50 Hz',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey.shade500,
+                                fontFamily: 'Courier',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+                      // ── Per-Channel Statistics ──
+                      if (channelStats.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Channel Statistics — Raw (Real-time)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Table(
+                                columnWidths: const {
+                                  0: FixedColumnWidth(50),
+                                  1: FlexColumnWidth(),
+                                  2: FlexColumnWidth(),
+                                  3: FlexColumnWidth(),
+                                  4: FlexColumnWidth(),
+                                },
+                                border: TableBorder.all(color: Colors.grey.shade200, width: 0.5),
+                                children: [
+                                  TableRow(
+                                    decoration: BoxDecoration(color: Colors.grey.shade100),
+                                    children: const [
+                                      _StatHeader('Ch'),
+                                      _StatHeader('Mean'),
+                                      _StatHeader('Std'),
+                                      _StatHeader('Min'),
+                                      _StatHeader('Max'),
+                                    ],
+                                  ),
+                                  ...['TP9', 'AF7', 'AF8', 'TP10'].map((ch) {
+                                    final s = channelStats[ch];
+                                    return TableRow(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(4),
+                                          child: Text(
+                                            ch,
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w700,
+                                              color: channelColors[ch],
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        _StatCell(s?['mean']),
+                                        _StatCell(s?['std']),
+                                        _StatCell(s?['min']),
+                                        _StatCell(s?['max']),
+                                      ],
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                    ],
+                  )
+                : const SizedBox(width: double.infinity, height: 0),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metaChip(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 9,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF1A237E),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Stat table helper widgets ──
+class _StatHeader extends StatelessWidget {
+  final String text;
+  const _StatHeader(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey.shade600,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  final double? value;
+  const _StatCell(this.value);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Text(
+        value != null ? value!.toStringAsFixed(2) : '—',
+        style: const TextStyle(
+          fontSize: 9,
+          fontFamily: 'Courier',
+          color: Colors.black87,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Research-grade EEG Trace Painter with grid, scale, and per-channel colors
+// Designed to match clinical/research EEG viewer conventions
+// ═══════════════════════════════════════════════════════════════════
+class EegResearchTracePainter extends CustomPainter {
+  final Map<String, List<double>> channels;
+  final Map<String, Color> channelColors;
+  final List<String> channelNames = const ['TP9', 'AF7', 'AF8', 'TP10'];
+
+  EegResearchTracePainter({
+    required this.channels,
+    required this.channelColors,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bgPaint = Paint()
+      ..color = const Color(0xFFFCFCFC)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+
+    final double channelHeight = size.height / channelNames.length;
+    const double labelWidth = 52.0;
+    const double rightPadding = 8.0;
+    final double plotWidth = size.width - labelWidth - rightPadding;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8E8E8)
+      ..strokeWidth = 0.4
+      ..style = PaintingStyle.stroke;
+
+    final gridPaintMajor = Paint()
+      ..color = const Color(0xFFD0D0D0)
+      ..strokeWidth = 0.6
+      ..style = PaintingStyle.stroke;
+
+    final baselinePaint = Paint()
+      ..color = const Color(0xFFBDBDBD)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    // Dashed baseline helper
+    void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+      const dashWidth = 4.0;
+      const dashSpace = 3.0;
+      final dx = end.dx - start.dx;
+      final dy = end.dy - start.dy;
+      final totalLength = sqrt(dx * dx + dy * dy);
+      final dirX = dx / totalLength;
+      final dirY = dy / totalLength;
+      double drawn = 0;
+      while (drawn < totalLength) {
+        final segEnd = (drawn + dashWidth).clamp(0.0, totalLength);
+        canvas.drawLine(
+          Offset(start.dx + dirX * drawn, start.dy + dirY * drawn),
+          Offset(start.dx + dirX * segEnd, start.dy + dirY * segEnd),
+          paint,
+        );
+        drawn += dashWidth + dashSpace;
+      }
+    }
+
+    for (int i = 0; i < channelNames.length; i++) {
+      final name = channelNames[i];
+      final yOffset = i * channelHeight;
+      final yCenter = yOffset + channelHeight / 2;
+      final chColor = channelColors[name] ?? const Color(0xFF1565C0);
+
+      // Alternating background
+      if (i % 2 == 1) {
+        canvas.drawRect(
+          Rect.fromLTWH(0, yOffset, size.width, channelHeight),
+          Paint()..color = const Color(0xFFF7F7FA),
+        );
+      }
+
+      // Grid lines (3 minor lines per channel)
+      for (int g = 1; g <= 3; g++) {
+        final gy = yOffset + channelHeight * g / 4;
+        canvas.drawLine(
+          Offset(labelWidth, gy),
+          Offset(size.width - rightPadding, gy),
+          gridPaint,
+        );
+      }
+
+      // Vertical grid lines (8 segments)
+      for (int v = 1; v < 8; v++) {
+        final vx = labelWidth + plotWidth * v / 8;
+        canvas.drawLine(
+          Offset(vx, yOffset),
+          Offset(vx, yOffset + channelHeight),
+          v == 4 ? gridPaintMajor : gridPaint,
+        );
+      }
+
+      // Zero baseline (dashed)
+      drawDashedLine(
+        canvas,
+        Offset(labelWidth, yCenter),
+        Offset(size.width - rightPadding, yCenter),
+        baselinePaint,
+      );
+
+      // Channel border
+      canvas.drawLine(
+        Offset(0, yOffset + channelHeight),
+        Offset(size.width, yOffset + channelHeight),
+        Paint()
+          ..color = const Color(0xFFCCCCCC)
+          ..strokeWidth = 0.8,
+      );
+
+      // Vertical divider
+      canvas.drawLine(
+        Offset(labelWidth, yOffset),
+        Offset(labelWidth, yOffset + channelHeight),
+        Paint()
+          ..color = const Color(0xFFCCCCCC)
+          ..strokeWidth = 0.8,
+      );
+
+      // ── Channel Label ──
+      canvas.save();
+      canvas.translate(labelWidth / 2, yCenter);
+      canvas.rotate(-pi / 2);
+      final labelSpan = TextSpan(
+        text: name,
+        style: TextStyle(
+          color: chColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+        ),
+      );
+      final labelPainter = TextPainter(
+        text: labelSpan,
+        textDirection: TextDirection.ltr,
+      );
+      labelPainter.layout();
+      labelPainter.paint(canvas, Offset(-labelPainter.width / 2, -labelPainter.height / 2));
+      canvas.restore();
+
+      // ── Electrode position sub-label ──
+      final posMap = {
+        'TP9': 'L-Temporal',
+        'AF7': 'L-Frontal',
+        'AF8': 'R-Frontal',
+        'TP10': 'R-Temporal',
+      };
+      final posSpan = TextSpan(
+        text: posMap[name] ?? '',
+        style: TextStyle(
+          color: Colors.grey.shade400,
+          fontSize: 7,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+      final posPainter = TextPainter(
+        text: posSpan,
+        textDirection: TextDirection.ltr,
+      );
+      posPainter.layout();
+      posPainter.paint(
+        canvas,
+        Offset(
+          (labelWidth - posPainter.width) / 2,
+          yCenter + 9,
+        ),
+      );
+
+      // ── Plot data ──
+      final data = channels[name] ?? [];
+      if (data.isEmpty) {
+        final noDataSpan = TextSpan(
+          text: 'Waiting for signal…',
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 9,
+            fontStyle: FontStyle.italic,
+          ),
+        );
+        final noDataPainter = TextPainter(
+          text: noDataSpan,
+          textDirection: TextDirection.ltr,
+        );
+        noDataPainter.layout();
+        noDataPainter.paint(
+          canvas,
+          Offset(
+            labelWidth + (plotWidth - noDataPainter.width) / 2,
+            yCenter - noDataPainter.height / 2,
+          ),
+        );
+        continue;
+      }
+
+      // Detrend: remove mean
+      double sum = 0;
+      for (final val in data) {
+        sum += val;
+      }
+      final mean = sum / data.length;
+
+      // Auto-scale: find max absolute deviation
+      double maxDev = 5.0;
+      for (final val in data) {
+        final dev = (val - mean).abs();
+        if (dev > maxDev) maxDev = dev;
+      }
+      maxDev *= 1.15;
+
+      // Draw waveform
+      final wavePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.3
+        ..color = chColor
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final path = Path();
+      final double xStep = plotWidth / (data.length <= 1 ? 1 : data.length - 1);
+
+      for (int k = 0; k < data.length; k++) {
+        final double x = labelWidth + k * xStep;
+        final double normalizedVal = (data[k] - mean) / maxDev;
+        final double y = yCenter - (normalizedVal * (channelHeight / 2) * 0.82);
+
+        if (k == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(path, wavePaint);
+
+      // ── µV scale indicator (right side) ──
+      final scaleBarHeight = channelHeight * 0.3;
+      final scaleX = size.width - 5;
+      final scaleTop = yCenter - scaleBarHeight / 2;
+      final scaleBottom = yCenter + scaleBarHeight / 2;
+      final scalePaint = Paint()
+        ..color = Colors.grey.shade400
+        ..strokeWidth = 0.8;
+      canvas.drawLine(Offset(scaleX, scaleTop), Offset(scaleX, scaleBottom), scalePaint);
+      canvas.drawLine(Offset(scaleX - 2, scaleTop), Offset(scaleX + 2, scaleTop), scalePaint);
+      canvas.drawLine(Offset(scaleX - 2, scaleBottom), Offset(scaleX + 2, scaleBottom), scalePaint);
+    }
+
+    // Top border
+    canvas.drawLine(
+      const Offset(0, 0),
+      Offset(size.width, 0),
+      Paint()
+        ..color = const Color(0xFFCCCCCC)
+        ..strokeWidth = 0.8,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant EegResearchTracePainter oldDelegate) => true;
 }

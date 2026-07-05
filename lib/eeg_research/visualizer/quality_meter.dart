@@ -76,12 +76,12 @@ class QualityMeter extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            level.color.withOpacity(0.15),
-            level.color.withOpacity(0.05),
+            level.color.withValues(alpha: 0.15),
+            level.color.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: level.color.withOpacity(0.3)),
+        border: Border.all(color: level.color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -95,8 +95,8 @@ class QualityMeter extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  level.color.withOpacity(0.3),
-                  level.color.withOpacity(0.1),
+                  level.color.withValues(alpha: 0.3),
+                  level.color.withValues(alpha: 0.1),
                 ],
               ),
               border: Border.all(color: level.color, width: 2),
@@ -171,7 +171,7 @@ class QualityMeter extends StatelessWidget {
               height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: level.color.withOpacity(0.15),
+                color: level.color.withValues(alpha: 0.15),
                 border: Border.all(color: level.color, width: 2),
               ),
               child: Icon(

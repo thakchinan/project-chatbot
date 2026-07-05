@@ -12,7 +12,8 @@ import 'eeg_risk_gauge.dart';
 import 'eeg_topographic_map.dart';
 import '../theme/app_theme.dart';
 
-/// ใบสรุปประเมินความเครียด (qEEG) — Premium Design
+/// EegAssessmentReportView เป็น Widget หน้าต่าง/การ์ดแสดงผลใบประเมินและสรุปผลคลื่นสมอง qEEG แบบพรีเมียม
+/// รวบรวมข้อมูลผู้ใช้งาน การแสดงผลเกจระดับความเครียด/ความเสี่ยง แผนภูมิสมอง Topographic และคำแนะนำการดูแลสุขภาพจิต
 class EegAssessmentReportView extends StatefulWidget {
   final Map<String, dynamic> summary;
   final User user;
@@ -101,7 +102,7 @@ class EegAssessmentReportViewState extends State<EegAssessmentReportView> {
 
   Future<Uint8List?> _capturePng(GlobalKey key) async {
     try {
-      // Small delay to ensure widget is fully rendered and rasterized
+      // หน่วงเวลาเล็กน้อยเพื่อให้แน่ใจว่า Widget ได้รับการเรนเดอร์และสร้างพิกเซลภาพสมบูรณ์
       await Future.delayed(const Duration(milliseconds: 100));
       final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return null;

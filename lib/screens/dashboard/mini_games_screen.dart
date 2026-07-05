@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
-import 'settings_screen.dart';
 import 'memory_game_screen.dart';
 import 'number_puzzle_screen.dart';
 
+/// MiniGamesScreen คือหน้าจอรายการมินิเกมคลายเครียดและบริหารสมอง
+/// แสดงผลรายการเกมฝึกสมองต่างๆ เช่น เกมจับคู่ความจำ และเกมปริศนาตัวเลข พร้อมให้ผู้ใช้สามารถกดเลือกเข้าเล่นได้
 class MiniGamesScreen extends StatelessWidget {
   final User? user;
 

@@ -4,6 +4,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// MemoryGameScreen คือหน้าจอมินิเกมจับคู่ภาพความจำ (Emoji Memory Game / Card Matching Game)
+/// สุ่มอีโมจิผลไม้บนบอร์ด 12 แผ่น ให้ผู้เล่นสลับเปิดและจับคู่ภาพเหมือนกันเพื่อส่งเสริมประสิทธิภาพความจำระยะสั้น
 class MemoryGameScreen extends StatefulWidget {
   final User? user;
 

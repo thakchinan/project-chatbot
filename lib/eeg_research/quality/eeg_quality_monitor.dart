@@ -380,7 +380,9 @@ class EegQualityMonitor {
     if (data.isEmpty) return 0;
     // Remove mean first
     double sum = 0;
-    for (final v in data) sum += v;
+    for (final v in data) {
+      sum += v;
+    }
     final mean = sum / data.length;
 
     double sqSum = 0;

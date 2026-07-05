@@ -5,6 +5,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// EditProfileScreen เป็นหน้าจอสำหรับแก้ไขข้อมูลโปรไฟล์ส่วนบุคคลของผู้ใช้งาน
+/// รองรับการอัปโหลดเปลี่ยนรูปโปรไฟล์ (Avatar Image) โดยการเลือกจากคลังภาพหรือถ่ายภาพใหม่
 class EditProfileScreen extends StatefulWidget {
   final User user;
 
@@ -15,15 +17,16 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  // ตัวเก็บค่าฟิลด์ข้อมูลการแก้ไขโปรไฟล์
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
   late TextEditingController _birthDateController;
-  bool _isLoading = false;
-  bool _isUploadingImage = false;
+  bool _isLoading = false;          // ใช้แสดงสถานะบันทึกข้อมูล
+  bool _isUploadingImage = false;   // ใช้แสดงสถานะอัปโหลดรูปภาพโปรไฟล์
 
-  File? _selectedImage;
-  String? _currentAvatarUrl;
+  File? _selectedImage;             // ไฟล์ภาพโปรไฟล์ที่ผู้ใช้เลือกจากเครื่อง
+  String? _currentAvatarUrl;        // ลิงก์ URL รูปภาพโปรไฟล์ปัจจุบันจากฐานข้อมูล
   final ImagePicker _picker = ImagePicker();
 
   @override

@@ -7,6 +7,8 @@ import '../../services/eeg_assessment_service.dart';
 import '../../services/eeg_pdf_service.dart';
 import 'eeg_assessment_report_screen.dart';
 
+/// EegReportHistoryScreen คือหน้าแสดงประวัติผลการประเมินวิเคราะห์คลื่นสมอง qEEG ทั้งหมดของคนไข้
+/// ดึงประวัติรายงานที่บันทึกไว้ในฐานข้อมูล แสดงผลระดับความเสี่ยงของแต่ละรายงาน และความสามารถในการเปิดอ่านหรือแปลงเป็นไฟล์ PDF
 class EegReportHistoryScreen extends StatefulWidget {
   final User user;
 
@@ -17,8 +19,8 @@ class EegReportHistoryScreen extends StatefulWidget {
 }
 
 class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
-  bool _loading = true;
-  List<Map<String, dynamic>> _reports = [];
+  bool _loading = true;                     // ใช้แสดงโหลดดิ้งขณะดึงประวัติรายงานจากฐานข้อมูล
+  List<Map<String, dynamic>> _reports = []; // อาเรย์สำหรับจัดเก็บข้อมูลรายงานประวัติทั้งหมดที่ดึงขึ้นมาได้
 
   @override
   void initState() {
@@ -146,7 +148,7 @@ class _EegReportHistoryScreenState extends State<EegReportHistoryScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: _reports.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final row = _reports[index];
                       final summary = _summaryFromReport(row);

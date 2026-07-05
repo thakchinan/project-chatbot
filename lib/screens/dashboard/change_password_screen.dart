@@ -3,6 +3,8 @@ import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 
+/// ChangePasswordScreen คือหน้าจอสำหรับการเปลี่ยนรหัสผ่านเพื่อความปลอดภัยของคนไข้
+/// ตรวจสอบการกรอกรหัสผ่านใหม่ทั้งสองช่องให้ตรงกัน มีสิทธิ์อย่างน้อย 6 ตัวอักษร และส่งค่าไปตรวจสอบกับ Supabase Service
 class ChangePasswordScreen extends StatefulWidget {
   final User user;
 
@@ -13,6 +15,7 @@ class ChangePasswordScreen extends StatefulWidget {
 }
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+  // บันทึกตัวควบคุมข้อความสำหรับช่องรหัสผ่านต่างๆ
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();

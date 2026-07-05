@@ -6,7 +6,11 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 
+/// STTService จัดการการแปลงสัญญาณเสียงพูดเป็นตัวอักษรภาษาไทย (Speech-to-Text) โดยใช้บริการ OpenAI Whisper API
+/// ทำหน้าที่บันทึกไฟล์เสียงคลื่นความถี่ 16kHz โมโนผ่านไมโครโฟนโทรศัพท์ 
+/// และส่งข้อมูลเสียงแบบ Multipart Request ไปแปลงผลที่เซิร์ฟเวอร์แบบเรียลไทม์
 class STTService {
+  // Singleton instance เพื่อให้ใช้ตัวควบคุมการบันทึกเสียงเดียวกันทั่วทั้งแอปพลิเคชัน
   static final STTService _instance = STTService._internal();
   factory STTService() => _instance;
   STTService._internal();
@@ -22,6 +26,7 @@ class STTService {
 
   String? _currentRecordingPath;
 
+  // ฟังก์ชัน Callback สำหรับการส่งคืนผลลัพธ์เสียงที่แปลงแล้ว และดักจับความเคลื่อนไหว/ข้อผิดพลาด
   Function(String)? onResult;
   Function(String)? onPartialResult;
   Function()? onListeningStarted;
@@ -34,6 +39,7 @@ class STTService {
 
   String get lastRecognizedText => _lastRecognizedText;
 
+  /// ตรวจสอบสิทธิ์การเข้าถึงไมโครโฟนและเปิดใช้งานไมโครโฟนเบื้องต้น
   Future<bool> init() async {
     if (_isInitialized) return true;
 
@@ -210,7 +216,14 @@ class STTService {
 
   void dispose() {
     cancelListening();
-    _recorder.dispose();
+    try {
+      // ดักจับข้อผิดพลาดแบบอะซิงโครนัสเพื่อป้องกันแอปแครช (โดยเฉพาะบน macOS/iOS Sandbox)
+      _recorder.dispose().catchError((e) {
+        debugPrint('⚠️ Recorder dispose error: $e');
+      });
+    } catch (e) {
+      debugPrint('⚠️ Recorder dispose sync error: $e');
+    }
     onResult = null;
     onPartialResult = null;
     onListeningStarted = null;

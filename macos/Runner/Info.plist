@@ -36,5 +36,20 @@
 	<string>แอปนี้ต้องการใช้การรู้จำเสียงเพื่อให้ผู้ใช้สามารถพูดส่งข้อความแทนการพิมพ์</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>แอปนี้ต้องการเข้าถึงไมโครโฟนเพื่อรับเสียงพูดสำหรับฟีเจอร์แชทด้วยเสียง</string>
+	
+	<!-- Google Sign-In Configuration — ป้องกันการแครชขณะเปิดใช้งาน -->
+	<key>GIDClientID</key>
+	<string>557274858748-hbn5quidnjbs6iqv52j21bdql50qm1gn.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.557274858748-hbn5quidnjbs6iqv52j21bdql50qm1gn</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

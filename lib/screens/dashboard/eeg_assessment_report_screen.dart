@@ -5,12 +5,13 @@ import 'eeg_report_history_screen.dart';
 
 import '../../theme/app_theme.dart';
 
-/// แสดงใบสรุป qEEG แบบเต็มหน้าจอ (หลังวัด 90 วินาที หรือจากประวัติ)
+/// EegAssessmentReportScreen คือหน้าจอหลักสำหรับห่อหุ้มและแสดงผลใบสรุป qEEG แบบเต็มหน้าจอ
+/// ทำหน้าที่เป็น container รองรับการสั่งพ่นไฟล์ภาพออกเป็น PDF และมีปุ่มนำทางด่วนไปดูประวัติรายงานย้อนหลัง
 class EegAssessmentReportScreen extends StatefulWidget {
   final User user;
-  final Map<String, dynamic> summary;
-  final String? recordedAt;
-  final int? reportId;
+  final Map<String, dynamic> summary; // ผลลัพธ์ข้อมูลสรุปที่ได้จากการประเมิน
+  final String? recordedAt;           // เวลาที่บันทึกรายงาน
+  final int? reportId;                // รหัสอ้างอิงของรายงาน
 
   const EegAssessmentReportScreen({
     super.key,

@@ -1,4 +1,6 @@
 
+/// Conversation คือคลาสโมเดลสำหรับจัดเก็บประวัติและเซสชันการคุยแชทของคนไข้กับบอท (Chat Sessions)
+/// จัดเก็บบันทึกประเด็นสรุป (topic_summary), ค่าความรู้สึกเฉลี่ย (sentiment_avg), จำนวนข้อความ และสถานะเปิด/ปิด AI
 class Conversation {
   final int? conversationId;
   final int userId;

@@ -11,12 +11,12 @@ import '../../services/supabase_service.dart';
 import '../../services/eeg_assessment_service.dart';
 import '../../services/eeg_pdf_service.dart';
 import '../../emotion_detection/emotion_detection.dart';
-import '../../eeg_research/eeg_research_screen.dart';
+import 'eeg_session_screen.dart'; // เพิ่มการนำเข้าหน้าเก็บบันทึกข้อมูลคลื่นสมอง
 import 'eeg_assessment_report_screen.dart';
 import 'eeg_report_history_screen.dart';
 import 'settings_screen.dart';
 import 'mini_games_screen.dart';
-import '../../widgets/eeg_topographic_map.dart';
+import '../../widgets/eeg_pipeline_visualizer.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -30,6 +30,100 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final MuseService _museService = MuseService();
+  static bool _isResearchWavesExpanded = true;
+ 
+  // สถานะค่าบัฟเฟอร์สัญญาณของหน้าจอออสซิลโลสโคปแบบเรียลไทม์ (Real-time scrolling oscilloscope state)
+  final Map<String, List<double>> _oscilloscopeBuffers = {
+    'TP9': [],
+    'AF7': [],
+    'AF8': [],
+    'TP10': [],
+  };
+  StreamSubscription? _rawEegSubscription;
+  Timer? _simulationWaveTimer;
+
+  void _updateOscilloscopeSubscription() {
+    final bool shouldBeRunning = _museService.isConnected;
+    
+    if (shouldBeRunning) {
+      if (_museService.isSimulating) {
+        _rawEegSubscription?.cancel();
+        _rawEegSubscription = null;
+        if (_simulationWaveTimer == null || !_simulationWaveTimer!.isActive) {
+          _startSimulationWaves();
+        }
+      } else {
+        _simulationWaveTimer?.cancel();
+        _simulationWaveTimer = null;
+        if (_rawEegSubscription == null) {
+          _startListeningToRawEeg();
+        }
+      }
+    } else {
+      _rawEegSubscription?.cancel();
+      _rawEegSubscription = null;
+      _simulationWaveTimer?.cancel();
+      _simulationWaveTimer = null;
+      _oscilloscopeBuffers.forEach((key, value) => value.clear());
+    }
+  }
+
+  void _startListeningToRawEeg() {
+    _rawEegSubscription?.cancel();
+    _rawEegSubscription = _museService.rawEegStream.listen((channelData) {
+      if (!mounted || !_museService.isConnected || _museService.isSimulating) return;
+      setState(() {
+        channelData.forEach((channel, samples) {
+          _addOscilloscopeSample(channel, samples);
+        });
+      });
+    });
+  }
+
+  void _startSimulationWaves() {
+    _simulationWaveTimer?.cancel();
+    double time = 0;
+    final random = math.Random();
+    _simulationWaveTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted || !_museService.isConnected || !_museService.isSimulating) {
+        timer.cancel();
+        return;
+      }
+      time += 0.03;
+      setState(() {
+        final tp9Val = 15.0 * math.sin(2 * math.pi * 10 * time) + 4.0 * math.sin(2 * math.pi * 4 * time) + (random.nextDouble() - 0.5) * 6.0;
+        final af7Val = 8.0 * math.sin(2 * math.pi * 20 * time) + 10.0 * math.sin(2 * math.pi * 8 * time) + (random.nextDouble() - 0.5) * 8.0;
+        final af8Val = 7.0 * math.sin(2 * math.pi * 18 * time) + 9.0 * math.sin(2 * math.pi * 9 * time) + (random.nextDouble() - 0.5) * 7.5;
+        final tp10Val = 10.0 * math.sin(2 * math.pi * 6 * time) + 15.0 * math.sin(2 * math.pi * 2 * time) + (random.nextDouble() - 0.5) * 5.0;
+
+        _addSingleOscilloscopeSample('TP9', tp9Val);
+        _addSingleOscilloscopeSample('AF7', af7Val);
+        _addSingleOscilloscopeSample('AF8', af8Val);
+        _addSingleOscilloscopeSample('TP10', tp10Val);
+      });
+    });
+  }
+
+  void _addOscilloscopeSample(String channel, List<double> samples) {
+    final buffer = _oscilloscopeBuffers[channel];
+    if (buffer != null) {
+      buffer.addAll(samples);
+      if (buffer.length > 500) {
+        buffer.removeRange(0, buffer.length - 500);
+      }
+    }
+  }
+
+  void _addSingleOscilloscopeSample(String channel, double value) {
+    final buffer = _oscilloscopeBuffers[channel];
+    if (buffer != null) {
+      buffer.add(value);
+      if (buffer.length > 500) {
+        buffer.removeAt(0);
+      }
+    }
+  }
+
   final EmotionDetectionService _emotionService = EmotionDetectionService();
   late final VideoPlayerController _videoController;
   bool _isVideoLoaded = false;
@@ -50,15 +144,15 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription? _testResultSub;
   StreamSubscription? _brainwaveSub;
 
-  // EEG Countdown Timer State
+  // สถานะเครื่องนับเวลาถอยหลังการทดสอบ EEG (EEG Countdown Timer State)
   bool _isEegCountdownRunning = false;
   bool _isEegCountdownDone = false;
-  int _eegCountdownSeconds = 90; // 90s = DEAP 60s + 30s artifact margin
+  int _eegCountdownSeconds = 90; // บันทึก 90 วินาที = อิง DEAP 60 วินาที + 30 วินาทีขอบเขตตัดสัญญาณรบกวน
   Timer? _eegCountdownTimer;
-  Timer? _eegSampleTimer; // Fast sampling timer (250ms)
+  Timer? _eegSampleTimer; // เครื่องเวลาสุ่มตัวอย่างความถี่เร็ว (Fast sampling timer 250ms)
   Map<String, dynamic>? _eegSummaryResult;
   
-  // Accumulated EEG data during countdown
+  // ชุดข้อมูลคลื่นสมอง EEG สะสมที่วัดได้ระหว่างการนับเวลาถอยหลัง
   final List<Map<String, double>> _eegSamples = [];
 
 
@@ -66,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // Initialize video player with local asset
+    // กำหนดค่าและเตรียมการเล่นวิดีโอตัวอย่างคลื่นสมองจากไฟล์ในเครื่อง (Initialize Video Player)
     _videoController = VideoPlayerController.asset('assets/videos/brain_demo.mov')
       ..setLooping(true)
       ..setVolume(0)
@@ -82,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
 
     _museService.addListener(_onMuseDataUpdate);
+    _updateOscilloscopeSubscription();
     _subscribeRealtime();
     _initEmotionDetection();
   }
@@ -272,6 +367,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _testResultSub?.cancel();
     _brainwaveSub?.cancel();
 
+    _rawEegSubscription?.cancel();
+    _simulationWaveTimer?.cancel();
+
     _museService.removeListener(_onMuseDataUpdate);
     _museService.stopSimulation();
     _videoController.dispose();
@@ -299,13 +397,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _eegSummaryResult = null;
     });
 
-    // Fast sampling timer - collect every 250ms (~360 samples in 90s)
+    // เครื่องจับเวลาสุ่มสัญญาณแบบเร็ว - ทำการสุ่มเก็บข้อมูลสัญญาณสมองทุกๆ 250 มิลลิวินาที (เก็บราวๆ 360 ชุดในเวลา 90 วินาที)
     _eegSampleTimer = Timer.periodic(const Duration(milliseconds: 250), (timer) {
       if (!mounted) { timer.cancel(); return; }
       _collectEegSample();
     });
 
-    // UI countdown timer - update display every 1 second
+    // เครื่องเวลานับถอยหลังสำหรับ UI - อัปเดตแสดงผลบนหน้าจอทุกๆ 1 วินาที
     _eegCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) { timer.cancel(); return; }
 
@@ -349,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _finishEegCountdown() async {
     final summary = EegAssessmentService.computeFromSamples(_eegSamples);
 
-    // Predict overall mental state using PyTorch Mobile model on averaged values
+    // ทำนายสภาวะทางอารมณ์/จิตใจภาพรวมโดยใช้โมเดล PyTorch Mobile บนข้อมูลค่าเฉลี่ย
     try {
       final sessionEegData = {
         'alpha': summary['avgAlpha'] as double? ?? 0.0,
@@ -435,6 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onMuseDataUpdate() {
+    _updateOscilloscopeSubscription();
     if (mounted) setState(() {});
   }
 
@@ -589,7 +688,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+                                  backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.1),
                                   child: Icon(Icons.bluetooth, color: AppColors.primaryBlue),
                                 ),
                                 title: Text(
@@ -842,7 +941,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryBlue.withOpacity(0.08),
+                            color: AppColors.primaryBlue.withValues(alpha: 0.08),
                             blurRadius: 24,
                             offset: const Offset(0, 8),
                           ),
@@ -852,7 +951,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(24),
                         child: Stack(
                           children: [
-                            // The Video Player — fills entire area
+                            // ตัวเล่นวิดีโอ (Video Player) — แสดงผลเต็มพื้นที่ในกรอบ Stack
                             Positioned.fill(
                               child: _isVideoLoaded
                                   ? FittedBox(
@@ -876,7 +975,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                             ),
 
-                            // High-Tech Cyber Corner Frame Paint
+                            // กรอบมุมสไตล์ไฮเทค (High-Tech Cyber Corner Frame Paint)
                             Positioned.fill(
                               child: CustomPaint(
                                 painter: CyberFramePainter(
@@ -886,7 +985,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
 
-                            // Pulse-scanning laser line overlay
+                            // แถบเส้นเลเซอร์สแกนแบบล้ำสมัย (Pulse-scanning laser line overlay)
                             if (_isVideoLoaded && _isVideoPlaying)
                               const Positioned.fill(
                                 child: SciFiScannerOverlay(
@@ -894,7 +993,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
 
-                            // Subtle gradient overlay at bottom and top for readability
+                            // แผ่นฟิล์มไล่ระดับเฉดสีเพื่อเพิ่มการอ่านค่า (Subtle gradient overlay at bottom and top for readability)
                             Positioned.fill(
                               child: Container(
                                 decoration: BoxDecoration(
@@ -902,10 +1001,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Colors.black.withOpacity(0.4),
+                                      Colors.black.withValues(alpha: 0.4),
                                       Colors.transparent,
                                       Colors.transparent,
-                                      Colors.black.withOpacity(0.5),
+                                      Colors.black.withValues(alpha: 0.5),
                                     ],
                                     stops: const [0.0, 0.2, 0.7, 1.0],
                                   ),
@@ -913,7 +1012,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
 
-                            // HUD Overlay: Top-Left (Capture status & red blinking indicator)
+                            // หน้าจอ HUD มุมบนซ้าย: แสดงสถานะการบันทึกภาพพร้อมจุดสีแดงกะพริบ (HUD Overlay: Top-Left)
                             Positioned(
                               top: 14,
                               left: 14,
@@ -941,7 +1040,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             : 'จำลองสแกนเนอร์: CALIBRATING',
                                         style: TextStyle(
                                           fontSize: 8,
-                                          color: Colors.white.withOpacity(0.6),
+                                          color: Colors.white.withValues(alpha: 0.6),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -951,17 +1050,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
 
-                            // HUD Overlay: Top-Right (Device information telemetry)
+                            // หน้าจอ HUD มุมบนขวา: แสดงข้อมูลรายละเอียดการเชื่อมต่อเครื่องส่ง (HUD Overlay: Top-Right)
                             Positioned(
                               top: 14,
                               right: 14,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.4),
+                                  color: Colors.black.withValues(alpha: 0.4),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.1),
+                                    color: Colors.white.withValues(alpha: 0.1),
                                     width: 0.5,
                                   ),
                                 ),
@@ -991,7 +1090,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
 
-                            // HUD Overlay: Bottom-Left (EEG Live Channels Status)
+                            // หน้าจอ HUD มุมล่างซ้าย: แสดงสถานะช่องวัดสัญญาณสมองแบบสด (HUD Overlay: Bottom-Left)
                             Positioned(
                               bottom: 14,
                               left: 14,
@@ -1015,7 +1114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     'SIGNAL SYNC SPEED: 250ms',
                                     style: TextStyle(
                                       fontSize: 7,
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: Colors.white.withValues(alpha: 0.5),
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -1023,24 +1122,24 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
 
-                            // HUD Overlay: Bottom-Right (Floating Glassmorphic Control Bar)
+                            // หน้าจอ HUD มุมล่างขวา: แถบควบคุมวิดีโอแบบกระจกฝ้าลอยตัว (HUD Overlay: Bottom-Right)
                             Positioned(
                               bottom: 12,
                               right: 12,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
+                                  color: Colors.black.withValues(alpha: 0.5),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                     width: 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // Play / Pause Button
+                                    // ปุ่มกด เล่น / หยุดเล่นวิดีโอ (Play / Pause Button)
                                     GestureDetector(
                                       onTap: () {
                                         setState(() {
@@ -1056,7 +1155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.1),
+                                          color: Colors.white.withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
@@ -1067,7 +1166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    // Mute Button
+                                    // ปุ่มเปิด / ปิดเสียงวิดีโอ (Mute Button)
                                     GestureDetector(
                                       onTap: () {
                                         setState(() {
@@ -1083,7 +1182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.1),
+                                          color: Colors.white.withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
@@ -1094,7 +1193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    // Live Indicator Dot
+                                    // จุดไฟกระพริบแสดงสัญญาณสดแบบเรียลไทม์ (Live Indicator Dot)
                                     Container(
                                       width: 5,
                                       height: 5,
@@ -1117,7 +1216,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
 
-                            // Loading overlay
+                            // หน้าต่างซ้อนทับขณะกำลังโหลด (Loading overlay)
                             if (!_isVideoLoaded)
                               Positioned.fill(
                                 child: Container(
@@ -1138,7 +1237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Text(
                                           'ระบบบันทึกความถึ่สมองกำลังเตรียมการ...',
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(0.7),
+                                            color: Colors.white.withValues(alpha: 0.7),
                                             fontSize: 11,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -1157,7 +1256,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // 3. Quick Actions menu
                     const Text(
-                      'เมนูการประเมินและกิจกรรม',
+                      'เมนูการประเมินและเก็บข้อมูลคลื่นสมอง',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1167,6 +1266,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 10),
                     Column(
                       children: [
+                        _buildFeaturedEegSessionCard(context),
+                        const SizedBox(height: 12),
                         _buildQuickActionCard(
                           context,
                           icon: Icons.assignment_outlined,
@@ -1204,7 +1305,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: AppTheme.glassDecoration(
                         color: Colors.white,
                         opacity: 0.75,
-                        borderColor: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withOpacity(0.2),
+                        borderColor: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Column(
@@ -1216,7 +1317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withOpacity(0.1),
+                                  color: (_museService.isConnected ? AppColors.primaryGreen : AppColors.primaryBlue).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
@@ -1241,8 +1342,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
                                             color: _museService.isConnected
-                                                ? AppColors.primaryGreen.withOpacity(0.1)
-                                                : Colors.grey.withOpacity(0.1),
+                                                ? AppColors.primaryGreen.withValues(alpha: 0.1)
+                                                : Colors.grey.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
@@ -1271,7 +1372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryBlue.withOpacity(0.05),
+                                color: AppColors.primaryBlue.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
@@ -1290,7 +1391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 12),
                           ElectrodePlacementMap(isConnected: _museService.isConnected),
                           
-                          // Connection Telemetry Grid (Visible when connected)
+                          // ตารางข้อมูลโทรมาตรการเชื่อมต่อ (Connection Telemetry Grid - แสดงเมื่อเชื่อมต่อสำเร็จ)
                           if (_museService.isConnected) ...[
                             const SizedBox(height: 16),
                             const Divider(height: 1, thickness: 0.5, color: Colors.black12),
@@ -1432,7 +1533,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF667eea).withOpacity(0.1),
+                                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
@@ -1465,7 +1566,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 decoration: AppTheme.glassDecoration(
                                   color: AppColors.warning,
                                   opacity: 0.12,
-                                  borderColor: AppColors.warning.withOpacity(0.3),
+                                  borderColor: AppColors.warning.withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
@@ -1475,7 +1576,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Expanded(
                                       child: Text(
                                         'รอสัญญาณจริง... ตรวจสอบการสวมใส่หน้ากากวัดคลื่นสมองให้กระชับหน้าผาก',
-                                        style: TextStyle(fontSize: 12, color: AppColors.textDark.withOpacity(0.8)),
+                                        style: TextStyle(fontSize: 12, color: AppColors.textDark.withValues(alpha: 0.8)),
                                       ),
                                     ),
                                   ],
@@ -1487,7 +1588,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 decoration: AppTheme.glassDecoration(
                                   color: AppColors.primaryBlue,
                                   opacity: 0.1,
-                                  borderColor: AppColors.primaryBlue.withOpacity(0.25),
+                                  borderColor: AppColors.primaryBlue.withValues(alpha: 0.25),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
@@ -1519,7 +1620,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: AppTheme.glassDecoration(
                         color: Colors.white,
                         opacity: 0.7,
-                        borderColor: AppColors.primaryBlue.withOpacity(0.15),
+                        borderColor: AppColors.primaryBlue.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Column(
@@ -1532,7 +1633,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               const Expanded(
                                 child: Text(
                                   'วิเคราะห์ช่องสัญญาณคลื่นสมอง (EEG Bands)',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1541,8 +1642,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: (_museService.isConnected && _museService.latestData != null)
-                                      ? AppColors.primaryGreen.withOpacity(0.12)
-                                      : Colors.grey.withOpacity(0.12),
+                                      ? AppColors.primaryGreen.withValues(alpha: 0.12)
+                                      : Colors.grey.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Row(
@@ -1577,11 +1678,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             (_museService.isConnected && _museService.latestData != null)
                                 ? 'ความเข้มของคลื่นสัญญาณสมองในแต่ละย่านความถี่ (ความถี่สุ่ม 256Hz)'
                                 : 'กรุณาเชื่อมต่ออุปกรณ์ Muse เพื่อเริ่มอ่านคลื่นสมองแบบสด',
-                            style: const TextStyle(fontSize: 11, color: AppColors.textGray),
+                            style: const TextStyle(fontSize: 13, color: AppColors.textGray),
                           ),
                           const SizedBox(height: 18),
                           
-                          // Responsive layout for the 5 EEG bands (Wrap instead of horizontal scroll)
+                          // รูปแบบเลย์เอาต์ยืดหยุ่นรองรับการแสดงผลความแรงคลื่นสมอง 5 ย่านความถี่ (Wrap แทนที่จะใช้การเลื่อนแนวนอน)
                           LayoutBuilder(
                             builder: (context, constraints) {
                               final availableWidth = constraints.maxWidth;
@@ -1596,6 +1697,50 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               const spacing = 8.0;
                               final cardWidth = (availableWidth - (columns - 1) * spacing) / columns;
+                              final hasData = _museService.isConnected && _museService.latestData != null;
+                              final rawVals = hasData
+                                  ? [
+                                      _museService.latestData!.delta,
+                                      _museService.latestData!.theta,
+                                      _museService.latestData!.alpha,
+                                      _museService.latestData!.beta,
+                                      _museService.latestData!.gamma,
+                                    ]
+                                  : [0.0, 0.0, 0.0, 0.0, 0.0];
+
+                              // แปลงสัดส่วนเป็นเปอร์เซ็นต์ (Normalized percentages)
+                              final double sumRaw = rawVals.reduce((a, b) => a + b);
+                              final List<double> pctVals = sumRaw > 0
+                                  ? rawVals.map((v) => (v / sumRaw) * 100.0).toList()
+                                  : [0.0, 0.0, 0.0, 0.0, 0.0];
+
+                              // ปรับแต่งโดยใช้วิธีเศษเหลือสูงสุด (Largest Remainder Method / Hamilton Method) เพื่อปรับจุดทศนิยมให้รวมกันได้ครบ 100% พอดี
+                              final List<int> roundedVals = List.filled(5, 0);
+                              if (sumRaw > 0) {
+                                final List<int> floors = pctVals.map((v) => v.floor()).toList();
+                                final int floorSum = floors.reduce((a, b) => a + b);
+                                final int diff = 100 - floorSum;
+
+                                // จัดเก็บค่าดัชนีและเศษที่เหลือหลังปัดเศษลง
+                                final List<MapEntry<int, double>> remainders = List.generate(
+                                  5,
+                                  (i) => MapEntry(i, pctVals[i] - floors[i])
+                                );
+
+                                // เรียงลำดับจากค่าเศษเหลือมากไปหาน้อย
+                                remainders.sort((a, b) => b.value.compareTo(a.value));
+
+                                // กำหนดสัดส่วนพื้นฐาน (Floors)
+                                for (int i = 0; i < 5; i++) {
+                                  roundedVals[i] = floors[i];
+                                }
+
+                                // กระจายผลต่างเศษเหลือที่เหลืออยู่ให้แก่ย่านความถี่ที่มีเศษเหลือมากสุดตามลำดับ
+                                for (int i = 0; i < diff; i++) {
+                                  final idx = remainders[i].key;
+                                  roundedVals[idx]++;
+                                }
+                              }
 
                               return Wrap(
                                 spacing: spacing,
@@ -1604,63 +1749,62 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   _buildCircularWaveIndicator(
                                     'Delta',
-                                    (_museService.isConnected && _museService.latestData != null)
-                                        ? _museService.latestData!.delta
-                                        : 0.0,
+                                    hasData ? roundedVals[0].toDouble() : 0.0,
                                     const Color(0xFF8B5CF6),
                                     'หลับลึก',
                                     1.0,
-                                    _museService.isConnected && _museService.latestData != null,
+                                    hasData,
                                     width: cardWidth,
                                   ),
                                   _buildCircularWaveIndicator(
                                     'Theta',
-                                    (_museService.isConnected && _museService.latestData != null)
-                                        ? _museService.latestData!.theta
-                                        : 0.0,
+                                    hasData ? roundedVals[1].toDouble() : 0.0,
                                     const Color(0xFF10B981),
                                     'ผ่อนคลาย',
                                     2.5,
-                                    _museService.isConnected && _museService.latestData != null,
+                                    hasData,
                                     width: cardWidth,
                                   ),
                                   _buildCircularWaveIndicator(
                                     'Alpha',
-                                    (_museService.isConnected && _museService.latestData != null)
-                                        ? _museService.latestData!.alpha
-                                        : 0.0,
+                                    hasData ? roundedVals[2].toDouble() : 0.0,
                                     const Color(0xFF3B82F6),
                                     'ตื่นตัว',
                                     5.0,
-                                    _museService.isConnected && _museService.latestData != null,
+                                    hasData,
                                     width: cardWidth,
                                   ),
                                   _buildCircularWaveIndicator(
                                     'Beta',
-                                    (_museService.isConnected && _museService.latestData != null)
-                                        ? _museService.latestData!.beta
-                                        : 0.0,
+                                    hasData ? roundedVals[3].toDouble() : 0.0,
                                     const Color(0xFFF59E0B),
                                     'คิดวิเคราะห์',
                                     9.0,
-                                    _museService.isConnected && _museService.latestData != null,
+                                    hasData,
                                     width: cardWidth,
                                   ),
                                   _buildCircularWaveIndicator(
                                     'Gamma',
-                                    (_museService.isConnected && _museService.latestData != null)
-                                        ? _museService.latestData!.gamma
-                                        : 0.0,
+                                    hasData ? roundedVals[4].toDouble() : 0.0,
                                     const Color(0xFFEF4444),
                                     'สมาธิสูง',
                                     15.0,
-                                    _museService.isConnected && _museService.latestData != null,
+                                    hasData,
                                     width: cardWidth,
                                   ),
                                 ],
                               );
                             },
                           ),
+                          if (_museService.isConnected) ...[
+                            const SizedBox(height: 18),
+                            _buildResearchWaveformCard(),
+                            const SizedBox(height: 18),
+                            EegPipelineVisualizer(
+                              channels: _oscilloscopeBuffers,
+                              hasData: _oscilloscopeBuffers.values.any((b) => b.isNotEmpty),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1694,10 +1838,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
-        color: isConnected ? Colors.green.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+        color: isConnected ? Colors.green.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: isConnected ? Colors.green.withOpacity(0.5) : Colors.white.withOpacity(0.2),
+          color: isConnected ? Colors.green.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.2),
           width: 0.5,
         ),
       ),
@@ -1735,9 +1879,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.12), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.12), width: 0.5),
       ),
       child: Row(
         children: [
@@ -1865,7 +2009,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: AppTheme.glassDecoration(
         color: Colors.white,
         opacity: isActive ? 0.8 : 0.4,
-        borderColor: displayColor.withOpacity(isActive ? 0.25 : 0.1),
+        borderColor: displayColor.withValues(alpha: isActive ? 0.25 : 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -1874,7 +2018,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             name,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: isActive ? AppColors.textDark : Colors.grey[600],
             ),
@@ -1894,7 +2038,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     return CircularProgressIndicator(
                       value: val,
                       strokeWidth: 6,
-                      backgroundColor: displayColor.withOpacity(0.12),
+                      backgroundColor: displayColor.withValues(alpha: 0.12),
                       valueColor: AlwaysStoppedAnimation<Color>(displayColor),
                       strokeCap: StrokeCap.round,
                     );
@@ -1904,7 +2048,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 '${value.round()}%',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: displayColor,
                 ),
@@ -1912,7 +2056,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Dynamic animated microwave line chart!
+          // กราฟเส้นคลื่นสมองเคลื่อนไหวแบบเรียลไทม์ (Dynamic animated microwave line chart)
           MicroWaveChart(
             color: displayColor,
             frequency: frequency,
@@ -1922,7 +2066,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             desc,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               color: isActive ? AppColors.textGray : Colors.grey[500],
               fontWeight: FontWeight.w500,
             ),
@@ -2019,7 +2163,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: AppTheme.glassDecoration(
         color: Colors.white,
         opacity: 0.75,
-        borderColor: AppColors.primaryBlue.withOpacity(0.15),
+        borderColor: AppColors.primaryBlue.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -2030,7 +2174,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.analytics_outlined, color: AppColors.primaryBlue, size: 20),
@@ -2053,14 +2197,14 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Left Panel: PHQ-9
+              // แผงควบคุมฝั่งซ้าย: ข้อมูลผลประเมินภาวะอารมณ์ PHQ-9 (Left Panel)
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.06),
+                    color: statusColor.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: statusColor.withOpacity(0.15), width: 1),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.15), width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2102,14 +2246,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // Right Panel: EEG Data
+              // แผงควบคุมฝั่งขวา: ข้อมูลผลประเมินคลื่นสมอง EEG (Right Panel)
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withOpacity(0.04),
+                    color: AppColors.primaryBlue.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1), width: 1),
+                    border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.1), width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2173,7 +2317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primaryBlue.withOpacity(0.1),
+                                  color: AppColors.primaryBlue.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Row(
@@ -2241,7 +2385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.1),
+                                  color: AppColors.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Row(
@@ -2290,10 +2434,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isPyTorch ? const Color(0xFF4F46E5).withOpacity(0.04) : AppColors.primaryBlue.withOpacity(0.04),
+        color: isPyTorch ? const Color(0xFF4F46E5).withValues(alpha: 0.04) : AppColors.primaryBlue.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: (isPyTorch ? const Color(0xFF4F46E5) : AppColors.primaryBlue).withOpacity(0.12),
+          color: (isPyTorch ? const Color(0xFF4F46E5) : AppColors.primaryBlue).withValues(alpha: 0.12),
           width: 1,
         ),
       ),
@@ -2320,7 +2464,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 10,
                       ),
                     ],
@@ -2409,7 +2553,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: AppTheme.glassDecoration(
         color: Colors.white,
         opacity: 0.7,
-        borderColor: const Color(0xFF667eea).withOpacity(0.18),
+        borderColor: const Color(0xFF667eea).withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -2420,7 +2564,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF667eea).withOpacity(0.1),
+                  color: const Color(0xFF667eea).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.psychology_outlined, color: Color(0xFF667eea), size: 20),
@@ -2434,7 +2578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Model Selection Menu
+              // เมนูสำหรับเลือกเปลี่ยนประเภทโมเดล AI ในการประมวลผล (Model Selection Menu)
               PopupMenuButton<String>(
                 icon: const Icon(Icons.tune_rounded, color: Color(0xFF667eea), size: 20),
                 tooltip: 'เลือกโมเดลตรวจจับ',
@@ -2532,7 +2676,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: AppTheme.glassDecoration(
         color: Colors.white,
         opacity: 0.7,
-        borderColor: const Color(0xFF1a237e).withOpacity(0.18),
+        borderColor: const Color(0xFF1a237e).withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -2543,7 +2687,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1a237e).withOpacity(0.1),
+                  color: const Color(0xFF1a237e).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.analytics_rounded, color: Color(0xFF1a237e), size: 20),
@@ -2561,7 +2705,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.12),
+                    color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -2587,7 +2731,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 20),
 
           if (_isEegCountdownRunning) ...[
-            // Timer circular progress or medical badge
+            // วงล้อแสดงความคืบหน้าของเวลานับถอยหลังการทดสอบ (Timer circular progress or medical badge)
             Center(
               child: Container(
                 width: 130,
@@ -2597,12 +2741,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: const Color(0xFF1B2A4A),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1a237e).withOpacity(0.25),
+                      color: const Color(0xFF1a237e).withValues(alpha: 0.25),
                       blurRadius: 24,
                       spreadRadius: 2,
                     ),
                   ],
-                  border: Border.all(color: Colors.cyan.withOpacity(0.3), width: 2),
+                  border: Border.all(color: Colors.cyan.withValues(alpha: 0.3), width: 2),
                 ),
                 child: Stack(
                   alignment: Alignment.center,
@@ -2754,17 +2898,583 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-} // End of _HomeScreenState
+
+  Widget _buildResearchWaveformCard() {
+    // คำนวณค่าสถิติแบบเรียลไทม์สำหรับแต่ละช่องสัญญาณประสาท (คำนวณจากค่าดิบ Raw values)
+    final Map<String, Map<String, double>> channelStats = {};
+    for (final entry in _oscilloscopeBuffers.entries) {
+      final data = entry.value;
+      if (data.isNotEmpty) {
+        double sum = 0, sqSum = 0;
+        double minVal = data.first, maxVal = data.first;
+        for (final v in data) {
+          sum += v;
+          sqSum += v * v;
+          if (v < minVal) minVal = v;
+          if (v > maxVal) maxVal = v;
+        }
+        final mean = sum / data.length;
+        final variance = (sqSum / data.length) - mean * mean;
+        final std = math.sqrt(variance.abs());
+        channelStats[entry.key] = {
+          'mean': mean,
+          'std': std,
+          'min': minVal,
+          'max': maxVal,
+          'pp': maxVal - minVal,
+        };
+      }
+    }
+
+    final bool hasData = _oscilloscopeBuffers.values.any((b) => b.isNotEmpty);
+    final int totalSamples = _oscilloscopeBuffers['TP9']?.length ?? 0;
+    final String sourceLabel = _museService.isSimulating
+        ? 'Simulation Mode'
+        : 'Muse 2 (Live)';
+    final now = DateTime.now();
+    final String timestamp =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+
+    const channelColors = {
+      'TP9': Color(0xFF1565C0),
+      'AF7': Color(0xFF2E7D32),
+      'AF8': Color(0xFFE65100),
+      'TP10': Color(0xFF6A1B9A),
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFBDBDBD), width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header Banner (Collapsible with Material InkWell ripple feedback) ──
+          Material(
+            color: const Color(0xFF1A237E),
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(13),
+              topRight: const Radius.circular(13),
+              bottomLeft: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+              bottomRight: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(13),
+                topRight: const Radius.circular(13),
+                bottomLeft: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+                bottomRight: _isResearchWavesExpanded ? Radius.zero : const Radius.circular(13),
+              ),
+              onTap: () {
+                setState(() {
+                  _isResearchWavesExpanded = !_isResearchWavesExpanded;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.science_outlined, color: Colors.white70, size: 16),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Raw EEG Multi-Channel Traces',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _isResearchWavesExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6, height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: hasData ? const Color(0xFF4CAF50) : Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            hasData ? 'LIVE' : 'IDLE',
+                            style: TextStyle(
+                              color: hasData ? const Color(0xFF81C784) : Colors.white54,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _isResearchWavesExpanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Device Metadata Row ──
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        color: const Color(0xFFF5F5F5),
+                        child: Row(
+                          children: [
+                            _buildMetaChip('Source', sourceLabel),
+                            const SizedBox(width: 12),
+                            _buildMetaChip('Fs', '256 Hz'),
+                            const SizedBox(width: 12),
+                            _buildMetaChip('Ref', 'FPz (Forehead)'),
+                            const Spacer(),
+                            Text(
+                              timestamp,
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 9,
+                                fontFamily: 'Courier',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // ── Montage Info ──
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        color: const Color(0xFFFAFAFA),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Montage: International 10-20 System  •  Channels: 4',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 9.5,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'N = $totalSamples pts',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 9,
+                                fontFamily: 'Courier',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFE0E0E0)),
+
+                      // ── Channel Color Legend ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        child: Row(
+                          children: channelColors.entries.map((e) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 14),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 10, height: 3,
+                                    decoration: BoxDecoration(
+                                      color: e.value,
+                                      borderRadius: BorderRadius.circular(1),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    e.key,
+                                    style: TextStyle(
+                                      color: e.value,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+
+                      // ── Waveform Plot ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            color: const Color(0xFFFCFCFC),
+                            height: 180,
+                            child: CustomPaint(
+                              painter: EegResearchTracePainter(
+                                channels: _oscilloscopeBuffers,
+                                channelColors: channelColors,
+                              ),
+                              child: Container(),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ── Scale Bar ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        child: Row(
+                          children: [
+                            Container(width: 40, height: 2, color: Colors.black54),
+                            const SizedBox(width: 4),
+                            Text(
+                              '~${(totalSamples / 33.3).toStringAsFixed(1)}s',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.black54,
+                                fontFamily: 'Courier',
+                               ),
+                            ),
+                            const SizedBox(width: 16),
+                            Container(width: 2, height: 12, color: Colors.black54),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Auto µV',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.black54,
+                                fontFamily: 'Courier',
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Filter: 0.5 – 50 Hz  •  Notch: 50 Hz',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey.shade500,
+                                fontFamily: 'Courier',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+                      // ── Per-Channel Statistics ──
+                      if (channelStats.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Channel Statistics — Raw (Real-time)',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Table(
+                                columnWidths: const {
+                                  0: FixedColumnWidth(50),
+                                  1: FlexColumnWidth(),
+                                  2: FlexColumnWidth(),
+                                  3: FlexColumnWidth(),
+                                  4: FlexColumnWidth(),
+                                },
+                                border: TableBorder.all(color: Colors.grey.shade200, width: 0.5),
+                                children: [
+                                  TableRow(
+                                    decoration: BoxDecoration(color: Colors.grey.shade100),
+                                    children: const [
+                                      _HomeStatHeader('Ch'),
+                                      _HomeStatHeader('Mean'),
+                                      _HomeStatHeader('Std'),
+                                      _HomeStatHeader('Min'),
+                                      _HomeStatHeader('Max'),
+                                    ],
+                                  ),
+                                  ...['TP9', 'AF7', 'AF8', 'TP10'].map((ch) {
+                                    final s = channelStats[ch];
+                                    return TableRow(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(4),
+                                          child: Text(
+                                            ch,
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w700,
+                                              color: channelColors[ch],
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        _HomeStatCell(s?['mean']),
+                                        _HomeStatCell(s?['std']),
+                                        _HomeStatCell(s?['min']),
+                                        _HomeStatCell(s?['max']),
+                                      ],
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                    ],
+                  )
+                : const SizedBox(width: double.infinity, height: 0),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetaChip(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 9,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFF1A237E),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// สร้างบัตรปุ่มกดสำหรับเปิดหน้าเก็บบันทึกข้อมูลอารมณ์คลื่นสมอง (EEG Session Screen)
+  /// ออกแบบเป็นสไตล์พรีเมียม ไฮเทค ตามภาพดีไซน์ที่กำหนด มีลายเส้นตาราง Grid สีจางที่พื้นหลัง
+  /// และมีปุ่มวงกลมสีขาวบรรจุลูกศรนำทางชี้ไปข้างหน้า
+  Widget _buildFeaturedEegSessionCard(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 850),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+        );
+      },
+      child: GestureDetector(
+        onTap: () {
+          // นำทางผู้ใช้ไปยังหน้าจอการเก็บบันทึกข้อมูลคลื่นสมองและอารมณ์จริง EegSessionScreen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EegSessionScreen(
+                user: widget.user,
+                museService: _museService, // ส่งมอบ service สัญญาณบลูทูธของอุปกรณ์ Muse ไปร่วมใช้งาน
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          height: 125,
+          decoration: AppTheme.glassDecoration(
+            color: AppColors.primaryBlue,
+            opacity: 0.15,
+            borderColor: AppColors.primaryBlue.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Stack(
+            children: [
+              // ลายเส้นกริดตารางจำลองจอวิเคราะห์สัญญาณแบบจาง
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _GridPatternPainter(color: AppColors.primaryBlue.withValues(alpha: 0.04)),
+                ),
+              ),
+              // วงกลมประดับพื้นหลังด้านขวาบนเพื่อความสมมาตรทางดีไซน์
+              Positioned(
+                right: -15,
+                top: -15,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primaryBlue.withValues(alpha: 0.05),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    // กล่องแสดงไอคอนสมองทรงพรีเมียมสีฟ้าอ่อนตัดน้ำเงินเข้ม
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.primaryBlue.withValues(alpha: 0.25)),
+                      ),
+                      child: const Icon(Icons.psychology_rounded, color: AppColors.primaryBlue, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    // ส่วนแสดงชื่อปุ่มและคำบรรยายวัตถุประสงค์การวัดผล
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'บันทึกข้อมูลอารมณ์',
+                                style: GoogleFonts.prompt(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              // วงกลมจุดสีเขียวบ่งบอกสถานะการวัดแบบเรียลไทม์
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.neonGreen,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'เชื่อมต่อเซนเซอร์ EEG เพื่อเริ่มทำการบันทึกและประเมินจิตวิทยาคลินิก',
+                            style: GoogleFonts.prompt(
+                              fontSize: 12,
+                              color: AppColors.textGray,
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // ปุ่มวงกลมสีขาวบรรจุไอคอนหัวลูกศรชี้ไปขวาตามรูปต้นแบบดีไซน์
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.primaryBlue,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// คลาสวาดตารางลายเส้นกริดพื้นหลังแบบจาง (Grid Background Painter)
+/// เพื่อใช้ตกแต่งหน้าบัตร Eeg Session Card ให้ดูสวยงามพรีเมียม สไตล์เครื่องมือทางการแพทย์ระดับสูง
+class _GridPatternPainter extends CustomPainter {
+  final Color color;
+  _GridPatternPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    const spacing = 15.0;
+    // ลากเส้นตามแนวตั้ง
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    // ลากเส้นตามแนวนอน
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+} // สิ้นสุดคลาส _HomeScreenState
 
 // ==========================================
-// Custom Helper Widgets & Dynamic Painters
+// วิดเจ็ตอำนวยความสะดวกภายนอกและตัววาดรูปไดนามิก (Custom Helper Widgets & Dynamic Painters)
 // ==========================================
 
 class _PulseDot extends StatefulWidget {
   final Color color;
   final double size;
 
-  const _PulseDot({super.key, required this.color, required this.size});
+  const _PulseDot({required this.color, required this.size});
 
   @override
   State<_PulseDot> createState() => _PulseDotState();
@@ -2844,24 +3554,24 @@ class CyberFramePainter extends CustomPainter {
 
     const double bracketSize = 18.0;
 
-    // Draw corner brackets
-    // Top-Left
+    // วาดสัญลักษณ์มุมกรอบ (Draw corner brackets)
+    // บนซ้าย (Top-Left)
     canvas.drawPath(Path()..moveTo(bracketSize, 2)..lineTo(2, 2)..lineTo(2, bracketSize), paint);
-    // Top-Right
+    // บนขวา (Top-Right)
     canvas.drawPath(Path()..moveTo(size.width - bracketSize, 2)..lineTo(size.width - 2, 2)..lineTo(size.width - 2, bracketSize), paint);
-    // Bottom-Left
+    // ล่างซ้าย (Bottom-Left)
     canvas.drawPath(Path()..moveTo(bracketSize, size.height - 2)..lineTo(2, size.height - 2)..lineTo(2, size.height - bracketSize), paint);
-    // Bottom-Right
+    // ล่างขวา (Bottom-Right)
     canvas.drawPath(Path()..moveTo(size.width - bracketSize, size.height - 2)..lineTo(size.width - 2, size.height - 2)..lineTo(size.width - 2, size.height - bracketSize), paint);
 
-    // Subtle inner boundary frame
+    // เส้นโครงขอบด้านในจางๆ (Subtle inner boundary frame)
     final borderPaint = Paint()
       ..color = color.withValues(alpha: 0.15)
       ..strokeWidth = 0.8
       ..style = PaintingStyle.stroke;
     canvas.drawRect(Rect.fromLTWH(8, 8, size.width - 16, size.height - 16), borderPaint);
 
-    // Center Target Reticle (Clinic-style scanning circle)
+    // เป้าเล็งวงกลมกึ่งกลางสไตล์กล้องสแกนคลินิก (Center Target Reticle)
     final center = Offset(size.width / 2, size.height / 2);
     final reticlePaint = Paint()
       ..color = color.withValues(alpha: 0.25)
@@ -2870,13 +3580,13 @@ class CyberFramePainter extends CustomPainter {
     canvas.drawCircle(center, 30, reticlePaint);
     canvas.drawCircle(center, 4, Paint()..color = color.withValues(alpha: 0.4)..style = PaintingStyle.fill);
 
-    // Draw reticle crosshair ticks
+    // วาดขีดไม้กางเขนเล็งเป้า (Draw reticle crosshair ticks)
     canvas.drawLine(Offset(center.dx - 45, center.dy), Offset(center.dx - 35, center.dy), reticlePaint);
     canvas.drawLine(Offset(center.dx + 35, center.dy), Offset(center.dx + 45, center.dy), reticlePaint);
     canvas.drawLine(Offset(center.dx, center.dy - 45), Offset(center.dx, center.dy - 35), reticlePaint);
     canvas.drawLine(Offset(center.dx, center.dy + 35), Offset(center.dx, center.dy + 45), reticlePaint);
 
-    // Side ticks (Rulers on left & right sides)
+    // ขีดสเกลด้านข้างสำหรับวัดระดับ (Side ticks - Rulers on left & right sides)
     final tickPaint = Paint()
       ..color = color.withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
@@ -2945,7 +3655,7 @@ class _ScannerLinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final double y = size.height * progress;
 
-    // Glowing laser scan line
+    // เส้นเลเซอร์เรืองแสงที่วิ่งสแกน (Glowing laser scan line)
     final paintLine = Paint()
       ..shader = LinearGradient(
         colors: [
@@ -2958,7 +3668,7 @@ class _ScannerLinePainter extends CustomPainter {
       ).createShader(Rect.fromLTRB(0, y - 10, size.width, y + 10))
       ..strokeWidth = 2.5;
 
-    // Glowing laser trail trailing behind
+    // ลำแสงเลเซอร์เรืองแสงฟุ้งที่ลากเป็นเงาตามหลังมา (Glowing laser trail trailing behind)
     final paintTrail = Paint()
       ..shader = LinearGradient(
         begin: Alignment.bottomCenter,
@@ -3069,7 +3779,7 @@ class _WaveLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isActive ? color : Colors.grey.withOpacity(0.3)
+      ..color = isActive ? color : Colors.grey.withValues(alpha: 0.3)
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -3112,7 +3822,7 @@ class ElectrodePlacementMap extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Stylized Head Vector Paint
+          // ภาพวาดจำลองศีรษะคนเชิงเวกเตอร์ (Stylized Head Vector Paint)
           SizedBox(
             width: 65,
             height: 65,
@@ -3214,13 +3924,13 @@ class _HeadPlacementPainter extends CustomPainter {
 
     final headCenter = Offset(size.width / 2, size.height / 2 + 1);
     
-    // Head Oval
+    // วาดรูปวงรีศีรษะ (Head Oval)
     canvas.drawOval(
       Rect.fromCenter(center: headCenter, width: 34, height: 42),
       headPaint,
     );
 
-    // Draw simple nose pointing up
+    // วาดรูปจมูกอย่างง่ายชี้ขึ้นด้านบน (Draw simple nose pointing up)
     final nosePath = Path()
       ..moveTo(headCenter.dx, headCenter.dy - 21)
       ..lineTo(headCenter.dx - 4, headCenter.dy - 25)
@@ -3228,7 +3938,7 @@ class _HeadPlacementPainter extends CustomPainter {
       ..close();
     canvas.drawPath(nosePath, Paint()..color = Colors.grey[400]!..style = PaintingStyle.fill);
 
-    // Ears
+    // วาดใบหูซ้ายขวา (Ears)
     canvas.drawArc(
       Rect.fromCenter(center: Offset(headCenter.dx - 17, headCenter.dy), width: 6, height: 12),
       math.pi / 2,
@@ -3244,7 +3954,7 @@ class _HeadPlacementPainter extends CustomPainter {
       headPaint,
     );
 
-    // Connecting signal routes
+    // วาดเส้นแนวเชื่อมต่อสัญญาณประสาท (Connecting signal routes)
     final routePaint = Paint()
       ..color = isConnected ? AppColors.primaryGreen.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2)
       ..strokeWidth = 0.8
@@ -3254,31 +3964,31 @@ class _HeadPlacementPainter extends CustomPainter {
     canvas.drawLine(Offset(headCenter.dx - 9, headCenter.dy - 15), Offset(headCenter.dx + 9, headCenter.dy - 15), routePaint);
     canvas.drawLine(Offset(headCenter.dx + 9, headCenter.dy - 15), Offset(headCenter.dx + 15, headCenter.dy), routePaint);
 
-    // Draw electrodes node values
+    // วาดจุดอิเล็กโทรดบนศีรษะ (Draw electrodes node values)
     void drawNode(Offset pos, bool good) {
       final nodeColor = good ? AppColors.primaryGreen : Colors.grey[500]!;
       
-      // Outer glow boundary
+      // เส้นวงกลมเรืองแสงวงนอก (Outer glow boundary)
       final borderPaint = Paint()
         ..color = nodeColor.withValues(alpha: 0.35)
         ..strokeWidth = 0.8
         ..style = PaintingStyle.stroke;
       canvas.drawCircle(pos, 4.5, borderPaint);
 
-      // Solid inner core
+      // แกนวงกลมทึบด้านใน (Solid inner core)
       final fillPaint = Paint()
         ..color = nodeColor
         ..style = PaintingStyle.fill;
       canvas.drawCircle(pos, 2.5, fillPaint);
     }
 
-    // TP9 (Left ear)
+    // จุดรับสัญญาณตำแหน่ง TP9 (หูด้านซ้าย)
     drawNode(Offset(headCenter.dx - 15, headCenter.dy), isConnected);
-    // AF7 (Left forehead)
+    // จุดรับสัญญาณตำแหน่ง AF7 (หน้าผากด้านซ้าย)
     drawNode(Offset(headCenter.dx - 9, headCenter.dy - 15), isConnected);
-    // AF8 (Right forehead)
+    // จุดรับสัญญาณตำแหน่ง AF8 (หน้าผากด้านขวา)
     drawNode(Offset(headCenter.dx + 9, headCenter.dy - 15), isConnected);
-    // TP10 (Right ear)
+    // จุดรับสัญญาณตำแหน่ง TP10 (หูด้านขวา)
     drawNode(Offset(headCenter.dx + 15, headCenter.dy), isConnected);
   }
 
@@ -3310,7 +4020,7 @@ class _LiveOscilloscopeState extends State<LiveOscilloscope> {
       if (!mounted) return;
       setState(() {
         _tick += 0.2;
-        // Shift points left
+        // เลื่อนจุดสัญญาณไปทางซ้ายเพื่อแสดงผลกราฟเลื่อน (Shift points left)
         _points1.removeAt(0);
         _points2.removeAt(0);
         _points3.removeAt(0);
@@ -3323,7 +4033,7 @@ class _LiveOscilloscopeState extends State<LiveOscilloscope> {
           _points3.add(math.cos(_tick * 1.2) * (data.beta / 30) + math.sin(_tick * 3) * (data.gamma / 60));
           _points4.add(math.sin(_tick * 0.8) * (data.alpha / 20) + math.cos(_tick * 1.7) * (data.theta / 30));
         } else {
-          // Flatline/Standby noise
+          // สัญญาณนิ่งหรือคลื่นสัญญาณรบกวนสแตนด์บาย (Flatline/Standby noise)
           _points1.add(math.sin(_tick) * 0.15 + (_random.nextDouble() - 0.5) * 0.04);
           _points2.add(math.cos(_tick * 1.3) * 0.1 + (_random.nextDouble() - 0.5) * 0.04);
           _points3.add(math.sin(_tick * 0.7) * 0.2 + (_random.nextDouble() - 0.5) * 0.04);
@@ -3386,7 +4096,7 @@ class _OscilloscopePainter extends CustomPainter {
       ..color = Colors.black.withValues(alpha: 0.03)
       ..strokeWidth = 0.5;
 
-    // Draw clinical oscilloscope grid
+    // วาดตารางกริดออสซิลโลสโคปแบบคลินิก (Draw clinical oscilloscope grid)
     const int gridCols = 10;
     const int gridRows = 6;
     for (int i = 0; i <= gridCols; i++) {
@@ -3398,7 +4108,7 @@ class _OscilloscopePainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    // Draw horizontal dashed reference centerline
+    // วาดเส้นแกนนอนกึ่งกลางแนวอ้างอิงประ (Draw horizontal dashed reference centerline)
     final centerPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.08)
       ..strokeWidth = 0.8;
@@ -3414,7 +4124,7 @@ class _OscilloscopePainter extends CustomPainter {
     _drawTrace(canvas, size, points3, const Color(0xFF3B82F6), size.height * 0.6);
     _drawTrace(canvas, size, points4, const Color(0xFFF59E0B), size.height * 0.8);
 
-    // CH indicators
+    // ป้ายกำกับระบุช่องสัญญาณประสาทแต่ละช่อง (CH indicators)
     const textStyle = TextStyle(color: AppColors.textGray, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 0.5);
     _drawText(canvas, const Offset(6, 4), 'CH1: TP9 (ALPHA/BETA)', textStyle);
     _drawText(canvas, Offset(6, size.height * 0.4 - 10), 'CH2: AF7 (THETA/DELTA)', textStyle);
@@ -3465,3 +4175,309 @@ class _OscilloscopePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _OscilloscopePainter oldDelegate) => true;
 }
+
+// ── Home Screen Stat table helper widgets ──
+class _HomeStatHeader extends StatelessWidget {
+  final String text;
+  const _HomeStatHeader(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey.shade600,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+class _HomeStatCell extends StatelessWidget {
+  final double? value;
+  const _HomeStatCell(this.value);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Text(
+        value != null ? value!.toStringAsFixed(2) : '—',
+        style: const TextStyle(
+          fontSize: 9,
+          fontFamily: 'Courier',
+          color: Colors.black87,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ตัววาดกราฟคลื่นสมอง EEG เกรดงานวิจัยที่มีตารางกริด สเกลวัด และสีแยกแยะสำหรับแต่ละช่องสัญญาณประสาท
+// ออกแบบขึ้นให้สอดคล้องตามเกณฑ์มาตรฐานสากล (clinical/research EEG viewer conventions)
+// ═══════════════════════════════════════════════════════════════════
+class EegResearchTracePainter extends CustomPainter {
+  final Map<String, List<double>> channels;
+  final Map<String, Color> channelColors;
+  final List<String> channelNames = const ['TP9', 'AF7', 'AF8', 'TP10'];
+
+  EegResearchTracePainter({
+    required this.channels,
+    required this.channelColors,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bgPaint = Paint()
+      ..color = const Color(0xFFFCFCFC)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+
+    final double channelHeight = size.height / channelNames.length;
+    const double labelWidth = 52.0;
+    const double rightPadding = 8.0;
+    final double plotWidth = size.width - labelWidth - rightPadding;
+
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8E8E8)
+      ..strokeWidth = 0.4
+      ..style = PaintingStyle.stroke;
+
+    final gridPaintMajor = Paint()
+      ..color = const Color(0xFFD0D0D0)
+      ..strokeWidth = 0.6
+      ..style = PaintingStyle.stroke;
+
+    final baselinePaint = Paint()
+      ..color = const Color(0xFFBDBDBD)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    // ฟังก์ชันย่อยสำหรับวาดเส้นฐานแนวนอนแบบประ (Dashed baseline helper)
+    void drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+      const dashWidth = 4.0;
+      const dashSpace = 3.0;
+      final dx = end.dx - start.dx;
+      final dy = end.dy - start.dy;
+      final totalLength = math.sqrt(dx * dx + dy * dy);
+      final dirX = dx / totalLength;
+      final dirY = dy / totalLength;
+      double drawn = 0;
+      while (drawn < totalLength) {
+        final segEnd = (drawn + dashWidth).clamp(0.0, totalLength);
+        canvas.drawLine(
+          Offset(start.dx + dirX * drawn, start.dy + dirY * drawn),
+          Offset(start.dx + dirX * segEnd, start.dy + dirY * segEnd),
+          paint,
+        );
+        drawn += dashWidth + dashSpace;
+      }
+    }
+
+    for (int i = 0; i < channelNames.length; i++) {
+      final name = channelNames[i];
+      final yOffset = i * channelHeight;
+      final yCenter = yOffset + channelHeight / 2;
+      final chColor = channelColors[name] ?? const Color(0xFF1565C0);
+
+      // วาดพื้นหลังสลับสีเพื่อแยกบรรทัดแต่ละแชลแนล (Alternating background)
+      if (i % 2 == 1) {
+        canvas.drawRect(
+          Rect.fromLTWH(0, yOffset, size.width, channelHeight),
+          Paint()..color = const Color(0xFFF7F7FA),
+        );
+      }
+
+      // เส้นกริดแนวนอนย่อย 3 เส้นต่อแชลแนล (Grid lines - 3 minor lines per channel)
+      for (int g = 1; g <= 3; g++) {
+        final gy = yOffset + channelHeight * g / 4;
+        canvas.drawLine(
+          Offset(labelWidth, gy),
+          Offset(size.width - rightPadding, gy),
+          gridPaint,
+        );
+      }
+
+      // เส้นกริดแนวตั้งแบ่งสเกลเวลาออกเป็น 8 ส่วน (Vertical grid lines - 8 segments)
+      for (int v = 1; v < 8; v++) {
+        final vx = labelWidth + plotWidth * v / 8;
+        canvas.drawLine(
+          Offset(vx, yOffset),
+          Offset(vx, yOffset + channelHeight),
+          v == 4 ? gridPaintMajor : gridPaint,
+        );
+      }
+
+      // เส้นอ้างอิงตรงกลางสมดุลศูนย์ประ (Zero baseline - dashed)
+      drawDashedLine(
+        canvas,
+        Offset(labelWidth, yCenter),
+        Offset(size.width - rightPadding, yCenter),
+        baselinePaint,
+      );
+
+      // เส้นขอบใต้แชลแนลช่องสัญญาณ (Channel border)
+      canvas.drawLine(
+        Offset(0, yOffset + channelHeight),
+        Offset(size.width, yOffset + channelHeight),
+        Paint()
+          ..color = const Color(0xFFCCCCCC)
+          ..strokeWidth = 0.8,
+      );
+
+      // เส้นคั่นแนวตั้งระหว่างชื่อแชลแนลและพื้นที่สัญญาณ (Vertical divider)
+      canvas.drawLine(
+        Offset(labelWidth, yOffset),
+        Offset(labelWidth, yOffset + channelHeight),
+        Paint()
+          ..color = const Color(0xFFCCCCCC)
+          ..strokeWidth = 0.8,
+      );
+
+      // ── Channel Label ──
+      canvas.save();
+      canvas.translate(labelWidth / 2, yCenter);
+      canvas.rotate(-math.pi / 2);
+      final labelSpan = TextSpan(
+        text: name,
+        style: TextStyle(
+          color: chColor,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+        ),
+      );
+      final labelPainter = TextPainter(
+        text: labelSpan,
+        textDirection: TextDirection.ltr,
+      );
+      labelPainter.layout();
+      labelPainter.paint(canvas, Offset(-labelPainter.width / 2, -labelPainter.height / 2));
+      canvas.restore();
+
+      // ── Electrode position sub-label ──
+      final posMap = {
+        'TP9': 'L-Temporal',
+        'AF7': 'L-Frontal',
+        'AF8': 'R-Frontal',
+        'TP10': 'R-Temporal',
+      };
+      final posSpan = TextSpan(
+        text: posMap[name] ?? '',
+        style: TextStyle(
+          color: Colors.grey.shade400,
+          fontSize: 7,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+      final posPainter = TextPainter(
+        text: posSpan,
+        textDirection: TextDirection.ltr,
+      );
+      posPainter.layout();
+      posPainter.paint(
+        canvas,
+        Offset(
+          (labelWidth - posPainter.width) / 2,
+          yCenter + 9,
+        ),
+      );
+
+      // ── Plot data ──
+      final data = channels[name] ?? [];
+      if (data.isEmpty) {
+        final noDataSpan = TextSpan(
+          text: 'Waiting for signal…',
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 9,
+            fontStyle: FontStyle.italic,
+          ),
+        );
+        final noDataPainter = TextPainter(
+          text: noDataSpan,
+          textDirection: TextDirection.ltr,
+        );
+        noDataPainter.layout();
+        noDataPainter.paint(
+          canvas,
+          Offset(
+            labelWidth + (plotWidth - noDataPainter.width) / 2,
+            yCenter - noDataPainter.height / 2,
+          ),
+        );
+        continue;
+      }
+
+      // การขจัดแนวโน้มเส้นกราฟเอียง (Detrend: ลบค่าเฉลี่ยออก)
+      double sum = 0;
+      for (final val in data) {
+        sum += val;
+      }
+      final mean = sum / data.length;
+
+      // ปรับขนาดความกว้างสเกลอัตโนมัติ (Auto-scale: หาค่าเบี่ยงเบนสัมบูรณ์สูงสุด)
+      double maxDev = 5.0;
+      for (final val in data) {
+        final dev = (val - mean).abs();
+        if (dev > maxDev) maxDev = dev;
+      }
+      maxDev *= 1.15;
+
+      // วาดรูปเส้นคลื่นคลื่นสมอง (Draw waveform)
+      final wavePaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.3
+        ..color = chColor
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final path = Path();
+      final double xStep = plotWidth / (data.length <= 1 ? 1 : data.length - 1);
+
+      for (int k = 0; k < data.length; k++) {
+        final double x = labelWidth + k * xStep;
+        final double normalizedVal = (data[k] - mean) / maxDev;
+        final double y = yCenter - (normalizedVal * (channelHeight / 2) * 0.82);
+
+        if (k == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(path, wavePaint);
+
+      // ── แถบสเกลบอกแรงดันไฟฟ้าในหน่วยไมโครโวลต์ด้านขวา (µV scale indicator) ──
+      final scaleBarHeight = channelHeight * 0.3;
+      final scaleX = size.width - 5;
+      final scaleTop = yCenter - scaleBarHeight / 2;
+      final scaleBottom = yCenter + scaleBarHeight / 2;
+      final scalePaint = Paint()
+        ..color = Colors.grey.shade400
+        ..strokeWidth = 0.8;
+      canvas.drawLine(Offset(scaleX, scaleTop), Offset(scaleX, scaleBottom), scalePaint);
+      canvas.drawLine(Offset(scaleX - 2, scaleTop), Offset(scaleX + 2, scaleTop), scalePaint);
+      canvas.drawLine(Offset(scaleX - 2, scaleBottom), Offset(scaleX + 2, scaleBottom), scalePaint);
+    }
+
+    // วาดเส้นขอบด้านบนสุด (Top border)
+    canvas.drawLine(
+      const Offset(0, 0),
+      Offset(size.width, 0),
+      Paint()
+        ..color = const Color(0xFFCCCCCC)
+        ..strokeWidth = 0.8,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant EegResearchTracePainter oldDelegate) => true;
+}
+

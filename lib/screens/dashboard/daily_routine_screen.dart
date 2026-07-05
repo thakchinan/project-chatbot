@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
+/// DailyRoutineScreen เป็นหน้าจอแสดงตารางและข้อแนะนำการทำกิจกรรมดูแลบริหารสุขภาพสมอง
+/// ออกแบบมาเพื่อกำหนดตารางและไลฟ์สไตล์การตื่นนอน ทำสมาธิ การทานอาหารเช้า และเวลาเข้านอนสำหรับผู้ป่วย/ผู้สูงอายุ
 class DailyRoutineScreen extends StatelessWidget {
   const DailyRoutineScreen({super.key});
 

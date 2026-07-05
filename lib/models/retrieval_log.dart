@@ -1,4 +1,6 @@
 
+/// RetrievalLog คือคลาสโมเดลสำหรับจัดเก็บบันทึกประวัติการเรียกค้นหาข้อมูลความรู้ทางการแพทย์และ RAG Context
+/// บันทึกข้อความการสืบค้น (queryText) คะแนนความคล้ายคลึง (similarityScore) วิธีการค้นหา และความสำเร็จของการจับคู่
 class RetrievalLog {
   final int? logId;
   final int? messageId;

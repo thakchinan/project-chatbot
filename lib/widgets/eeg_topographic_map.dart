@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
-/// แผนที่ Topographic แบบหลายช่องสัญญาณ (Multi-channel) โดยใช้สมการ IDW
+/// EegTopographicMap เป็น Widget แสดงแผนที่จำลองการกระจายความร้อนของคลื่นสมองบนศีรษะ (Topographic Map)
+/// รองรับการกระจายพิกัดแบบ IDW (Inverse Distance Weighting) และแบบปกติ
+/// รองรับทั้งค่าแสดงความหนาแน่นสัมบูรณ์ (Absolute Power) และระดับคะแนนความต่าง Z-Score
 class EegTopographicMap extends StatelessWidget {
   final String title;
   final bool isZScore;
@@ -210,7 +212,7 @@ class _TopoPainter extends CustomPainter {
     const power = 3.0; // ค่าความเรียบของการกระจายตัว
 
     for (var s in sensors) {
-      double dist = (pt - s['pos'] as Offset).distance;
+      double dist = (pt - s['pos']).distance;
       if (dist < 1.0) dist = 1.0; // ป้องกันหารด้วยศูนย์
       double w = 1.0 / math.pow(dist / headR, power);
       num += w * s['val'];

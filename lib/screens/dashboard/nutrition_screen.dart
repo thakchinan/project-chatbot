@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
+/// NutritionScreen คือหน้าจอสาระน่ารู้เกี่ยวกับโภชนาการคลายเครียดและการดูแลสมอง
+/// แสดงรายชื่ออาหาร วิตามินเสริม และเครื่องดื่ม ที่ช่วยส่งเสริมการทำงานของคลื่นสมอง Alpha และควบคุมระดับฮอร์โมนความเครียด
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
 

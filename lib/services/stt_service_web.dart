@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 
-/// Web build: voice input is not available (use text input instead).
+/// Web build ของ STTService: เนื่องจากข้อจำกัดด้านการจัดการสิทธิ์ไมโครโฟนและการบันทึกไฟล์เสียง m4a ในเว็บบราวเซอร์ 
+/// ระบบจึงปิดใช้งานฟังก์ชันไมโครโฟนสำหรับการพูด โดยแนะนำให้พิมพ์คำค้นหาทางข้อความแทนในกรณีที่เปิดบนเบราว์เซอร์
 class STTService {
   static final STTService _instance = STTService._internal();
   factory STTService() => _instance;
   STTService._internal();
 
   bool _isListening = false;
-  String _lastRecognizedText = '';
+  final String _lastRecognizedText = '';
 
   Function(String)? onResult;
   Function(String)? onPartialResult;

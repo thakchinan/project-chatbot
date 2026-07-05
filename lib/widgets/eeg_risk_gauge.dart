@@ -1,7 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-/// เกจครึ่งวงกลมสรุประดับความเสี่ยง (0–100) — Premium Design
+/// EegRiskGauge เป็น Widget แสดงระดับความเสี่ยงหรือคะแนนแบบครึ่งวงกลม (Gauge)
+/// ใช้แสดงผลระดับดัชนีคลื่นสมองหรือความเครียดสะสมแบบพรีเมียม (0-100)
 class EegRiskGauge extends StatelessWidget {
   final double value;
   final Color accentColor;
@@ -39,7 +40,7 @@ class _GaugePainter extends CustomPainter {
 
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    // Draw track (shadow)
+    // วาดเส้นพื้นหลังรางวัด (แถบสีเทาด้านหลัง)
     canvas.drawArc(
       rect,
       startAngle,
@@ -52,7 +53,7 @@ class _GaugePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Draw colored segments with gradient feel
+    // วาดส่วนแบ่งสีต่างๆ บนเกจวัด พร้อมทำเอฟเฟกต์ไล่ระดับเฉดสี
     final segments = [
       (0.33, const Color(0xFF43A047), const Color(0xFF66BB6A)),
       (0.33, const Color(0xFFF57C00), const Color(0xFFFFB74D)),
@@ -79,7 +80,7 @@ class _GaugePainter extends CustomPainter {
       start += sweepSeg;
     }
 
-    // Glow behind needle
+    // วาดแสงเรืองรอง (Glow) ด้านหลังของเข็มชี้วัด
     final needleAngle = startAngle + (value / 100) * sweep;
     final glowEnd = Offset(
       center.dx + radius * 0.75 * math.cos(needleAngle),
@@ -93,7 +94,7 @@ class _GaugePainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
 
-    // Needle
+    // วาดเข็มชี้วัดของเกจ (Needle)
     final needleEnd = Offset(
       center.dx + radius * 0.78 * math.cos(needleAngle),
       center.dy + radius * 0.78 * math.sin(needleAngle),
@@ -107,7 +108,7 @@ class _GaugePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Center dot with ring
+    // วาดวงกลมตรงจุดแกนกลางเข็มวัดพร้อมขอบเส้นรอบนอก
     canvas.drawCircle(center, 9, Paint()..color = Colors.white);
     canvas.drawCircle(
       center,

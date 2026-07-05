@@ -4,6 +4,8 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import 'test_screen.dart';
 
+/// Phq9TabScreen เป็นหน้าจอหลักสำหรับการทำแบบประเมินและติดตามประวัติ PHQ-9
+/// แบ่งออกเป็น 2 แท็บย่อย: แท็บทำแบบประเมิน และแท็บดูประวัติผลการทดสอบย้อนหลัง
 class Phq9TabScreen extends StatefulWidget {
   final User user;
 
@@ -55,12 +57,12 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
         child: SafeArea(
           child: Column(
             children: [
-            // Header
+            // ส่วนหัวข้อด้านบนของหน้าจอ
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
               child: Column(
                 children: [
-                  // Title Row
+                  // ส่วนแสดงชื่อแบบทดสอบพร้อมไอคอนประจิตวิทยา
                   Row(
                     children: [
                       Container(
@@ -110,7 +112,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Tab bar container
+                  // ส่วนแถบเลือกแท็บการนำทาง (Tab Bar Container)
                   Container(
                     margin: const EdgeInsets.only(bottom: 4),
                     decoration: AppTheme.glassDecoration(
@@ -170,7 +172,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
               ),
             ),
 
-            // Tab content
+            // พื้นที่แสดงผลสำหรับแต่ละแท็บการทำงาน
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -192,7 +194,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          // PHQ-9 info card
+          // การ์ดแสดงข้อมูลทั่วไปเกี่ยวกับ PHQ-9
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -241,7 +243,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
 
           const SizedBox(height: 20),
 
-          // Info section
+          // กล่องข้อมูลเกี่ยวกับเวลาและจำนวนข้อสอบในการทำประเมิน
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -286,7 +288,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
 
           const SizedBox(height: 16),
 
-          // Score ranges
+          // เกณฑ์ช่วงคะแนนการแปลผลลัพธ์
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -318,7 +320,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
 
           const SizedBox(height: 24),
 
-          // Start button
+          // ปุ่มเริ่มต้นสำหรับคลิกไปทำแบบทดสอบ
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -396,7 +398,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
               itemCount: _testHistory.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {
-                  // Summary card at top
+                  // การ์ดสรุปผลคะแนนรวมที่แสดงอยู่ด้านบนสุดของแท็บประวัติ
                   return _buildSummaryCard();
                 }
                 final test = _testHistory[index - 1];
@@ -444,7 +446,7 @@ class _Phq9TabScreenState extends State<Phq9TabScreen>
           const SizedBox(height: 16),
           Row(
             children: [
-              // Score circle
+              // วงกลมสัญลักษณ์แสดงคะแนนรวม
               Container(
                 width: 70,
                 height: 70,

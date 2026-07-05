@@ -151,7 +151,9 @@ class IcaArtifactRemoval {
 
     // Remove DC from template
     double sum = 0;
-    for (final v in template) sum += v;
+    for (final v in template) {
+      sum += v;
+    }
     final mean = sum / templateLen;
     for (int i = 0; i < templateLen; i++) {
       template[i] -= mean;

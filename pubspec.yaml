@@ -76,6 +76,15 @@ dependencies:
   model_viewer_plus: ^1.10.0
   webview_flutter: ^4.13.1
   video_player: ^2.9.3
+  
+  # Authentication — Google Sign-In สำหรับเข้าสู่ระบบด้วยบัญชี Google
+  google_sign_in: ^6.2.2
+  
+  # จดจำข้อมูลล็อกอินในเครื่อง (Remember Me)
+  shared_preferences: ^2.3.4
+  
+  # Hash รหัสผ่านฝั่ง Client (SHA-256 สำหรับเปรียบเทียบ)
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:

@@ -1,10 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../utils/password_validator.dart';
 import 'login_screen.dart';
 
+/// RegisterScreen เป็นหน้าจอกรอกข้อมูลสมัครสมาชิกใหม่สำหรับแอปพลิเคชัน
+/// รองรับ:
+///   1. สมัครด้วย Email + Password (ผ่าน Supabase Auth) พร้อม Password Strength Indicator
+///   2. สมัครด้วย Google Sign-In
+/// ประกอบด้วย Bottom Sheet กฎเงื่อนไขการใช้บริการ (Terms) และนโยบายความเป็นส่วนตัว (Privacy Policy)
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -13,17 +20,23 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _usernameController = TextEditingController();
+  // คอนโทรลเลอร์ควบคุมช่องกรอกข้อมูลฟอร์มลงทะเบียน
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _birthDateController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _isLoading = false;
-  bool _agreeToTerms = false;
+  bool _obscurePassword = true;        // เปิด/ปิด การซ่อนรหัสผ่านในกล่องข้อความ
+  bool _obscureConfirmPassword = true;  // เปิด/ปิด การซ่อนช่องยืนยันรหัสผ่าน
+  bool _isLoading = false;             // บอกสถานะการโหลดระหว่างส่งข้อมูล API
+  bool _isGoogleLoading = false;       // บอกสถานะการโหลด Google Sign-In
+  bool _agreeToTerms = false;          // เช็คว่ายอมรับข้อตกลงการใช้งานหรือยัง
   late TapGestureRecognizer _termsRecognizer;
   late TapGestureRecognizer _privacyRecognizer;
+
+  // ผลลัพธ์การตรวจสอบรหัสผ่าน — อัปเดตเมื่อผู้ใช้พิมพ์
+  PasswordResult? _passwordResult;
 
   @override
   void initState() {
@@ -36,12 +49,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ..onTap = () {
         _showTermsAndPrivacyBottomSheet(context, initialTab: 1);
       };
+
+    // ติดตามการพิมพ์รหัสผ่านเพื่ออัปเดตแถบความแข็งแรงแบบเรียลไทม์
+    _passwordController.addListener(_onPasswordChanged);
   }
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _passwordController.removeListener(_onPasswordChanged);
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -51,7 +68,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  /// เรียกเมื่อรหัสผ่านเปลี่ยน เพื่ออัปเดตแถบความแข็งแรงแบบเรียลไทม์
+  void _onPasswordChanged() {
+    setState(() {
+      _passwordResult = PasswordValidator.evaluate(_passwordController.text);
+    });
+  }
 
+  /// เปิด Date Picker เลือกวันเกิด
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -85,34 +109,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  /// สมัครสมาชิกด้วย Email + Password ผ่าน Supabase Auth
   Future<void> _register() async {
     if (!_agreeToTerms) {
       _showError('กรุณายอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก');
       return;
     }
 
-    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty || _emailController.text.isEmpty) {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showError('กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
-    if (!_emailController.text.contains('@')) {
-      _showError('อีเมลต้องมีเครื่องหมาย @');
+    // ตรวจสอบรูปแบบอีเมล
+    if (!PasswordValidator.isValidEmail(_emailController.text.trim())) {
+      _showError('กรุณากรอกอีเมลให้ถูกต้อง เช่น example@gmail.com');
       return;
     }
 
-    if (_passwordController.text.length < 6) {
-      _showError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+    // ตรวจสอบความแข็งแรงของรหัสผ่าน
+    if (!PasswordValidator.isAcceptable(_passwordController.text)) {
+      _showError('รหัสผ่านไม่ผ่านเกณฑ์ความปลอดภัย กรุณาตรวจสอบเงื่อนไขรหัสผ่าน');
       return;
     }
 
-    if (_phoneController.text.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(_phoneController.text)) {
-      _showError('เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลักเท่านั้น');
+    // ตรวจสอบรหัสผ่านยืนยัน
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showError('รหัสผ่านและรหัสผ่านยืนยันไม่ตรงกัน');
       return;
+    }
+
+    // ตรวจสอบเบอร์โทรศัพท์ (ถ้ากรอก)
+    if (_phoneController.text.isNotEmpty) {
+      if (_phoneController.text.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(_phoneController.text)) {
+        _showError('เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลักเท่านั้น');
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
 
+    // แปลงวันเกิดเป็นรูปแบบ YYYY-MM-DD
     String? birthDate;
     if (_birthDateController.text.isNotEmpty) {
       final parts = _birthDateController.text.split('/');
@@ -121,12 +158,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     }
 
-    final result = await ApiService.register(
-      username: _usernameController.text,
+    final result = await AuthService.signUpWithEmail(
+      email: _emailController.text.trim(),
       password: _passwordController.text,
       fullName: _fullNameController.text,
       phone: _phoneController.text,
-      email: _emailController.text,
       birthDate: birthDate,
     );
 
@@ -134,9 +170,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (result['success'] == true) {
       if (mounted) {
+        // แสดง Dialog แจ้งให้ยืนยัน email
+        _showVerificationDialog();
+      }
+    } else {
+      _showError(result['message'] ?? 'เกิดข้อผิดพลาด');
+    }
+  }
+
+  /// สมัครด้วย Google Sign-In
+  Future<void> _registerWithGoogle() async {
+    if (!_agreeToTerms) {
+      _showError('กรุณายอมรับเงื่อนไขการใช้งานก่อนสมัครด้วย Google');
+      return;
+    }
+
+    setState(() => _isGoogleLoading = true);
+
+    final result = await AuthService.signInWithGoogle();
+
+    setState(() => _isGoogleLoading = false);
+
+    if (result['success'] == true) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('สมัครสมาชิกสำเร็จ'),
+            content: Text('สมัครสมาชิกด้วย Google สำเร็จ'),
             backgroundColor: Colors.green,
           ),
         );
@@ -146,10 +205,273 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } else {
-      _showError(result['message'] ?? 'เกิดข้อผิดพลาด');
+      if (result['message'] != 'ยกเลิกการเข้าสู่ระบบด้วย Google') {
+        _showError(result['message'] ?? 'เกิดข้อผิดพลาด');
+      }
     }
   }
 
+  /// แสดง Dialog ให้ผู้ใช้กรอก OTP 6-8 หลักจากอีเมลเพื่อยืนยันตัวตน
+  void _showVerificationDialog() {
+    final otpController = TextEditingController();
+    int countdown = 60;
+    bool canResend = false;
+    bool isVerifying = false;
+    bool timerStarted = false;
+    String? errorText;
+    Timer? countdownTimer;
+
+    void startTimer(StateSetter setState) {
+      countdown = 60;
+      canResend = false;
+      countdownTimer?.cancel();
+      countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (countdown > 0) {
+          setState(() => countdown--);
+        } else {
+          setState(() => canResend = true);
+          timer.cancel();
+        }
+      });
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            // เริ่มนับถอยหลังเมื่อ Dialog เปิดขึ้นมาครั้งแรก
+            if (!timerStarted) {
+              timerStarted = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                startTimer(setDialogState);
+              });
+            }
+
+            Future<void> verify() async {
+              final code = otpController.text.trim();
+              if (code.length < 6 || code.length > 8) {
+                setDialogState(() => errorText = 'กรุณากรอกรหัสยืนยัน 6-8 หลักให้ครบถ้วน');
+                return;
+              }
+              setDialogState(() { isVerifying = true; errorText = null; });
+
+              final result = await AuthService.verifySignUpOTP(
+                email: _emailController.text.trim(),
+                token: code,
+              );
+
+              if (!mounted) return;
+              setDialogState(() => isVerifying = false);
+
+              if (result['success'] == true) {
+                Navigator.pop(dialogContext);
+                _showSuccessAndNavigate();
+              } else {
+                setDialogState(() => errorText = result['message'] ?? 'รหัสยืนยันไม่ถูกต้อง');
+              }
+            }
+
+            Future<void> resend() async {
+              setDialogState(() { errorText = null; canResend = false; });
+              final result = await AuthService.resendVerificationEmail(_emailController.text.trim());
+              if (result['success'] == true) {
+                startTimer(setDialogState);
+              } else {
+                setDialogState(() => errorText = result['message']);
+              }
+            }
+
+            return PopScope(
+              canPop: false,
+              child: AlertDialog(
+                insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ปุ่มปิด (ข้ามการยืนยัน → ไปหน้า Login)
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(dialogContext);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.close_rounded, color: AppColors.textGray, size: 20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+
+                      // ไอคอนอีเมล
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.mark_email_read_rounded, size: 48, color: AppColors.primaryBlue),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // หัวข้อ
+                      Text(
+                        'ยืนยันอีเมลของคุณ',
+                        style: GoogleFonts.prompt(fontWeight: FontWeight.bold, fontSize: 20, color: AppColors.textDark),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'เราได้ส่งรหัสยืนยันไปยังอีเมลของคุณแล้ว',
+                        style: GoogleFonts.prompt(fontSize: 13, color: AppColors.textGray),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _emailController.text.trim(),
+                        style: GoogleFonts.prompt(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ช่องกรอก OTP (รองรับ 6-8 หลัก)
+                      Container(
+                        height: 60,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: TextField(
+                          controller: otpController,
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          maxLength: 8,
+                          style: GoogleFonts.prompt(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 8,
+                            color: AppColors.textDark,
+                          ),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            hintText: 'กรอกรหัสยืนยัน',
+                            hintStyle: GoogleFonts.prompt(
+                              fontSize: 14,
+                              letterSpacing: 0,
+                              color: Colors.grey.shade400,
+                              fontWeight: FontWeight.normal,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          onChanged: (_) {
+                            setDialogState(() => errorText = null);
+                          },
+                        ),
+                      ),
+
+                      // ข้อความ error
+                      if (errorText != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          errorText!,
+                          style: GoogleFonts.prompt(fontSize: 12, color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+
+                      // ปุ่มยืนยันรหัส OTP
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: isVerifying ? null : verify,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryBlue,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: isVerifying
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                )
+                              : Text('ยืนยันรหัส', style: GoogleFonts.prompt(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ส่งรหัส OTP ซ้ำ พร้อมนับถอยหลัง
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('ไม่ได้รับรหัส? ', style: GoogleFonts.prompt(fontSize: 12.5, color: AppColors.textGray)),
+                          canResend
+                              ? GestureDetector(
+                                  onTap: resend,
+                                  child: Text(
+                                    'ส่งรหัสอีกครั้ง',
+                                    style: GoogleFonts.prompt(fontSize: 12.5, color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
+                                  ),
+                                )
+                              : Text(
+                                  'ส่งอีกครั้งใน ${countdown}s',
+                                  style: GoogleFonts.prompt(fontSize: 12.5, color: AppColors.textGray),
+                                ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      countdownTimer?.cancel();
+      otpController.dispose();
+    });
+  }
+
+  /// แสดงข้อความยืนยันสำเร็จ แล้วนำไปหน้าเข้าสู่ระบบ
+  void _showSuccessAndNavigate() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ ยืนยันอีเมลสำเร็จ! กรุณาเข้าสู่ระบบ', style: GoogleFonts.prompt()),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  /// แสดง Snackbar แจ้งข้อผิดพลาด
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -191,28 +513,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildLabel('ชื่อผู้ใช้งาน'),
-              _buildTextField(
-                controller: _usernameController,
-                hintText: 'ระบุชื่อผู้ใช้งาน',
-              ),
-
-              const SizedBox(height: 16),
-
+              // อีเมล
               _buildLabel('อีเมล'),
               _buildTextField(
                 controller: _emailController,
-                hintText: 'ระบุอีเมลของคุณ',
+                hintText: 'ระบุอีเมลของคุณ เช่น example@gmail.com',
                 keyboardType: TextInputType.emailAddress,
+                prefixIcon: const Icon(Icons.email_outlined, size: 20),
               ),
 
               const SizedBox(height: 16),
 
+              // รหัสผ่าน
               _buildLabel('รหัสผ่าน'),
               _buildTextField(
                 controller: _passwordController,
-                hintText: 'ระบุรหัสผ่านอย่างน้อย 6 ตัวอักษร',
+                hintText: 'ตั้งรหัสผ่านอย่างน้อย 8 ตัวอักษร',
                 obscureText: _obscurePassword,
+                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -224,32 +542,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
+              // แถบความแข็งแรงของรหัสผ่าน
+              if (_passwordController.text.isNotEmpty && _passwordResult != null)
+                _buildPasswordStrengthIndicator(),
+
               const SizedBox(height: 16),
 
-              _buildLabel('ชื่อ-นามสกุล'),
+              // ยืนยันรหัสผ่าน
+              _buildLabel('ยืนยันรหัสผ่าน'),
               _buildTextField(
-                controller: _fullNameController,
-                hintText: 'ระบุชื่อและนามสกุลจริง',
+                controller: _confirmPasswordController,
+                hintText: 'กรอกรหัสผ่านอีกครั้ง',
+                obscureText: _obscureConfirmPassword,
+                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    color: AppColors.textGray,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                  },
+                ),
               ),
 
               const SizedBox(height: 16),
 
+              // ชื่อ-นามสกุล
+              _buildLabel('ชื่อ-นามสกุล'),
+              _buildTextField(
+                controller: _fullNameController,
+                hintText: 'ระบุชื่อและนามสกุลจริง',
+                prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+              ),
+
+              const SizedBox(height: 16),
+
+              // เบอร์โทรศัพท์
               _buildLabel('เบอร์โทรศัพท์'),
               _buildTextField(
                 controller: _phoneController,
                 hintText: 'ระบุเบอร์โทรศัพท์ 10 หลัก',
                 keyboardType: TextInputType.phone,
                 maxLength: 10,
+                prefixIcon: const Icon(Icons.phone_outlined, size: 20),
               ),
 
               const SizedBox(height: 16),
 
+              // วันเกิด
               _buildLabel('วัน/เดือน/ปีเกิด'),
               _buildTextField(
                 controller: _birthDateController,
                 hintText: 'เลือกวัน/เดือน/ปีเกิดของคุณ',
                 readOnly: true,
                 onTap: _selectDate,
+                prefixIcon: const Icon(Icons.cake_outlined, size: 20),
                 suffixIcon: Icon(
                   Icons.calendar_today_outlined,
                   color: AppColors.primaryBlue,
@@ -259,6 +607,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 16),
 
+              // ข้อตกลงการใช้งาน
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -317,8 +666,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
+              // ปุ่มสมัครสมาชิก
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -341,9 +691,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'สมัครบัญชีใช้งาน',
-                          style: TextStyle(
+                          style: GoogleFonts.prompt(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -353,6 +703,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               const SizedBox(height: 20),
 
+              // เส้นคั่น "หรือ"
+              Row(
+                children: [
+                  Expanded(child: Divider(color: AppColors.textLight.withValues(alpha: 0.5))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'หรือ',
+                      style: GoogleFonts.prompt(color: AppColors.textGray, fontSize: 13),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: AppColors.textLight.withValues(alpha: 0.5))),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // ปุ่มสมัครด้วย Google
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: _isGoogleLoading ? null : _registerWithGoogle,
+                  icon: _isGoogleLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Image.network(
+                          'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                          height: 22,
+                          width: 22,
+                          errorBuilder: (c, e, s) => const Icon(Icons.g_mobiledata_rounded, size: 28),
+                        ),
+                  label: Text(
+                    'สมัครด้วย Google',
+                    style: GoogleFonts.prompt(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textDark,
+                    side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ลิงก์ไปหน้าเข้าสู่ระบบ
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -387,6 +793,108 @@ class _RegisterScreenState extends State<RegisterScreen> {
   );
 }
 
+  // ═══════════════════════════════════════════
+  //  Widget ย่อย — Password Strength Indicator
+  // ═══════════════════════════════════════════
+
+  /// แสดงแถบวัดความแข็งแรงของรหัสผ่าน + Checklist เกณฑ์แต่ละข้อ
+  Widget _buildPasswordStrengthIndicator() {
+    final result = _passwordResult!;
+    final checks = result.checks;
+
+    // เลือกสี/ข้อความตามระดับความแข็งแรง
+    Color strengthColor;
+    String strengthLabel;
+    double strengthProgress;
+
+    switch (result.strength) {
+      case PasswordStrength.weak:
+        strengthColor = Colors.red;
+        strengthLabel = 'อ่อน';
+        strengthProgress = result.score / 5;
+      case PasswordStrength.medium:
+        strengthColor = Colors.orange;
+        strengthLabel = 'ปานกลาง';
+        strengthProgress = result.score / 5;
+      case PasswordStrength.strong:
+        strengthColor = Colors.green;
+        strengthLabel = 'แข็งแรง';
+        strengthProgress = 1.0;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // แถบความแข็งแรง
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: strengthProgress,
+                    backgroundColor: Colors.grey.shade200,
+                    color: strengthColor,
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                strengthLabel,
+                style: GoogleFonts.prompt(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: strengthColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Checklist เกณฑ์แต่ละข้อ
+          _buildCheckItem('อย่างน้อย 8 ตัวอักษร', checks.minLength),
+          _buildCheckItem('มีตัวพิมพ์ใหญ่ (A-Z)', checks.hasUppercase),
+          _buildCheckItem('มีตัวพิมพ์เล็ก (a-z)', checks.hasLowercase),
+          _buildCheckItem('มีตัวเลข (0-9)', checks.hasDigit),
+          _buildCheckItem('มีอักขระพิเศษ (!@#\$%)', checks.hasSpecialChar),
+        ],
+      ),
+    );
+  }
+
+  /// สร้างเช็คมาร์กสำหรับเกณฑ์รหัสผ่านแต่ละข้อ
+  Widget _buildCheckItem(String label, bool passed) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            passed ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 16,
+            color: passed ? Colors.green : Colors.grey.shade400,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.prompt(
+              fontSize: 12,
+              color: passed ? Colors.green.shade700 : AppColors.textGray,
+              fontWeight: passed ? FontWeight.w500 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  //  Widget ย่อย — Build Helper
+  // ═══════════════════════════════════════════
+
+  /// สร้างป้ายชื่อเหนือช่องกรอกข้อมูล
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -401,11 +909,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  /// สร้างช่องกรอกข้อมูลพร้อมไอคอน
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
     bool obscureText = false,
     Widget? suffixIcon,
+    Widget? prefixIcon,
     TextInputType? keyboardType,
     int? maxLength,
     bool readOnly = false,
@@ -423,9 +933,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         counterText: '',
         hintText: hintText,
         suffixIcon: suffixIcon,
+        prefixIcon: prefixIcon,
       ),
     );
   }
+
+  // ═══════════════════════════════════════════
+  //  Bottom Sheet — เงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัว
+  // ═══════════════════════════════════════════
 
   void _showTermsAndPrivacyBottomSheet(BuildContext context, {required int initialTab}) {
     showModalBottomSheet(
@@ -444,7 +959,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             child: Column(
               children: [
-                // Top Handle bar
+                // แถบจับด้านบน
                 const SizedBox(height: 12),
                 Container(
                   width: 40,
@@ -455,7 +970,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Header Row
+                // หัวข้อ
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Row(
@@ -476,7 +991,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                 ),
-                // TabBar
+                // แท็บเลือกหมวด
                 TabBar(
                   labelColor: AppColors.primaryBlue,
                   unselectedLabelColor: AppColors.textGray,
@@ -488,7 +1003,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Tab(text: 'นโยบายความเป็นส่วนตัว'),
                   ],
                 ),
-                // TabBarView Content
+                // เนื้อหา
                 Expanded(
                   child: TabBarView(
                     children: [
@@ -497,7 +1012,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                 ),
-                // Bottom Button
+                // ปุ่มยอมรับ
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   decoration: BoxDecoration(
