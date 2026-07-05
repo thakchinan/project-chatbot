@@ -3,10 +3,13 @@ name: Gemini Code Reviewer
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
 
 permissions:
   pull-requests: write
-  contents: read
+  contents: write
 
 jobs:
   review:
