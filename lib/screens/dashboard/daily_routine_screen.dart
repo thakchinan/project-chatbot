@@ -8,23 +8,24 @@ class DailyRoutineScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Scaffold กำหนดโครงสร้างหน้าจอหลักประกอบด้วย AppBar และพื้นที่แสดงผลข้อมูลเนื้อหาหลัก
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 0,
+        elevation: 0, // ซ่อนเงาใต้ AppBar เพื่อให้กลมกลืนกับพื้นหลังสีขาว
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios, color: AppColors.primaryBlue),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context), // ฟังก์ชันปุ่มย้อนกลับไปยังหน้าจอก่อนหน้า
         ),
         title: Text(
-          'กิจวัตรบำรุงสมอง',
+          'กิจวัตรบำรุงสมอง', // ข้อความหัวเรื่องหน้าจอหลัก
           style: TextStyle(
             color: AppColors.primaryBlue,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w600, // ปรับความหนาของตัวอักษรเป็นระดับ Medium Bold
           ),
         ),
-        centerTitle: true,
+        centerTitle: true, // กำหนดหัวข้อจัดวางตรงกลางหน้าจอ
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
