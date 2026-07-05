@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../theme/app_theme.dart';
-import '../../services/auth_service.dart';
-import '../../models/user.dart';
-import '../main_navigation.dart';
-import 'register_screen.dart';
+import 'package:flutter/material.dart'; // สำหรับสร้าง UI ด้วยองค์ประกอบ Material Design
+import 'package:google_fonts/google_fonts.dart'; // สำหรับใช้ฟอนต์สวยงามจาก Google Fonts
+import 'package:shared_preferences/shared_preferences.dart'; // สำหรับบันทึกอีเมลล่าสุดไว้ในเครื่อง (Remember Me)
+import '../../theme/app_theme.dart'; // เรียกใช้ชุดสีและดีไซน์หลักของแอป
+import '../../services/auth_service.dart'; // เชื่อมต่อระบบล็อกอิน (Supabase, Google Sign-In)
+import '../../models/user.dart'; // รูปแบบโครงสร้างข้อมูลผู้ใช้งาน
+import '../main_navigation.dart'; // สำหรับเปลี่ยนหน้าไปยังหน้าหลักหลังเข้าระบบสำเร็จ
+import 'register_screen.dart'; // สำหรับเปิดหน้าจอสมัครสมาชิกใหม่เมื่อคลิกสมัคร
 
 /// LoginScreen เป็นหน้าจอล็อกอินสำหรับการเข้าสู่ระบบผู้ใช้งาน
 /// รองรับ 2 ช่องทาง:
