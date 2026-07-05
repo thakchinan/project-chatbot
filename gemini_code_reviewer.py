@@ -180,11 +180,52 @@ def post_github_comment(repo, pr_number, comment, token):
         print(f"❌ ไม่สามารถโพสต์ผลการรีวิลงใน GitHub ได้: {e}", file=sys.stderr)
         return False
 
+def get_github_commit_diff(repo, commit_sha, token):
+    """Retrieves the git diff of a specific commit from GitHub API."""
+    url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}"
+    req = urllib.request.Request(url)
+    req.add_header("Accept", "application/vnd.github.v3.diff")
+    req.add_header("Authorization", f"Bearer {token}")
+    req.add_header("User-Agent", "gemini-code-reviewer-action")
+    try:
+        with urllib.request.urlopen(req) as response:
+            return response.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        print(f"❌ ไม่สามารถดึง Commit Diff จาก GitHub API ได้: {e}", file=sys.stderr)
+        return None
+
+def post_github_commit_comment(repo, commit_sha, comment, token):
+    """Posts a comment to a GitHub commit."""
+    url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}/comments"
+    payload = {"body": comment}
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"Bearer {token}",
+            "User-Agent": "gemini-code-reviewer-action",
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            print(f"🎉 โพสต์ผลการรีวิวลงใน GitHub Commit ({commit_sha}) เรียบร้อยแล้ว!")
+            return True
+    except Exception as e:
+        print(f"❌ ไม่สามารถโพสต์ผลการรีวิลงใน GitHub Commit ได้: {e}", file=sys.stderr)
+        return False
+
 def handle_github_actions(model):
     """Handles the code review execution when running inside GitHub Actions."""
+    event_name = os.environ.get("GITHUB_EVENT_NAME")
     event_path = os.environ.get("GITHUB_EVENT_PATH")
-    if not event_path:
-        print("❌ ข้อผิดพลาด: ไม่พบ GITHUB_EVENT_PATH (สคริปต์นี้ไม่ได้รันใน GitHub Actions)", file=sys.stderr)
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    commit_sha = os.environ.get("GITHUB_SHA")
+
+    if not event_path or not repo:
+        print("❌ ข้อผิดพลาด: ไม่พบตัวแปรสภาพแวดล้อมที่จำเป็นสำหรับ GitHub Actions", file=sys.stderr)
         sys.exit(1)
         
     github_token = os.environ.get("GITHUB_TOKEN")
@@ -205,31 +246,53 @@ def handle_github_actions(model):
         sys.exit(1)
 
     pr_number = event_data.get("number")
-    repo = event_data.get("repository", {}).get("full_name")
 
-    if not pr_number or not repo:
-        print("❌ ข้อผิดพลาด: อีเวนต์นี้ไม่ใช่ Pull Request หรือไม่พบข้อมูล Repository/PR Number", file=sys.stderr)
+    # กรณีเป็น Event Pull Request
+    if event_name == "pull_request" or pr_number is not None:
+        print(f"📦 ตรวจพบ Pull Request #{pr_number} สำหรับ Repository: {repo}")
+        
+        # 1. Get PR Diff
+        diff_content = get_github_pr_diff(repo, pr_number, github_token)
+        if not diff_content or not diff_content.strip():
+            print("ℹ️ ดึงข้อมูล Git Diff สำเร็จ แต่อาจไม่มีการเปลี่ยนแปลงของโค้ด")
+            return
+
+        diff_lines = diff_content.count("\n")
+        print(f"📝 ขนาด Git Diff: ประมาณ {diff_lines} บรรทัด")
+
+        # 2. Get Code Review from Gemini
+        review_result = review_code_with_gemini(diff_content, gemini_api_key, model=model)
+        if not review_result:
+            print("❌ การรีวิวโค้ดด้วย Gemini ล้มเหลว")
+            sys.exit(1)
+
+        # 3. Post comment to GitHub PR
+        post_github_comment(repo, pr_number, review_result, github_token)
+
+    # กรณีเป็น Event Push (เช่น commit โดยตรงลงใน branchหลัก)
+    elif event_name == "push" or commit_sha is not None:
+        print(f"📦 ตรวจพบ Push Event สำหรับ Commit: {commit_sha} ใน Repository: {repo}")
+
+        # 1. Get Commit Diff
+        diff_content = get_github_commit_diff(repo, commit_sha, github_token)
+        if not diff_content or not diff_content.strip():
+            print("ℹ️ ดึงข้อมูล Git Diff สำเร็จ แต่อาจไม่มีการเปลี่ยนแปลงของโค้ดสำหรับ Commit นี้")
+            return
+
+        diff_lines = diff_content.count("\n")
+        print(f"📝 ขนาด Git Diff: ประมาณ {diff_lines} บรรทัด")
+
+        # 2. Get Code Review from Gemini
+        review_result = review_code_with_gemini(diff_content, gemini_api_key, model=model)
+        if not review_result:
+            print("❌ การรีวิวโค้ดด้วย Gemini ล้มเหลว")
+            sys.exit(1)
+
+        # 3. Post comment to GitHub Commit
+        post_github_commit_comment(repo, commit_sha, review_result, github_token)
+    else:
+        print(f"❌ ข้อผิดพลาด: ไม่รองรับการทำงานกับ Event: {event_name}", file=sys.stderr)
         sys.exit(1)
-
-    print(f"📦 ตรวจพบ Pull Request #{pr_number} สำหรับ Repository: {repo}")
-
-    # 1. Get PR Diff
-    diff_content = get_github_pr_diff(repo, pr_number, github_token)
-    if not diff_content or not diff_content.strip():
-        print("ℹ️ ดึงข้อมูล Git Diff สำเร็จ แต่อาจไม่มีการเปลี่ยนแปลงของโค้ด")
-        return
-
-    diff_lines = diff_content.count("\n")
-    print(f"📝 ขนาด Git Diff: ประมาณ {diff_lines} บรรทัด")
-
-    # 2. Get Code Review from Gemini
-    review_result = review_code_with_gemini(diff_content, gemini_api_key, model=model)
-    if not review_result:
-        print("❌ การรีวิวโค้ดด้วย Gemini ล้มเหลว")
-        sys.exit(1)
-
-    # 3. Post comment to GitHub PR
-    post_github_comment(repo, pr_number, review_result, github_token)
 
 def main():
     parser = argparse.ArgumentParser(description="สคริปต์รีวิว Code ก่อนขึ้น GitHub ด้วย Gemini API")
