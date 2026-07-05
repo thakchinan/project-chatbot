@@ -77,7 +77,7 @@
     import sys
     import json
     import urllib.request
-    from urllib.error import HTTPError
+    from urllib.error import HTTPError, URLError # เพิ่ม URLError
 
     # (สมมติว่ามีฟังก์ชัน get_github_pr_diff, post_github_comment,
     # get_github_commit_diff, post_github_commit_comment อยู่แล้ว)
@@ -94,10 +94,10 @@
             sys.exit(1)
 
         try:
-            with open(event_path, "r", encoding="utf-8") as f:
+            with open(event_path, 'r', encoding='utf-8') as f:
                 event_data = json.load(f)
         except Exception as e:
-            print(f"❌ ข้อผิดพลาดในการอ่านไฟล์ Event JSON: {e}", file=sys.stderr)
+            print(f"❌ ข้อผิดพลาด: ไม่สามารถอ่านหรือ parse JSON จาก GITHUB_EVENT_PATH ได้: {e}", file=sys.stderr)
             sys.exit(1)
 
         diff_content = None
@@ -107,6 +107,7 @@
             if pr_number is None:
                 print("❌ ข้อผิดพลาด: ตรวจพบ Pull Request event แต่ไม่พบ PR number ใน payload", file=sys.stderr)
                 sys.exit(1)
+            print(f"📦 ตรวจพบ Pull Request #{pr_number} สำหรับ Repository: {repo}")
             
             diff_content = get_github_pr_diff(repo, pr_number, github_token)
             if diff_content is None: # ตรวจสอบหากดึง diff ไม่สำเร็จ
@@ -123,6 +124,7 @@
             if commit_sha_to_review is None:
                 print("❌ ข้อผิดพลาด: ตรวจพบ Push event แต่ไม่พบ Commit SHA ใน payload หรือ GITHUB_SHA", file=sys.stderr)
                 sys.exit(1)
+            print(f"📦 ตรวจพบ Push Event สำหรับ Commit: {commit_sha_to_review} ใน Repository: {repo}")
 
             diff_content = get_github_commit_diff(repo, commit_sha_to_review, github_token)
             if diff_content is None: # ตรวจสอบหากดึง diff ไม่สำเร็จ
@@ -140,31 +142,60 @@
     ```
 
 2.  **การจัดการ Error HTTP ที่ละเอียดขึ้น:**
-    การแยกจับ `HTTPError` ออกจาก `Exception` ทั่วไปจะช่วยให้การวินิจฉัยปัญหาเกี่ยวกับสถานะ HTTP (เช่น 404, 403, 401) ทำได้ง่ายขึ้นตามที่รายงานฉบับปรับปรุงได้เสนอไว้แล้ว
+    การแยกจับ `HTTPError` ออกจาก `Exception` ทั่วไปจะช่วยให้การวินิจฉัยปัญหาเกี่ยวกับสถานะ HTTP (เช่น 404, 403, 401) ทำได้ง่ายขึ้นตามที่รายงานฉบับปรับปรุงได้เสนอไว้แล้ว ผมขอเพิ่ม `URLError` เพื่อดักจับข้อผิดพลาดที่เกี่ยวข้องกับการเชื่อมต่อเครือข่าย
 
     ```python
     from urllib.error import HTTPError, URLError
-    # ...
+
+    # ... (ส่วนอื่นๆ)
+
+    # ควรประกาศ USER_AGENT เป็นค่าคงที่
+    USER_AGENT = "gemini-code-reviewer-action"
+
     def get_github_commit_diff(repo, commit_sha, token):
         url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}/diff"
         req = urllib.request.Request(url)
         req.add_header("Accept", "application/vnd.github.v3.diff")
         req.add_header("Authorization", f"Bearer {token}")
-        req.add_header("User-Agent", "gemini-code-reviewer-action") # ใช้ค่าคงที่ USER_AGENT
+        req.add_header("User-Agent", USER_AGENT) # ใช้ค่าคงที่ USER_AGENT
         try:
             with urllib.request.urlopen(req) as response:
                 print(f"✅ ดึง Commit Diff '{commit_sha}' สำเร็จ", file=sys.stdout)
                 return response.read().decode("utf-8", errors="replace")
         except HTTPError as e:
             print(f"❌ ไม่สามารถดึง Commit Diff จาก GitHub API ได้ (HTTP Status: {e.code}): {e.reason}", file=sys.stderr)
-            # สามารถเพิ่ม log.debug(e.read().decode()) เพื่อดูรายละเอียด error response
+            # สามารถเพิ่ม log.debug(e.read().decode()) เพื่อดูรายละเอียด error response จาก API ได้
             return None 
-        except URLError as e: # สำหรับข้อผิดพลาดเกี่ยวกับ URL (เช่น ไม่มีอินเทอร์เน็ต)
+        except URLError as e: # สำหรับข้อผิดพลาดเกี่ยวกับ URL (เช่น ไม่มีอินเทอร์เน็ต, DNS resolve ไม่ได้)
             print(f"❌ ไม่สามารถเชื่อมต่อกับ GitHub API ได้: {e.reason}", file=sys.stderr)
             return None
         except Exception as e:
             print(f"❌ ไม่สามารถดึง Commit Diff จาก GitHub API ได้ (ข้อผิดพลาดทั่วไป): {e}", file=sys.stderr)
             return None
+
+    def post_github_commit_comment(repo, commit_sha, comment, token):
+        url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}/comments"
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+            "User-Agent": USER_AGENT, # ใช้ค่าคงที่ USER_AGENT
+        }
+        data = json.dumps({"body": comment}).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req) as response:
+                print(f"✅ โพสต์คอมเมนต์บน Commit '{commit_sha}' สำเร็จ", file=sys.stdout)
+                return True
+        except HTTPError as e:
+            print(f"❌ ไม่สามารถโพสต์คอมเมนต์บน Commit ได้ (HTTP Status: {e.code}): {e.reason}", file=sys.stderr)
+            return False
+        except URLError as e: # สำหรับข้อผิดพลาดเกี่ยวกับ URL (เช่น ไม่มีอินเทอร์เน็ต)
+            print(f"❌ ไม่สามารถเชื่อมต่อกับ GitHub API ได้: {e.reason}", file=sys.stderr)
+            return False
+        except Exception as e:
+            print(f"❌ ไม่สามารถโพสต์คอมเมนต์บน Commit ได้ (ข้อผิดพลาดทั่วไป): {e}", file=sys.stderr)
+            return False
     ```
 
 3.  **รวม `User-Agent` เป็นค่าคงที่:**
@@ -194,16 +225,37 @@
             "User-Agent": USER_AGENT,
         }
         try:
-            response = requests.get(url, headers=headers, timeout=30)
+            response = requests.get(url, headers=headers, timeout=30) # เพิ่ม timeout
             response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
             print(f"✅ ดึง Commit Diff '{commit_sha}' สำเร็จ", file=sys.stdout)
             return response.text
         except requests.exceptions.HTTPError as e:
             print(f"❌ ไม่สามารถดึง Commit Diff จาก GitHub API ได้ (HTTP Status: {e.response.status_code}): {e.response.text}", file=sys.stderr)
             return None
-        except requests.exceptions.RequestException as e:
-            print(f"❌ ไม่สามารถดึง Commit Diff จาก GitHub API ได้ (ข้อผิดพลาดการเชื่อมต่อ): {e}", file=sys.stderr)
+        except requests.exceptions.RequestException as e: # ดักจับข้อผิดพลาดที่เกี่ยวข้องกับ requests ทั้งหมด (รวมถึง ConnectionError, Timeout)
+            print(f"❌ ไม่สามารถดึง Commit Diff จาก GitHub API ได้ (ข้อผิดพลาดการเชื่อมต่อหรือทั่วไป): {e}", file=sys.stderr)
             return None
+
+    def post_github_commit_comment_with_requests(repo, commit_sha, comment, token):
+        url = f"https://api.github.com/repos/{repo}/commits/{commit_sha}/comments"
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json",
+            "User-Agent": USER_AGENT,
+        }
+        data = {"body": comment}
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            print(f"✅ โพสต์คอมเมนต์บน Commit '{commit_sha}' สำเร็จ", file=sys.stdout)
+            return True
+        except requests.exceptions.HTTPError as e:
+            print(f"❌ ไม่สามารถโพสต์คอมเมนต์บน Commit ได้ (HTTP Status: {e.response.status_code}): {e.response.text}", file=sys.stderr)
+            return False
+        except requests.exceptions.RequestException as e:
+            print(f"❌ ไม่สามารถโพสต์คอมเมนต์บน Commit ได้ (ข้อผิดพลาดการเชื่อมต่อหรือทั่วไป): {e}", file=sys.stderr)
+            return False
     ```
 
 ---
