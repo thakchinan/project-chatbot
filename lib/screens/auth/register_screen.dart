@@ -213,31 +213,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   /// แสดง Dialog ให้ผู้ใช้กรอก OTP 6-8 หลักจากอีเมลเพื่อยืนยันตัวตน
   void _showVerificationDialog() {
+    // คอนโทรลเลอร์สำหรับรองรับรหัส OTP ที่ผู้ใช้ป้อนเข้ามา
     final otpController = TextEditingController();
+    // ตัวนับเวลานับถอยหลังในการส่ง OTP ซ้ำ (เริ่มต้นที่ 60 วินาที)
     int countdown = 60;
+    // สถานะระบุว่าสามารถส่งรหัส OTP อีกครั้งได้หรือไม่
     bool canResend = false;
+    // สถานะระบุว่าระบบกำลังทำรายการตรวจสอบรหัส OTP อยู่หรือไม่ (สำหรับแสดงวงกลมโหลดดิ้ง)
     bool isVerifying = false;
+    // ตรวจสอบว่าระบบเริ่มนับถอยหลังจับเวลาไปแล้วหรือยัง
     bool timerStarted = false;
+    // ข้อความแสดงข้อผิดพลาดเมื่อกรอกรหัสไม่ถูกต้อง
     String? errorText;
+    // ตัวจับเวลาในการนับถอยหลังส่งใหม่
     Timer? countdownTimer;
 
+    // ฟังก์ชันเริ่มต้นการจับเวลานับถอยหลังส่ง OTP ใหม่
     void startTimer(StateSetter setState) {
       countdown = 60;
       canResend = false;
-      countdownTimer?.cancel();
+      countdownTimer?.cancel(); // ล้างตัวนับเวลาเดิม (ถ้ามี)
       countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (countdown > 0) {
-          setState(() => countdown--);
+          setState(() => countdown--); // ปรับลดเวลาที่เหลือและอัปเดตหน้าจอ Dialog
         } else {
-          setState(() => canResend = true);
-          timer.cancel();
+          setState(() => canResend = true); // เปิดให้กดส่ง OTP ซ้ำได้เมื่อหมดเวลา
+          timer.cancel(); // สั่งหยุดตัวจับเวลา
         }
       });
     }
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: false, // บังคับไม่ให้ปิดเมื่อคลิกพื้นที่ด้านนอก
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (_, setDialogState) {
