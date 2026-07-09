@@ -1,136 +1,242 @@
-ในฐานะ Senior Software Engineer และ Code Reviewer ผมได้ตรวจสอบการเปลี่ยนแปลงของโค้ดที่ให้มาอย่างละเอียด และขอจัดทำรายงานการรีวิวโค้ดดังนี้ครับ
+ในฐานะผู้เชี่ยวชาญด้านการรีวิวโค้ด (Senior Software Engineer/Code Reviewer) ผมได้ตรวจสอบการเปลี่ยนแปลงของโค้ด (Git Diff) ที่ให้มาอย่างละเอียดแล้ว ขอสรุปรายงานการรีวิวดังนี้ครับ
 
 ---
 
-## รายงานการรีวิวโค้ด: `daily_routine_screen.dart`
+## รายงานการรีวิวโค้ด (Code Review Report)
 
-**ภาพรวม:**
-การเปลี่ยนแปลงในครั้งนี้เป็นการเพิ่ม Comment เพื่ออธิบายการทำงานของโค้ดในไฟล์ `daily_routine_screen.dart` ซึ่งเป็นส่วนหนึ่งของหน้าจอ `DailyRoutineScreen` ที่เป็น `StatelessWidget` โดยเฉพาะในส่วนของการสร้าง `Scaffold` และ `AppBar` ไม่มีการเปลี่ยนแปลงเชิงฟังก์ชันการทำงานของแอปพลิเคชัน
+### ภาพรวมการเปลี่ยนแปลง
+
+การเปลี่ยนแปลงหลักๆ ใน Diff นี้ประกอบด้วย:
+1.  **การอัปเดต `ios/Podfile.lock`:** มีการเพิ่ม Pods จำนวนมากที่เกี่ยวข้องกับการทำ Google Sign-In (เช่น `AppAuth`, `GoogleSignIn`, `AppCheckCore`, etc.) ซึ่งบ่งชี้ว่ามีการเพิ่มฟังก์ชันการเข้าสู่ระบบด้วย Google
+2.  **การเพิ่ม `lib/utils/responsive_helper.dart`:** เป็นไฟล์ใหม่ที่รวมฟังก์ชันช่วยเหลือสำหรับการออกแบบ UI ที่ตอบสนอง (Responsive Design) เช่น การตรวจสอบขนาดหน้าจอ, การปรับ Text Scale
+3.  **การปรับ `lib/main.dart`:** มีการนำ `ResponsiveHelper` มาใช้เพื่อปรับขนาดตัวอักษรของแอปพลิเคชันโดยรวมให้เหมาะสมกับขนาดหน้าจอ
+4.  **การปรับ `lib/screens/dashboard/home_screen.dart`:** มีการนำ `ResponsiveHelper` มาใช้เพื่อปรับ `crossAxisCount` และ `childAspectRatio` ของ `GridView.count` ในส่วนแสดงผลเมตริกการเชื่อมต่อ ให้เหมาะสมกับขนาดหน้าจอ
 
 ---
 
 ### 1. บั๊กหรือข้อผิดพลาดที่อาจเกิดขึ้น (Potential Bugs & Logic Errors)
 
-**สถานะ:** ✅ **ไม่พบ**
-
-**รายละเอียด:**
-การเปลี่ยนแปลงนี้เป็นการเพิ่ม Comment เท่านั้น ไม่ได้มีการแก้ไขหรือเพิ่ม Logic การทำงานใดๆ ของโค้ด จึงไม่พบข้อผิดพลาดหรือบั๊กที่อาจเกิดขึ้นจากการเปลี่ยนแปลงนี้
+*   **`ios/Podfile.lock`:**
+    *   **ข้อสังเกต:** ไฟล์ `Podfile.lock` เป็นไฟล์ที่ถูกสร้างขึ้นอัตโนมัติจากการรัน `pod install` หลังจากมีการแก้ไข `Podfile` การเปลี่ยนแปลงจำนวนมากบ่งชี้ว่ามีการเพิ่มแพ็คเกจที่เกี่ยวข้องกับ Google Sign-In อย่างเป็นระบบ ซึ่งโดยตัวมันเองไม่ได้เป็นบั๊ก
+    *   **ข้อควรระวัง:** ควรตรวจสอบว่า `Podfile` ที่มีการแก้ไขนั้นมีความถูกต้องและไม่มีความขัดแย้งของเวอร์ชัน (version conflicts) ระหว่าง Pods ต่างๆ ที่อาจเกิดขึ้นได้ หากมีการเพิ่ม `google_sign_in_ios` เข้าไปใน `pubspec.yaml` และรัน `flutter pub get` ก็จะทำให้ `Podfile` และ `Podfile.lock` เปลี่ยนแปลงไปตามที่เห็น
+*   **`lib/main.dart` - Global Text Scaling:**
+    *   **ข้อสังเกต:** การตั้งค่า `textScaler` ที่ระดับ `MaterialApp` เป็นวิธีที่ดีในการปรับขนาดตัวอักษรทั่วทั้งแอปพลิเคชัน อย่างไรก็ตาม การปรับขนาดตัวอักษรทั้งหมดอาจทำให้เกิดปัญหา "text overflow" ในบางจุดที่ไม่คาดคิด โดยเฉพาะอย่างยิ่งหาก UI บางส่วนไม่ได้ถูกออกแบบมาให้รองรับการปรับขนาดตัวอักษรได้ดี
+    *   **ข้อควรระวัง:** ควรทำการทดสอบ UI ทั่วทั้งแอปพลิเคชันอย่างละเอียดบนอุปกรณ์ที่มีขนาดหน้าจอหลากหลาย โดยเฉพาะหน้าจอขนาดเล็กมากๆ และหน้าจอขนาดใหญ่มากๆ รวมถึงในโหมดแนวนอน (landscape mode) เพื่อหาจุดที่อาจเกิด overflow.
+*   **`lib/screens/dashboard/home_screen.dart` - `GridView.count` Responsive Logic:**
+    *   **ข้อผิดพลาดทางตรรกะที่อาจเกิดขึ้น:** ในการคำนวณ `connectionCrossAxisCount` และ `connectionChildAspectRatio` มีการใช้ `ResponsiveHelper.screenWidth(context)` ซึ่งจะส่งกลับค่าความกว้างของหน้าจอ *ทั้งหมด*
+    *   **ปัญหา:** หาก `GridView` นี้ไม่ได้ขยายเต็มความกว้างของหน้าจอ (เช่น มี padding, margin, หรืออยู่ใน `Column`/`Row` ที่มี widgets อื่นๆ) ค่า `screenWidth` อาจไม่สะท้อนถึงความกว้างที่แท้จริงที่ `GridView` มีอยู่ ทำให้การคำนวณ `crossAxisCount` และ `childAspectRatio` ไม่ถูกต้อง ซึ่งอาจส่งผลให้:
+        *   เกิด `overflow` (หาก `crossAxisCount` สูงเกินไป)
+        *   `items` มีขนาดที่ไม่สวยงามหรือผิดสัดส่วน
+    *   **ตัวอย่าง:** หาก `screenWidth` คือ 480px แต่ `GridView` มี `padding` ด้านข้างรวม 40px ทำให้มีพื้นที่จริงแค่ 440px การใช้ `screenWidth < 450` จะยังคงส่งผลให้ `crossAxisCount` เป็น 1 ในขณะที่ 440px อาจยังกว้างพอที่จะแสดง 2 คอลัมน์ได้ถ้าคำนวณอย่างแม่นยำ หรือถ้าพื้นที่จริงน้อยกว่า 450px แต่เราต้องการ 2 คอลัมน์ที่เล็กกว่า
 
 ---
 
 ### 2. ประสิทธิภาพการทำงาน (Performance Optimization)
 
-**สถานะ:** ⚠️ **มีโอกาสปรับปรุง**
-
-**รายละเอียด:**
-โค้ดในส่วนนี้เป็น `StatelessWidget` ซึ่งเป็นแนวทางที่ดีในการสร้าง UI ที่ไม่มี State ภายใน อย่างไรก็ตาม มีโอกาสในการปรับปรุงประสิทธิภาพเล็กน้อยโดยการใช้ `const` constructor กับ Widgets ที่ไม่มีการเปลี่ยนแปลงค่าระหว่างการ Rebuild ของ Widget Tree
-
-*   **ประเด็นที่พบ:** Widgets ภายใน `build` method หลายตัว เช่น `AppBar`, `Icon`, `Text`, `TextStyle` ไม่ได้ถูกสร้างด้วย `const` constructor ทำให้ Flutter ต้องสร้าง Instance ใหม่ของ Widget เหล่านี้ทุกครั้งที่ `DailyRoutineScreen` ถูก Rebuild (แม้ว่าข้อมูลจะเหมือนเดิมก็ตาม)
-*   **ผลกระทบ:** อาจทำให้เกิด Overhead เล็กน้อยในการสร้าง Widget Tree ใหม่บ่อยครั้ง โดยเฉพาะในแอปพลิเคชันที่มีการ Rebuild บ่อยๆ การใช้ `const` จะช่วยให้ Flutter สามารถนำ Instance ของ Widget เดิมกลับมาใช้ใหม่ได้ (ถ้า Input Parameters เหมือนเดิม) ซึ่งช่วยลดภาระของ Garbage Collector และเพิ่มประสิทธิภาพในการแสดงผล
+*   **`ios/Podfile.lock`:**
+    *   **ข้อสังเกต:** การเพิ่ม Pods ใหม่จำนวนมาก (โดยเฉพาะ `GoogleSignIn` และ dependencies ของมัน) จะส่งผลให้ขนาดของแอปพลิเคชัน (binary size) เพิ่มขึ้น และอาจทำให้เวลาในการคอมไพล์สำหรับ iOS เพิ่มขึ้นด้วย
+    *   **ผลกระทบ:** เป็นผลกระทบที่หลีกเลี่ยงไม่ได้เมื่อเพิ่มฟังก์ชันการทำงานใหม่ๆ ที่ต้องพึ่งพาไลบรารีภายนอกขนาดใหญ่
+    *   **ข้อเสนอแนะ:** ตรวจสอบให้แน่ใจว่าได้เลือกใช้เฉพาะฟังก์ชันที่จำเป็นจากไลบรารีเหล่านี้ เพื่อลดขนาด binary ให้มากที่สุดเท่าที่จะทำได้ (แต่ในกรณีของ Google Sign-In มักจะมี dependency ที่สำคัญตามมาอยู่แล้ว)
+*   **`lib/main.dart` - Global Text Scaling:**
+    *   **ข้อสังเกต:** การใช้ `MediaQuery.of(context).copyWith` ใน `builder` ของ `MaterialApp` จะมีการคำนวณ `textScaler` เพียงครั้งเดียวเมื่อแอปพลิเคชันเริ่มต้นทำงาน หรือเมื่อมีการเปลี่ยนแปลงขนาดหน้าจอ (เช่น การหมุนหน้าจอ)
+    *   **ผลกระทบ:** มีผลกระทบต่อประสิทธิภาพการทำงานน้อยมาก เนื่องจากเป็นการคำนวณที่ไม่ซับซ้อนและไม่ได้เกิดขึ้นบ่อยครั้ง
+*   **`lib/screens/dashboard/home_screen.dart` - Responsive Logic:**
+    *   **ข้อสังเกต:** การใช้ `Builder` และ `MediaQuery.of(context).size.width` เพื่อคำนวณค่า `crossAxisCount` และ `childAspectRatio` จะเกิดขึ้นเมื่อ `Builder` ถูกสร้างใหม่เท่านั้น (เช่น เมื่อ widget tree ที่อยู่เหนือมันมีการ rebuild หรือมีการหมุนหน้าจอ)
+    *   **ผลกระทบ:** มีผลกระทบต่อประสิทธิภาพการทำงานน้อยมาก การคำนวณเป็นเพียงการอ่านค่าและเปรียบเทียบง่ายๆ ไม่ได้ใช้ทรัพยากรมาก
 
 ---
 
 ### 3. ความปลอดภัยของโค้ด (Security Vulnerabilities)
 
-**สถานะ:** ✅ **ไม่พบ**
-
-**รายละเอียด:**
-โค้ดที่รีวิวเป็นส่วนของ User Interface (UI) เพียงอย่างเดียว ไม่มีการจัดการข้อมูลส่วนตัว, การเชื่อมต่อเครือข่าย, การยืนยันตัวตน, หรือการประมวลผลข้อมูลที่ละเอียดอ่อน จึงไม่พบประเด็นด้านความปลอดภัยที่เกี่ยวข้องกับการเปลี่ยนแปลงนี้
+*   **`ios/Podfile.lock`:**
+    *   **ข้อสังเกต:** การเพิ่มไลบรารีที่เกี่ยวข้องกับการยืนยันตัวตน เช่น `AppAuth` และ `GoogleSignIn` มีความสำคัญอย่างยิ่งต่อความปลอดภัยของแอปพลิเคชัน
+    *   **ข้อควรระวัง:** ตัวไลบรารีเองมักจะได้รับการตรวจสอบความปลอดภัยอย่างดีแล้ว แต่ความเสี่ยงจะอยู่ที่ *วิธีการใช้งาน* ในโค้ดของแอปพลิเคชันเอง
+    *   **ข้อเสนอแนะ:**
+        *   ตรวจสอบให้แน่ใจว่าได้ปฏิบัติตามคำแนะนำและแนวทางปฏิบัติที่ดีที่สุดของ Google สำหรับการรวม Google Sign-In อย่างเคร่งครัด (เช่น การตั้งค่า Client ID, redirect URLs, การจัดการ Token อย่างปลอดภัย)
+        *   หลีกเลี่ยงการจัดเก็บข้อมูล sensitive (เช่น Access Tokens, ID Tokens) ในที่ที่ไม่ปลอดภัย (เช่น SharedPreferences ที่ไม่เข้ารหัส) ควรใช้ Secure Storage สำหรับข้อมูลดังกล่าว
+        *   ตรวจสอบให้แน่ใจว่ามีการตรวจสอบ (validation) และจัดการข้อผิดพลาด (error handling) ที่เหมาะสมในขั้นตอนการยืนยันตัวตน
+*   **`lib/main.dart`, `lib/screens/dashboard/home_screen.dart`, `lib/utils/responsive_helper.dart`:**
+    *   **ข้อสังเกต:** การเปลี่ยนแปลงเหล่านี้มุ่งเน้นไปที่การปรับ UI และ Responsive Design
+    *   **ผลกระทบ:** ไม่มีการเปลี่ยนแปลงใดๆ ที่เกี่ยวข้องกับความปลอดภัยโดยตรงในส่วนนี้
 
 ---
 
 ### 4. ความสะอาดของโค้ดและแนวทางปฏิบัติที่ดีที่สุด (Code Readability, Best Practices)
 
-**สถานะ:** 🔶 **ดี แต่มีจุดที่ควรพิจารณา**
-
-**รายละเอียด:**
-
-*   **Comments:**
-    *   **ข้อดี:** การเพิ่ม Comment เพื่ออธิบายการทำงานของแต่ละส่วนเป็นสิ่งที่ดี โดยเฉพาะ Comment ที่อธิบาย `เหตุผล` ในการตัดสินใจ เช่น `// ซ่อนเงาใต้ AppBar เพื่อให้กลมกลืนกับพื้นหลังสีขาว` ซึ่งช่วยให้เข้าใจเจตนาของโค้ดมากขึ้น
-    *   **ข้อควรพิจารณา:** Comment บางส่วนอาจจะอธิบายสิ่งที่โค้ดบอกอยู่แล้ว (Self-documenting code) เช่น `// ฟังก์ชันปุ่มย้อนกลับไปยังหน้าจอก่อนหน้า` สำหรับ `Navigator.pop(context)` หรือ `// ข้อความหัวเรื่องหน้าจอหลัก` สำหรับ `Text('กิจวัตรบำรุงสมอง', ...)` การมี Comment ที่มากเกินไปสำหรับโค้ดที่อ่านเข้าใจง่ายอยู่แล้ว อาจทำให้โค้ดดูรก (Cluttered) และยากต่อการดูแลรักษาในระยะยาว เนื่องจาก Comment อาจไม่ได้รับการอัปเดตตามโค้ด
-    *   **Best Practice:** ควรเน้น Comment ในส่วนที่ซับซ้อน อธิบาย *ทำไม* โค้ดถึงทำแบบนั้น หรืออธิบาย Business Logic ที่ไม่ชัดเจนจากตัวโค้ดโดยตรง ส่วนโค้ดที่อ่านเข้าใจง่ายอยู่แล้ว ควรปล่อยให้เป็น Self-documenting โดยใช้ชื่อตัวแปรหรือฟังก์ชันที่สื่อความหมาย
-*   **Flutter Widget Tree:** การจัดวาง Widget ใน `Scaffold`, `AppBar`, `Text`, `Icon` เป็นไปตามแนวทางปกติของ Flutter และอ่านเข้าใจง่าย
-*   **การใช้ `AppColors`:** การดึงสีมาจาก `AppColors.primaryBlue` แสดงให้เห็นถึงการใช้ Design System หรือ Theme ซึ่งเป็นแนวทางปฏิบัติที่ดีในการจัดการสีและ UI consistency ทั่วทั้งแอปพลิเคชัน
+*   **`ios/Podfile.lock`:**
+    *   **ข้อสังเกต:** ไฟล์ `Podfile.lock` เป็นไฟล์ที่ถูกสร้างโดย CocoaPods ไม่ใช่โค้ดที่เราเขียนเองโดยตรง ดังนั้นความสะอาดจึงหมายถึงการที่มันสะท้อนถึง dependency ที่ถูกต้องและไม่มีความขัดแย้ง
+    *   **แนวทางปฏิบัติที่ดี:** ควรจะ commit ทั้ง `Podfile` และ `Podfile.lock` เสมอ เพื่อให้การ build ของนักพัฒนาคนอื่นและการทำ CI/CD มีความสอดคล้องกัน
+*   **`lib/main.dart`:**
+    *   **ข้อสังเกต:** การใช้ `builder` ใน `MaterialApp` เพื่อครอบคลุม `MediaQuery` นั้นเป็นแนวทางปฏิบัติที่ดีและเป็นวิธีมาตรฐานในการปรับแต่งคุณสมบัติของ `MediaQuery` ที่ส่งผลต่อทั้งแอป
+    *   **ความสะอาด:** การใช้ `TextScaler.linear` แทน `textScaleFactor` เป็นการใช้ API ที่ใหม่กว่าและเป็น Best Practice ใน Flutter 3.16+
+    *   **ความสามารถในการอ่าน:** มีคอมเมนต์ภาษาไทยที่ชัดเจน (`// ใช้ชุดรูปแบบธีมสะอาดทางการแพทย์ CGH Hospital`)
+*   **`lib/screens/dashboard/home_screen.dart`:**
+    *   **ข้อสังเกต:** การใช้ `Builder` widget เพื่อให้สามารถเข้าถึง `BuildContext` ที่เหมาะสมสำหรับ `MediaQuery.of(context)` ภายใน `GridView.count` เป็นแนวทางปฏิบัติที่ดี
+    *   **ความสะอาด:** ชื่อตัวแปร `screenWidth`, `connectionCrossAxisCount`, `connectionChildAspectRatio` มีความชัดเจนและสื่อความหมาย
+    *   **แนวทางปฏิบัติที่ดี:** การปรับ `crossAxisCount` และ `childAspectRatio` แบบ Responsive เป็นสิ่งที่ดีสำหรับการสร้าง UI ที่ปรับเปลี่ยนตามขนาดหน้าจอ
+*   **`lib/utils/responsive_helper.dart` (ไฟล์ใหม่):**
+    *   **ข้อสังเกต:** นี่เป็นการเพิ่มโค้ดที่ดีเยี่ยม! การสร้าง Utility Class `ResponsiveHelper` เพื่อรวมฟังก์ชันที่เกี่ยวข้องกับการทำ Responsive Design ไว้ในที่เดียว เป็นแนวทางปฏิบัติที่ดีเยี่ยมในการทำให้โค้ดมีความสะอาด, สามารถนำกลับมาใช้ใหม่ได้, และง่ายต่อการบำรุงรักษา
+    *   **ความสะอาด:**
+        *   การตั้งชื่อคลาสและเมธอดมีความชัดเจนและสื่อความหมาย (e.g., `screenWidth`, `isMobile`, `getResponsiveTextScale`)
+        *   มี Doc Comments สำหรับแต่ละเมธอดซึ่งเป็นสิ่งที่ดีมากในการอธิบายวัตถุประสงค์และวิธีการใช้งาน
+        *   เมธอด `value<T>` เป็น pattern ที่ยืดหยุ่นและมีประโยชน์มาก
+    *   **แนวทางปฏิบัติที่ดี:** การกำหนด breakpoint (e.g., 600, 1200) เพื่อแยกประเภทอุปกรณ์ (Mobile, Tablet, Desktop) เป็นวิธีมาตรฐานในการทำ Responsive Design ใน Flutter
 
 ---
 
 ### 5. ข้อเสนอแนะหรือแนวทางแก้ไขเพิ่มเติม (Suggestions with code examples if helpful)
 
-**1. ใช้ `const` constructor เพื่อประสิทธิภาพที่ดีขึ้น:**
-ควรใช้ `const` keyword กับ Widgets ที่ไม่ได้เปลี่ยนแปลงค่า เพื่อให้ Flutter สามารถนำ Widget Instance เดิมกลับมาใช้ใหม่ได้ ซึ่งช่วยลดภาระในการสร้าง Object ใหม่
+1.  **แก้ไขบั๊กเรื่อง `GridView` Responsive Logic ด้วย `LayoutBuilder`:**
+    อย่างที่กล่าวไว้ในส่วน "บั๊กหรือข้อผิดพลาด" การใช้ `MediaQuery.of(context).size.width` ใน `GridView` อาจไม่แม่นยำนัก หาก `GridView` ไม่ได้ขยายเต็มความกว้างของหน้าจอ วิธีแก้ปัญหาคือการใช้ `LayoutBuilder` เพื่อรับ constraints ของ `GridView` โดยตรง
 
-**แนวทางแก้ไข:**
+    **เหตุผล:** `LayoutBuilder` จะให้ `constraints` ที่ระบุถึงพื้นที่จริงที่ Widget นั้นมีอยู่ ซึ่งแม่นยำกว่าการใช้ `screenWidth` ทั่วไป
 
-```diff
-diff --git a/lib/screens/dashboard/daily_routine_screen.dart b/lib/screens/dashboard/daily_routine_screen.dart
-index a88e438..5488800 100644
---- a/lib/screens/dashboard/daily_routine_screen.dart
-+++ b/lib/screens/dashboard/daily_routine_screen.dart
-@@ -8,23 +8,24 @@ class DailyRoutineScreen extends StatelessWidget {
- 
-   @override
-   Widget build(BuildContext context) {
--    // Scaffold กำหนดโครงสร้างหน้าจอหลักประกอบด้วย AppBar และพื้นที่แสดงผลข้อมูลเนื้อหาหลัก
-+    // Scaffold กำหนดโครงสร้างหน้าจอหลักประกอบด้วย AppBar และพื้นที่แสดงผลข้อมูลเนื้อหาหลัก
-     return Scaffold(
-       backgroundColor: Colors.white,
-       appBar: AppBar(
-         backgroundColor: Colors.white,
--        elevation: 0,
-+        elevation: 0, // ซ่อนเงาใต้ AppBar เพื่อให้กลมกลืนกับพื้นหลังสีขาว
-         leading: IconButton(
--          icon: Icon(Icons.arrow_back_ios, color: AppColors.primaryBlue),
-+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primaryBlue), // เพิ่ม const
-           onPressed: () => Navigator.pop(context), // ฟังก์ชันปุ่มย้อนกลับไปยังหน้าจอก่อนหน้า
-         ),
--        title: Text(
--          'กิจวัตรบำรุงสมอง',
--          style: TextStyle(
-+        title: const Text( // เพิ่ม const
-+          'กิจวัตรบำรุงสมอง', // ข้อความหัวเรื่องหน้าจอหลัก
-+          style: const TextStyle( // เพิ่ม const
-             color: AppColors.primaryBlue,
--            fontWeight: FontWeight.w600,
-+            fontWeight: FontWeight.w600, // ปรับความหนาของตัวอักษรเป็นระดับ Medium Bold
-           ),
-         ),
--        centerTitle: true,
-+        centerTitle: true, // กำหนดหัวข้อจัดวางตรงกลางหน้าจอ
-       ),
-       body: SingleChildScrollView(
-         padding: const EdgeInsets.all(20),
-```
+    **โค้ดตัวอย่าง:**
+    ```dart
+    // lib/screens/dashboard/home_screen.dart
+    // ...
+    const SizedBox(height: 16),
+    const Divider(height: 1, thickness: 0.5, color: Colors.black12),
+    const SizedBox(height: 16),
+    LayoutBuilder( // <-- เปลี่ยนจาก Builder เป็น LayoutBuilder
+      builder: (context, constraints) { // <-- รับ constraints เข้ามา
+        final double availableWidth = constraints.maxWidth; // <-- ใช้ maxWidth จาก constraints
 
-*   **หมายเหตุ:** การใช้ `const` ใน `TextStyle` หรือ `Icon` จำเป็นต้องให้ `AppColors.primaryBlue` ถูกประกาศเป็น `static const Color primaryBlue = ...;` ด้วย ซึ่งปกติแล้วจะทำในไฟล์ `AppColors` อยู่แล้ว
+        // ปรับ logic การคำนวณตาม availableWidth แทน screenWidth
+        final int connectionCrossAxisCount = availableWidth < 450 ? 1 : 2;
+        // การคำนวณ childAspectRatio ที่แม่นยำขึ้นจะขึ้นอยู่กับความสูงที่คาดหวังของ item ด้วย
+        // แต่ถ้าจะใช้ magic number เดิม ให้เปลี่ยนเป็นอิงตาม availableWidth
+        final double connectionChildAspectRatio = availableWidth < 450 ? 4.2 : 1.9;
 
-**2. พิจารณาการใช้ Comment ให้เหมาะสม:**
-ควรทบทวน Comment ที่เพิ่มเข้ามาว่าจำเป็นจริงๆ หรือไม่ ควรเน้น Comment ที่อธิบาย "ทำไม" มากกว่า "อะไร" เพื่อให้โค้ดอ่านง่ายและรักษาความถูกต้องของ Comment ได้ง่ายในระยะยาว
+        return GridView.count(
+          crossAxisCount: connectionCrossAxisCount,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: connectionChildAspectRatio,
+          children: [
+            _buildConnectionMetricItem(
+              label: 'ความแรงสัญญาณ BT',
+              value: _museService.isSimulating ? 'ดีเยี่ยม (จำลอง)' : 'เสถียร (RSSI)',
+              icon: Icons.signal_cellular_alt_rounded,
+              color: Colors.blue,
+            ),
+            _buildConnectionMetricItem(
+              label: 'อัตราข้อมูลวิเคราะห์',
+              value: '256 Samples/s',
+              icon: Icons.speed_rounded,
+              color: Colors.cyan,
+            ),
+            _buildConnectionMetricItem(
+              label: 'ความหน่วงการรับส่ง',
+              value: '< 250 ms',
+              icon: Icons.hourglass_bottom_rounded,
+              color: Colors.amber,
+            ),
+            _buildConnectionMetricItem(
+              label: 'ความน่าเชื่อถือช่องสัญญาณ',
+              value: '99.8% Calibrated',
+              icon: Icons.verified_user_rounded,
+              color: Colors.green,
+            ),
+          ],
+        );
+      },
+    ),
+    // ...
+    ```
 
-**แนวทางแก้ไข (ตัวอย่างการปรับ Comment):**
+2.  **พิจารณาเรื่อง Global Text Scaling และ System Accessibility:**
+    ใน `lib/main.dart` การใช้ `TextScaler.linear(scale)` เป็นการ *กำหนด* scale ให้กับแอปพลิเคชันโดยตรง ซึ่งอาจ *ละเลย* การตั้งค่า Accessibility ของผู้ใช้ในระบบปฏิบัติการ (เช่น ผู้ใช้ที่ตั้งค่า "Larger Text" ไว้) หากต้องการให้การปรับ scale ของคุณเป็น *ตัวคูณ* กับการตั้งค่าของระบบ (เพื่อรองรับทั้ง Responsive และ Accessibility) คุณอาจพิจารณาปรับดังนี้:
 
-```dart
-// ก่อน
-// Scaffold กำหนดโครงสร้างหน้าจอหลักประกอบด้วย AppBar และพื้นที่แสดงผลข้อมูลเนื้อหาหลัก
-// หลัง (ถ้าเห็นว่า Scaffold เป็น Widget พื้นฐานที่คนส่วนใหญ่รู้จักอยู่แล้ว)
-// สามารถลบ Comment นี้ได้ หรือถ้าอยากคงไว้ อาจจะกระชับขึ้น เช่น:
-// Defines the basic screen structure with an AppBar and main content area.
-```
+    **เหตุผล:** เพื่อให้แอปพลิเคชันสามารถทำงานร่วมกับการตั้งค่า Accessibility ของระบบปฏิบัติการได้ดีขึ้น
 
-```dart
-// ก่อน
-// ฟังก์ชันปุ่มย้อนกลับไปยังหน้าจอก่อนหน้า
-// หลัง (ถ้าเห็นว่า Navigator.pop(context) เป็นโค้ดที่สื่อความหมายอยู่แล้ว)
-// สามารถลบ Comment นี้ได้เลย
-onPressed: () => Navigator.pop(context),
-```
+    **โค้ดตัวอย่าง:**
+    ```dart
+    // lib/main.dart
+    // ...
+    class MyApp extends StatelessWidget {
+      const MyApp({super.key});
 
-**3. การจัดเรียง Widget Properties (ไม่เกี่ยวข้องกับ Diff แต่เป็น Best Practice):**
-ถึงแม้ Diff นี้จะไม่มีการเปลี่ยนแปลงการจัดเรียง แต่โดยทั่วไปแล้ว ควรจัดเรียง Widget properties ตามลำดับที่เหมาะสม (เช่น `key`, `child`/`children`, `width`/`height`, `padding`/`margin`, `color`, `alignment`, `decoration`, `onPressed` เป็นต้น) เพื่อให้โค้ดอ่านง่ายและเป็นระเบียบ
+      @override
+      Widget build(BuildContext context) {
+        return ScreenUtilInit(
+          designSize: const Size(360, 690),
+          minTextAdapt: true,
+          splitScreenMode: true,
+          builder: (context, child) => MaterialApp(
+            title: 'Smart Brain',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme, // ใช้ชุดรูปแบบธีมสะอาดทางการแพทย์ CGH Hospital
+            builder: (context, child) {
+              // ดึงค่า textScaler เดิมจาก MediaQuery (ซึ่งจะรวมค่าจากระบบปฏิบัติการแล้ว)
+              final currentTextScaler = MediaQuery.of(context).textScaler;
+
+              // คำนวณ responsive scale โดยให้ baseScale เป็น 1.0 เสมอ
+              final double responsiveFactor = ResponsiveHelper.getResponsiveTextScale(context, 1.0);
+
+              // สร้าง TextScaler ใหม่ โดยใช้ responsiveFactor เป็นตัวคูณกับ textScaleFactor เดิม
+              // นี่หมายความว่า ถ้า responsiveFactor คือ 0.9 และ system factor คือ 1.2,
+              // ผลลัพธ์สุดท้ายจะเป็น 0.9 * 1.2 = 1.08
+              final TextScaler newTextScaler = TextScaler.linear(currentTextScaler.textScaleFactor * responsiveFactor);
+
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: newTextScaler,
+                ),
+                child: child!,
+              );
+            },
+            home: const WelcomeScreen(), // เปิดแอปที่หน้าจอเข้ายินดีต้อนรับ (WelcomeScreen)
+          ),
+        );
+      }
+    }
+    ```
+    *   **หมายเหตุ:** หาก `ResponsiveHelper.getResponsiveTextScale` ถูกออกแบบมาเพื่อให้ *แทนที่* `textScaleFactor` ของระบบด้วยค่าที่คำนวณได้โดยสมบูรณ์อยู่แล้ว (ไม่ว่าจะตั้งค่าในระบบเท่าไหร่) โค้ดเดิมก็ถูกต้องตามจุดประสงค์นั้นครับ เพียงแต่ควรระบุจุดประสงค์นี้ให้ชัดเจน
+
+3.  **เพิ่มคอมเมนต์ใน `ResponsiveHelper.getResponsiveTextScale`:**
+    อธิบายเหตุผลเบื้องหลังการเลือก breakpoint และค่า `baseScale` ในแต่ละช่วง เพื่อให้ผู้อื่นเข้าใจ logic ได้ง่ายขึ้น
+
+    **เหตุผล:** เพิ่มความสามารถในการอ่านและบำรุงรักษาโค้ดในอนาคต
+
+    **โค้ดตัวอย่าง:**
+    ```dart
+    // lib/utils/responsive_helper.dart
+    // ...
+    /// Calculates a responsive text scale factor to prevent overflows on small screens
+    /// and take advantage of larger screen real estate.
+    ///
+    /// The [baseScale] is the desired text scale for a standard screen size (e.g., 1.0 for ~450-600 width).
+    /// The method returns a multiplier to be applied to the base scale.
+    static double getResponsiveTextScale(BuildContext context, double baseScale) {
+      final width = screenWidth(context);
+      
+      // Scale down on very small screens (e.g., iPhone SE, older Android) to avoid overflow
+      if (width < 360) {
+        return baseScale * 0.75; // Smaller text for tiny screens
+      }
+      // Standard phone screen size
+      if (width < 450) {
+        return baseScale * 0.9; // Slightly smaller for most phones
+      }
+      // Large phone or small tablet
+      if (width < 600) {
+        return baseScale * 1.0; // Standard text size
+      }
+      // Tablet screen
+      if (width < 900) {
+        return baseScale * 1.15; // Slightly larger for tablets
+      }
+      // Large tablet / Desktop
+      return baseScale * 1.3; // Significantly larger for large screens
+    }
+    // ...
+    ```
 
 ---
 
-**สรุป:**
+### สรุป
 
-การเปลี่ยนแปลงนี้มีเจตนาที่ดีในการเพิ่มความเข้าใจในโค้ดผ่าน Comment แต่มีโอกาสในการปรับปรุงประสิทธิภาพและแนวทางการใช้ Comment ให้เหมาะสมยิ่งขึ้น โดยรวมแล้ว ไม่ได้สร้างปัญหาเชิงฟังก์ชันการทำงานหรือความปลอดภัย แต่ควรพิจารณาข้อเสนอแนะเรื่อง `const` keyword และการใช้ Comment เพื่อให้โค้ดมีคุณภาพดียิ่งขึ้นในระยะยาวครับ
-
----
+โดยรวมแล้ว การเปลี่ยนแปลงใน Diff นี้เป็นการพัฒนาที่ดีมาก โดยเฉพาะการนำ `ResponsiveHelper` เข้ามาใช้ ซึ่งช่วยให้แอปพลิเคชันมีความยืดหยุ่นและรองรับอุปกรณ์ที่หลากหลายได้ดีขึ้น ข้อเสนอแนะหลักคือการแก้ไขเรื่องการใช้ `screenWidth` สำหรับ `GridView` โดยใช้ `LayoutBuilder` แทน เพื่อให้การคำนวณ Responsive แม่นยำยิ่งขึ้นครับ
