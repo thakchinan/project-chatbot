@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/responsive_helper.dart';
 import '../../models/user.dart';
 import '../../services/muse_service.dart';
 import '../../services/api_service.dart';
@@ -1396,39 +1397,47 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 16),
                             const Divider(height: 1, thickness: 0.5, color: Colors.black12),
                             const SizedBox(height: 16),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                              childAspectRatio: 2.8,
-                              children: [
-                                _buildConnectionMetricItem(
-                                  label: 'ความแรงสัญญาณ BT',
-                                  value: _museService.isSimulating ? 'ดีเยี่ยม (จำลอง)' : 'เสถียร (RSSI)',
-                                  icon: Icons.signal_cellular_alt_rounded,
-                                  color: Colors.blue,
-                                ),
-                                _buildConnectionMetricItem(
-                                  label: 'อัตราข้อมูลวิเคราะห์',
-                                  value: '256 Samples/s',
-                                  icon: Icons.speed_rounded,
-                                  color: Colors.cyan,
-                                ),
-                                _buildConnectionMetricItem(
-                                  label: 'ความหน่วงการรับส่ง',
-                                  value: '< 250 ms',
-                                  icon: Icons.hourglass_bottom_rounded,
-                                  color: Colors.amber,
-                                ),
-                                _buildConnectionMetricItem(
-                                  label: 'ความน่าเชื่อถือช่องสัญญาณ',
-                                  value: '99.8% Calibrated',
-                                  icon: Icons.verified_user_rounded,
-                                  color: Colors.green,
-                                ),
-                              ],
+                            Builder(
+                              builder: (context) {
+                                final double screenWidth = ResponsiveHelper.screenWidth(context);
+                                final int connectionCrossAxisCount = screenWidth < 450 ? 1 : 2;
+                                final double connectionChildAspectRatio = screenWidth < 450 ? 4.2 : 1.9;
+
+                                return GridView.count(
+                                  crossAxisCount: connectionCrossAxisCount,
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  childAspectRatio: connectionChildAspectRatio,
+                                  children: [
+                                    _buildConnectionMetricItem(
+                                      label: 'ความแรงสัญญาณ BT',
+                                      value: _museService.isSimulating ? 'ดีเยี่ยม (จำลอง)' : 'เสถียร (RSSI)',
+                                      icon: Icons.signal_cellular_alt_rounded,
+                                      color: Colors.blue,
+                                    ),
+                                    _buildConnectionMetricItem(
+                                      label: 'อัตราข้อมูลวิเคราะห์',
+                                      value: '256 Samples/s',
+                                      icon: Icons.speed_rounded,
+                                      color: Colors.cyan,
+                                    ),
+                                    _buildConnectionMetricItem(
+                                      label: 'ความหน่วงการรับส่ง',
+                                      value: '< 250 ms',
+                                      icon: Icons.hourglass_bottom_rounded,
+                                      color: Colors.amber,
+                                    ),
+                                    _buildConnectionMetricItem(
+                                      label: 'ความน่าเชื่อถือช่องสัญญาณ',
+                                      value: '99.8% Calibrated',
+                                      icon: Icons.verified_user_rounded,
+                                      color: Colors.green,
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           ],
 
