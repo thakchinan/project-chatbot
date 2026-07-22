@@ -170,8 +170,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (result['success'] == true) {
       if (mounted) {
-        // แสดง Dialog แจ้งให้ยืนยัน email
-        _showVerificationDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบเพื่อใช้งาน', style: GoogleFonts.prompt()),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
       }
     } else {
       _showError(result['message'] ?? 'เกิดข้อผิดพลาด');

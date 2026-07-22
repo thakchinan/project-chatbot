@@ -2,14 +2,39 @@ import 'package:flutter/material.dart';
 
 /// EegAssessmentService จัดการวิเคราะห์ผลการตรวจสัญญาณคลื่นสมอง qEEG
 /// คำนวณและประเมินสภาวะจิตใจ (90 วินาที — DEAP Protocol 60s + 30s margin)
-/// นำค่าคลื่นสมอง Alpha, Beta, Theta, Delta, Gamma มาจัดกลุ่ม วิเคราะห์ Z-Score 
-/// และคำนวณดัชนีระดับความเสี่ยงเพื่อจัดทําคำแนะนำในการฟื้นฟูสุขภาพจิต
+///
+/// ═══════════════════════════════════════════════════════════════════
+/// วิธีการคำนวณ: Relative Power (%) + Validated Ratios
+/// ─────────────────────────────────────────────────────────────────
+/// ใช้ Relative Power (สัดส่วน %) แทน Absolute Power เพื่อขจัดปัญหา
+/// ความแตกต่างระหว่างบุคคล (skull thickness, age, electrode contact)
+/// ร่วมกับ Alpha/Beta Ratio และ Theta/Beta Ratio ที่มีงานวิจัยรองรับ
+///
+/// References:
+/// • Klimesch, W. (1999). "EEG alpha and theta oscillations reflect
+///   cognitive and memory performance." Brain Research Reviews.
+///   → ที่มาของการใช้ Relative Power เป็นดัชนีสภาวะจิต
+///
+/// • Luijcks, R., et al. (2015). "Experimentally induced stress
+///   validated by EMG activity." PLoS ONE.
+///   → Alpha/Beta Ratio ต่ำ = เครียด, สูง = ผ่อนคลาย
+///
+/// • Arns, M., et al. (2013). "A decade of EEG Theta/Beta Ratio
+///   Research in ADHD." Journal of Attention Disorders.
+///   → Theta/Beta Ratio สูง = ล้า/ขาดสมาธิ
+///
+/// • Thibodeau, R., et al. (2006). "Depression, Anxiety, and Resting
+///   Frontal EEG Asymmetry: A Meta-Analytic Review." J Abnorm Psychol.
+///   → Frontal Alpha Asymmetry เชื่อมโยงกับภาวะซึมเศร้า/วิตกกังวล
+/// ═══════════════════════════════════════════════════════════════════
 class EegAssessmentService {
-  
+
   /// ประเมินสัญญาณคลื่นสมองจากลิสต์ของ Samples ทั้งหมดที่เก็บรวบรวมได้
+  /// ใช้ Relative Power (%) + Validated Ratios (α/β, θ/β)
+  /// ไม่พึ่งค่า Normative Mean/SD จากภายนอก — คำนวณจากข้อมูล 90 วินาทีที่เก็บได้
   static Map<String, dynamic> computeFromSamples(List<Map<String, double>> samples) {
     if (samples.isEmpty) {
-      return _defaultSummary(); // ส่งค่าผลลัพธ์ว่างกลับไปหากยังไม่มีสัญญาณสะสม
+      return _defaultSummary();
     }
 
     final n = samples.length;
@@ -34,66 +59,117 @@ class EegAssessmentService {
     avgAttention /= n;
     avgMeditation /= n;
 
-    // === Frontal Muse EEG resting state Norms (AF7/AF8) ===
-    // อ้างอิงงานวิจัยและการปรับเทียบตำแหน่งขั้ววัดหน้าผาก (Frontal EEG):
-    // 1. Krigolson et al. (2017) "Choosing Muse: Validation of a Low-Cost, Portable EEG System"
-    //    ระบุว่าหน้าผาก (Frontal) มีปริมาณคลื่น Alpha ตามธรรมชาติต่ำกว่าบริเวณท้ายทอย (Occipital)
-    //    จึงปรับปรุงค่าเฉลี่ย alphaMean ลงเหลือ 15.0 เพื่อเลี่ยงปัญหาผลลบลวง (False Low Alpha)
-    // 2. Fatourechi et al. (2007) "EMG artifacts in EEG"
-    //    อธิบายการปนเปื้อนของสัญญาณไฟฟ้ากล้ามเนื้อ (EMG) บริเวณใบหน้าและหน้าผากในย่านความถี่สูง (Beta)
-    //    จึงปรับเพิ่ม betaMean เป็น 35.0 เพื่อชดเชยค่าเบี่ยงเบนปกติที่เกิดจากการกระพริบตาหรือขยับกล้ามเนื้อใบหน้าปกติ
-    const deltaMean = 22.5, deltaSd = 7.8;
-    const thetaMean = 18.0, thetaSd = 6.5;
-    const alphaMean = 15.0, alphaSd = 6.5;
-    const betaMean = 35.0, betaSd = 12.0;
-    const gammaMean = 10.0, gammaSd = 5.0;
+    // ═══════════════════════════════════════════════════════════════
+    // ขั้นที่ 1: Relative Power (สัดส่วน %)
+    // ─────────────────────────────────────────────────────────────
+    // แปลง Absolute Power เป็นสัดส่วน % ของ power ทั้งหมด
+    // เพื่อขจัดความแตกต่างระหว่างบุคคล (Klimesch, 1999)
+    // ═══════════════════════════════════════════════════════════════
+    final totalPower = avgAlpha + avgBeta + avgTheta + avgDelta + avgGamma;
+    final safeTotalPower = totalPower > 0 ? totalPower : 1.0;
 
-    final deltaZScore = _zScore(avgDelta, deltaMean, deltaSd);
-    final thetaZScore = _zScore(avgTheta, thetaMean, thetaSd);
-    final alphaZScore = _zScore(avgAlpha, alphaMean, alphaSd);
-    final betaZScore = _zScore(avgBeta, betaMean, betaSd);
-    final highBetaZScore = _zScore(avgGamma, gammaMean, gammaSd);
+    final relAlpha = avgAlpha / safeTotalPower; // ปกติ ~25-40% (หลับตา)
+    final relBeta  = avgBeta / safeTotalPower;  // ปกติ ~15-25%
+    final relTheta = avgTheta / safeTotalPower; // ปกติ ~15-25%
+    final relDelta = avgDelta / safeTotalPower; // ปกติ ~20-30%
+    final relGamma = avgGamma / safeTotalPower; // ปกติ ~5-10%
 
+    // ═══════════════════════════════════════════════════════════════
+    // ขั้นที่ 2: Validated Ratios (อัตราส่วนที่มีงานวิจัยรองรับ)
+    // ═══════════════════════════════════════════════════════════════
+
+    // Alpha/Beta Ratio — ดัชนีความเครียด (Luijcks et al., 2015)
+    // สูง = ผ่อนคลาย, ต่ำ = เครียด/ตื่นตัวมากเกินไป
+    // ขณะพักปกติ Frontal: ~0.3-0.8 (Beta มักสูงกว่า Alpha ที่หน้าผาก)
+    final alphaBetaRatio = avgAlpha / (avgBeta > 0 ? avgBeta : 0.01);
+
+    // Theta/Beta Ratio — ดัชนีความล้า/สมาธิ (Arns et al., 2013)
+    // สูง = ล้า/ขาดสมาธิ/ง่วง, ต่ำ = ตื่นตัว/จดจ่อ
+    // ขณะพักปกติ: ~0.4-0.8
+    final thetaBetaRatio = avgTheta / (avgBeta > 0 ? avgBeta : 0.01);
+
+    // Alpha Asymmetry — ดัชนีซึมเศร้า/วิตกกังวล (Thibodeau et al., 2006)
+    // ใช้สัดส่วนสัมพัทธ์ (Relative) แทน Absolute
     final alphaAsymmetry = (avgAlpha - avgBeta) / (avgAlpha + avgBeta + 0.01);
+
+    // Beta/Theta Ratio (เก็บไว้สำหรับ backward compatibility กับ UI)
     final betaThetaRatio = avgBeta / (avgTheta + 0.01);
 
-    // ปรับค่าเกณฑ์มาตรฐานและสูตรสำหรับ Frontal Muse EEG ขณะพัก (เกณฑ์ยืดหยุ่นขึ้น)
-    // ใช้ Baseline เริ่มต้นที่ 20.0 (ความเสี่ยงต่ำ) เพื่อให้เหมาะกับการเป็นดัชนีตรวจคัดกรองทั่วไป
-    double eegIndex = 20.0;
-    eegIndex += (thetaZScore * 3.0).clamp(-7.5, 7.5);
-    eegIndex += (deltaZScore * 2.5).clamp(-5.0, 5.0);
-    eegIndex -= (alphaZScore * 3.5).clamp(-8.5, 8.5);
+    // ═══════════════════════════════════════════════════════════════
+    // ขั้นที่ 3: คำนวณ EEG Stress Index (0–100)
+    // ─────────────────────────────────────────────────────────────
+    // เริ่มจาก 50 (neutral/ปกติ)
+    // คะแนนสูงขึ้น = เครียด/ล้ามากขึ้น
+    // คะแนนต่ำลง = ผ่อนคลายมากขึ้น
+    //
+    // ใช้ Relative Power + Ratios ทั้งหมด ไม่ต้องพึ่ง Normative Mean/SD
+    // ═══════════════════════════════════════════════════════════════
+    double eegIndex = 50.0;
 
-    // ค่าความเบี่ยงเบนของคลื่นสมองสมมาตร Frontal Alpha-Beta (ค่า Offset ปกติขณะพักคือ ~ -0.45)
-    // อ้างอิงจากงานวิจัยภาวะ Frontal Alpha Asymmetry (Thibodeau et al., 2006)
-    // ในภาวะผ่อนคลายปกติของตำแหน่งหน้าผาก คลื่น Beta จะสูงกว่า Alpha เล็กน้อยทำให้ได้ค่าติดลบเฉลี่ย -0.45
-    // การบวกชดเชย +0.45 เป็นการ Calibrate สภาวะเริ่มต้นให้เข้าสู่ศูนย์กลางทางสถิติ
-    final adjustedAsymmetry = alphaAsymmetry + 0.45;
-    eegIndex += (adjustedAsymmetry * -10.0).clamp(-5.0, 5.0);
+    // ─── ตัวแปรที่ 1: Relative Alpha (Klimesch, 1999) ───
+    // Alpha สูง = ผ่อนคลาย → คะแนนลดลง (ดี)
+    // Alpha ปกติ ~25-40% ของ total power (eyes-closed resting)
+    // Frontal site: Alpha ต่ำกว่า Occipital → ปรับ reference เป็น 20%
+    // ค่าเบี่ยงเบนจาก 20% × น้ำหนัก → ±15 คะแนนสูงสุด
+    eegIndex -= ((relAlpha - 0.20) * 75.0).clamp(-15.0, 15.0);
 
-    // เกณฑ์สัดส่วนของคลื่นความร้อน Beta/Theta สูงขึ้น (ขณะพักปกติคือ ~ 2.2)
-    // อ้างอิงเกณฑ์ประเมิน Neurofeedback ของหน้าผาก ปรับระดับจาก 1.5 เป็น 2.2 
-    // เพื่อคัดกรองสัญญาณรบกวนทางกายภาพ (Ocular/Muscular Artifacts) ในชีวิตประจำวัน
-    eegIndex += ((betaThetaRatio - 2.2) * 3.0).clamp(-5.0, 5.0);
+    // ─── ตัวแปรที่ 2: Alpha/Beta Ratio (Luijcks et al., 2015) ───
+    // α/β สูง = ผ่อนคลาย → คะแนนลดลง (ดี)
+    // Frontal resting: α/β ~0.5 เป็นค่ากลาง
+    // ค่าเบี่ยงเบนจาก 0.5 × น้ำหนัก → ±12 คะแนนสูงสุด
+    eegIndex -= ((alphaBetaRatio - 0.5) * 24.0).clamp(-12.0, 12.0);
+
+    // ─── ตัวแปรที่ 3: Theta/Beta Ratio (Arns et al., 2013) ───
+    // θ/β สูง = ล้า/ขาดสมาธิ → คะแนนสูงขึ้น (ไม่ดี)
+    // ขณะพักปกติ: θ/β ~0.6 เป็นค่ากลาง
+    // ค่าเบี่ยงเบนจาก 0.6 × น้ำหนัก → ±12 คะแนนสูงสุด
+    eegIndex += ((thetaBetaRatio - 0.6) * 20.0).clamp(-12.0, 12.0);
+
+    // ─── ตัวแปรที่ 4: Relative Theta+Delta (Slow wave excess) ───
+    // Theta+Delta สูง = ง่วง/สมองล้า → คะแนนสูงขึ้น (ไม่ดี)
+    // ปกติ Theta+Delta รวมกัน ~35-55% ของ total power
+    // ใช้ 45% เป็นค่ากลาง → ±11 คะแนนสูงสุด
+    final relSlowWave = relTheta + relDelta;
+    eegIndex += ((relSlowWave - 0.45) * 22.0).clamp(-11.0, 11.0);
 
     eegIndex = eegIndex.clamp(0.0, 100.0);
 
+    // ═══════════════════════════════════════════════════════════════
+    // ขั้นที่ 4: แบ่งระดับความเสี่ยง
+    // ─────────────────────────────────────────────────────────────
+    // 50 = neutral (ไม่เปลี่ยนจากปกติ)
+    // ±10 = noise margin ตามธรรมชาติของสัญญาณ EEG
+    // ดังนั้น 31–60 = ช่วงปกติ
+    // ═══════════════════════════════════════════════════════════════
     String riskLevel;
     String riskLevelEn;
     int riskColorValue;
-    if (eegIndex <= 28) {
-      riskLevel = 'ความเสี่ยงต่ำ';
-      riskLevelEn = 'Low Risk';
+    if (eegIndex <= 30) {
+      riskLevel = 'ผ่อนคลาย';
+      riskLevelEn = 'Relaxed';
       riskColorValue = 0xFF4CAF50;
-    } else if (eegIndex <= 48) {
-      riskLevel = 'ปานกลาง';
-      riskLevelEn = 'Moderate Risk';
-      riskColorValue = 0xFFFF9800;
+    } else if (eegIndex <= 60) {
+      riskLevel = 'ปกติ';
+      riskLevelEn = 'Normal';
+      riskColorValue = 0xFF2196F3;
     } else {
-      riskLevel = 'ความเสี่ยงสูง';
-      riskLevelEn = 'High Risk';
+      riskLevel = 'เครียด';
+      riskLevelEn = 'Stressed';
       riskColorValue = 0xFFF44336;
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // คำนวณ Z-Score จาก Relative Power (ใช้แสดงผลใน UI เดิม)
+    // ─────────────────────────────────────────────────────────────
+    // แทน Z-Score จาก absolute power + arbitrary norms
+    // ใช้ค่าเบี่ยงเบนจาก relative power ปกติแทน
+    // (ค่า reference มาจาก resting-state EEG literature ทั่วไป)
+    // ═══════════════════════════════════════════════════════════════
+    final deltaZScore = _relativeDeviation(relDelta, 0.25, 0.08);  // ~25% ±8%
+    final thetaZScore = _relativeDeviation(relTheta, 0.20, 0.06);  // ~20% ±6%
+    final alphaZScore = _relativeDeviation(relAlpha, 0.20, 0.08);  // ~20% ±8% (Frontal)
+    final betaZScore  = _relativeDeviation(relBeta, 0.25, 0.08);   // ~25% ±8%
+    final highBetaZScore = _relativeDeviation(relGamma, 0.08, 0.04); // ~8% ±4%
 
     return {
       'avgAlpha': avgAlpha,
@@ -103,6 +179,16 @@ class EegAssessmentService {
       'avgGamma': avgGamma,
       'avgAttention': avgAttention,
       'avgMeditation': avgMeditation,
+      // Relative Power (%) — ค่าใหม่
+      'relAlpha': relAlpha,
+      'relBeta': relBeta,
+      'relTheta': relTheta,
+      'relDelta': relDelta,
+      'relGamma': relGamma,
+      // Validated Ratios — ค่าใหม่
+      'alphaBetaRatio': alphaBetaRatio,
+      'thetaBetaRatio': thetaBetaRatio,
+      // Z-Score จาก Relative Power (backward compatible กับ UI)
       'deltaZScore': deltaZScore,
       'thetaZScore': thetaZScore,
       'alphaZScore': alphaZScore,
@@ -110,13 +196,14 @@ class EegAssessmentService {
       'highBetaZScore': highBetaZScore,
       'alphaAsymmetry': alphaAsymmetry,
       'betaThetaRatio': betaThetaRatio,
+      // ผลลัพธ์หลัก
       'eegIndex': eegIndex,
       'riskLevel': riskLevel,
       'riskLevelEn': riskLevelEn,
       'riskColorValue': riskColorValue,
       'samplesCollected': n,
       'durationSeconds': 90,
-      'normRef': 'Krigolson et al. (2017), DEAP Dataset (Calibrated for Frontal Muse EEG)',
+      'normRef': 'Relative Power + α/β Ratio (Luijcks 2015) + θ/β Ratio (Arns 2013)',
       'recordedAt': DateTime.now().toIso8601String(),
     };
   }
@@ -131,6 +218,13 @@ class EegAssessmentService {
       'avgGamma': 0.0,
       'avgAttention': 0.0,
       'avgMeditation': 0.0,
+      'relAlpha': 0.0,
+      'relBeta': 0.0,
+      'relTheta': 0.0,
+      'relDelta': 0.0,
+      'relGamma': 0.0,
+      'alphaBetaRatio': 0.0,
+      'thetaBetaRatio': 0.0,
       'deltaZScore': 0.0,
       'thetaZScore': 0.0,
       'alphaZScore': 0.0,
@@ -148,9 +242,10 @@ class EegAssessmentService {
     };
   }
 
-  /// คำนวณค่า Z-Score จากค่าเฉลี่ยและค่าเบี่ยงเบนมาตรฐานประชากรกลุ่มเปรียบเทียบ
-  static double _zScore(double value, double mean, double stdDev) {
-    return (value - mean) / (stdDev == 0 ? 1 : stdDev);
+  /// คำนวณค่าเบี่ยงเบนจาก Relative Power ที่คาดหวัง
+  /// ใช้แทน Z-Score จาก absolute power + arbitrary norms
+  static double _relativeDeviation(double relValue, double expectedRel, double expectedSd) {
+    return (relValue - expectedRel) / (expectedSd > 0 ? expectedSd : 0.01);
   }
 
   /// ดึงข้อมูลชุดสีสำหรับแบ่งระดับความเสี่ยงกลับมาในรูปของ Color ของ Flutter

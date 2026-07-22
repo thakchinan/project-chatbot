@@ -132,6 +132,7 @@ class AuthService {
       // ขั้นตอนที่ 1: เปิดหน้า Google Sign-In
       final googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
+        serverClientId: '557274858748-hbn5quidnjbs6iqv52j21bdql50qm1gn.apps.googleusercontent.com',
       );
 
       final googleUser = await googleSignIn.signIn();

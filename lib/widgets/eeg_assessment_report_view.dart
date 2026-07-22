@@ -47,6 +47,7 @@ class EegAssessmentReportViewState extends State<EegAssessmentReportView> {
     if (c == const Color(0xFF4CAF50) || c == const Color(0xFF43A047) || c == Colors.green) return AppColors.primaryGreen;
     if (c == const Color(0xFFFF9800) || c == const Color(0xFFF57C00) || c == Colors.orange) return AppColors.warning;
     if (c == const Color(0xFFF44336) || c == const Color(0xFFE53935) || c == Colors.red) return AppColors.error;
+    if (c == const Color(0xFF2196F3) || c == Colors.blue) return AppColors.primaryBlue;
     return c;
   }
 

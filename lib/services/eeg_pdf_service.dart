@@ -26,7 +26,7 @@ class EegPdfService {
     final riskLevel = s['riskLevel'] as String;
     final riskLevelEn = s['riskLevelEn'] as String;
     final eegIndex = (s['eegIndex'] as num).toDouble();
-    final riskColorHex = eegIndex <= 33 ? PdfColors.green : (eegIndex <= 66 ? PdfColors.orange : PdfColors.red);
+    final riskColorHex = eegIndex <= 30 ? PdfColors.green : (eegIndex <= 60 ? PdfColors.blue : PdfColors.red);
 
     final userName = user.fullName ?? user.username;
     final age = EegAssessmentService.ageFromBirthDate(user.birthDate);
